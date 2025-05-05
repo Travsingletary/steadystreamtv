@@ -48,6 +48,48 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          genres: string[] | null
+          id: string
+          name: string | null
+          preferred_device: string | null
+          subscription_status: string | null
+          subscription_tier: string | null
+          trial_end_date: string | null
+          updated_at: string
+          xtream_password: string | null
+          xtream_username: string | null
+        }
+        Insert: {
+          created_at?: string
+          genres?: string[] | null
+          id: string
+          name?: string | null
+          preferred_device?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          trial_end_date?: string | null
+          updated_at?: string
+          xtream_password?: string | null
+          xtream_username?: string | null
+        }
+        Update: {
+          created_at?: string
+          genres?: string[] | null
+          id?: string
+          name?: string | null
+          preferred_device?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          trial_end_date?: string | null
+          updated_at?: string
+          xtream_password?: string | null
+          xtream_username?: string | null
+        }
+        Relationships: []
+      }
       resellers: {
         Row: {
           api_key: string | null
