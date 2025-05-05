@@ -1,7 +1,10 @@
+
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Tv } from "lucide-react";
+
 const HeroSection = () => {
-  return <section id="home" className="pt-24 pb-16 md:pt-32 md:pb-24 relative">
+  return (
+    <section id="home" className="pt-24 pb-16 md:pt-32 md:pb-24 relative">
       {/* Background with gradient overlay */}
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1605810230434-7631ac76ec81')] bg-cover bg-center opacity-20"></div>
       <div className="absolute inset-0 bg-gradient-to-b from-black via-black/95 to-black"></div>
@@ -42,23 +45,37 @@ const HeroSection = () => {
             </div>
           </div>
           
-          <div style={{
-          animationDelay: "0.3s"
-        }} className="md:w-1/2 flex justify-center animate-fade-in px-0 py-[220px]">
+          <div className="md:w-1/2 flex justify-center animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <div className="relative">
               <div className="tv-glow">
                 <div className="bg-dark-300 border-2 border-gold/30 rounded-xl overflow-hidden w-full max-w-md aspect-video">
-                  <div className="relative rounded-3xl bg-black px-[48px] my-[7px] mx-0 py-[14px]">
-                    <img alt="SteadyStream TV" src="/lovable-uploads/f52a5114-91be-4cee-8320-5125cabacc9f.png" className="w-full h-full object-contain" />
-                    
+                  <div className="relative">
+                    <img 
+                      src="https://images.unsplash.com/photo-1586899028174-e7098a71b9ae?q=80&w=1771&auto=format&fit=crop" 
+                      alt="SteadyStream TV" 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-black/40 rounded-full p-4">
+                        <img
+                          src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
+                          alt="SteadyStream Logo"
+                          className="h-12 w-12"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-                
+                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-dark-200 px-6 py-2 rounded-full border border-gold/20">
+                  <span className="text-gold font-semibold">SteadyStream</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default HeroSection;
