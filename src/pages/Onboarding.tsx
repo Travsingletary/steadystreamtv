@@ -17,6 +17,10 @@ export interface UserData {
   preferredDevice: string;
   genres: string[];
   subscription: any;
+  xtreamCredentials?: {
+    username: string;
+    password: string;
+  };
 }
 
 const Onboarding = () => {
@@ -55,6 +59,33 @@ const Onboarding = () => {
 
   const prevStep = () => {
     setCurrentStep((prev) => Math.max(0, prev - 1));
+  };
+
+  const createXtreamAccount = async (userId: string, plan: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-xtream-account', {
+        body: { userId, plan: plan || 'free-trial' }
+      });
+      
+      if (error) throw error;
+      
+      if (data.success) {
+        toast.success("Streaming account created successfully!");
+        updateUserData({ 
+          xtreamCredentials: {
+            username: data.username,
+            password: data.password
+          }
+        });
+        return data;
+      } else {
+        throw new Error(data.message || "Failed to create streaming account");
+      }
+    } catch (error: any) {
+      console.error("Failed to create Xtream account:", error);
+      toast.error("Failed to create streaming account. Please try again later.");
+      return null;
+    }
   };
 
   const finalizeOnboarding = async () => {
@@ -96,12 +127,17 @@ const Onboarding = () => {
           
         if (profileError) throw profileError;
         
-        // 3. In the future, we would call the create-xtream-account edge function here
-        // const { data: xtrealCredentials, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
-        //   body: { userId: authData.user.id, plan: userData.subscription?.id || 'free-trial' }
-        // });
+        // 3. Call the create-xtream-account edge function
+        const xtreamAccount = await createXtreamAccount(
+          authData.user.id, 
+          userData.subscription?.id || 'free-trial'
+        );
         
-        // if (xtreamError) throw xtreamError;
+        if (!xtreamAccount) {
+          // Still continue even if Xtream account creation fails
+          // We'll retry it later or let user manually trigger it
+          console.warn("Xtream account creation failed but continuing onboarding");
+        }
         
         toast.success("Account created successfully!");
         // Continue to final step which will redirect to player

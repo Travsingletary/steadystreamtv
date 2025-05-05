@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Calendar, Mail, User, Smartphone } from "lucide-react";
+import { CheckCircle, Calendar, Mail, User, Smartphone, Key } from "lucide-react";
 
 interface OnboardingCompleteProps {
   userData: {
@@ -11,6 +11,10 @@ interface OnboardingCompleteProps {
     preferredDevice: string;
     genres: string[];
     subscription: any;
+    xtreamCredentials?: {
+      username: string;
+      password: string;
+    };
   };
 }
 
@@ -98,6 +102,20 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
               <div>
                 <p className="text-sm text-gray-400">Trial End Date</p>
                 <p className="font-medium">{formatDate(userData.subscription.trialEndDate)}</p>
+              </div>
+            </div>
+          )}
+
+          {userData.xtreamCredentials && (
+            <div className="flex items-start gap-3">
+              <Key className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-gray-400">Streaming Credentials</p>
+                <p className="font-medium">Username: {userData.xtreamCredentials.username}</p>
+                <p className="font-medium">Password: {userData.xtreamCredentials.password}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Save these credentials if you plan to use external players
+                </p>
               </div>
             </div>
           )}
