@@ -6,7 +6,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Mail, User } from "lucide-react";
+import { Mail, User, Lock } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -15,11 +15,15 @@ const formSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
+  }),
 });
 
 interface UserData {
   name: string;
   email: string;
+  password?: string;
   preferredDevice: string;
   genres: string[];
   subscription: any;
@@ -39,6 +43,7 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
     defaultValues: {
       name: userData.name || "",
       email: userData.email || "",
+      password: userData.password || "",
     },
   });
 
@@ -49,6 +54,7 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
       updateUserData({
         name: values.name,
         email: values.email,
+        password: values.password,
       });
       setIsLoading(false);
       onNext();
@@ -98,6 +104,28 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
                     <Input 
                       placeholder="Enter your email" 
                       type="email" 
+                      className="pl-10 bg-dark-300 border-gray-700" 
+                      {...field} 
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                    <Input 
+                      placeholder="Create a password" 
+                      type="password" 
                       className="pl-10 bg-dark-300 border-gray-700" 
                       {...field} 
                     />

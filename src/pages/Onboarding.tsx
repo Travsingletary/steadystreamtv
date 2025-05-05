@@ -1,15 +1,19 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { OnboardingWelcome } from "@/components/onboarding/OnboardingWelcome";
 import { OnboardingDeviceSetup } from "@/components/onboarding/OnboardingDeviceSetup";
 import { OnboardingPreferences } from "@/components/onboarding/OnboardingPreferences";
 import { OnboardingSubscription } from "@/components/onboarding/OnboardingSubscription";
 import { OnboardingComplete } from "@/components/onboarding/OnboardingComplete";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Define a common UserData interface to be used across all components
 export interface UserData {
   name: string;
   email: string;
+  password?: string; // Added password for signup
   preferredDevice: string;
   genres: string[];
   subscription: any;
@@ -20,10 +24,26 @@ const Onboarding = () => {
   const [userData, setUserData] = useState<UserData>({
     name: "",
     email: "",
+    password: "",
     preferredDevice: "",
     genres: [],
     subscription: null,
   });
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const navigate = useNavigate();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // If already logged in, redirect to dashboard
+        navigate("/dashboard");
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
 
   const updateUserData = (data: Partial<UserData>) => {
     setUserData((prev) => ({ ...prev, ...data }));
@@ -35,6 +55,64 @@ const Onboarding = () => {
 
   const prevStep = () => {
     setCurrentStep((prev) => Math.max(0, prev - 1));
+  };
+
+  const finalizeOnboarding = async () => {
+    // This function is called at the final step
+    if (!userData.email || !userData.password) {
+      toast.error("Email and password are required");
+      return;
+    }
+
+    setIsCreatingAccount(true);
+    
+    try {
+      // 1. Create user account with Supabase
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+          }
+        }
+      });
+      
+      if (authError) throw authError;
+      
+      if (authData.user) {
+        // 2. Store user preferences in Supabase
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            name: userData.name,
+            preferred_device: userData.preferredDevice,
+            genres: userData.genres,
+            subscription_tier: userData.subscription?.id || 'free-trial',
+            subscription_status: 'active',
+            trial_end_date: userData.subscription?.trialEndDate || null
+          });
+          
+        if (profileError) throw profileError;
+        
+        // 3. In the future, we would call the create-xtream-account edge function here
+        // const { data: xtrealCredentials, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
+        //   body: { userId: authData.user.id, plan: userData.subscription?.id || 'free-trial' }
+        // });
+        
+        // if (xtreamError) throw xtreamError;
+        
+        toast.success("Account created successfully!");
+        // Continue to final step which will redirect to player
+        nextStep();
+      }
+    } catch (error: any) {
+      console.error("Onboarding error:", error);
+      toast.error(error.message || "Failed to create account");
+    } finally {
+      setIsCreatingAccount(false);
+    }
   };
 
   const steps = [
@@ -62,7 +140,8 @@ const Onboarding = () => {
       key="subscription" 
       userData={userData} 
       updateUserData={updateUserData} 
-      onNext={nextStep} 
+      onNext={finalizeOnboarding}
+      isProcessing={isCreatingAccount}
       onBack={prevStep} 
     />,
     <OnboardingComplete 

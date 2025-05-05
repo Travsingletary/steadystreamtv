@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Clock, CreditCard } from "lucide-react";
@@ -17,6 +16,7 @@ interface OnboardingSubscriptionProps {
   updateUserData: (data: Partial<UserData>) => void;
   onNext: () => void;
   onBack: () => void;
+  isProcessing?: boolean;
 }
 
 // Pricing plan data - using the same data as in PricingSection
@@ -72,12 +72,13 @@ export const OnboardingSubscription = ({
   userData, 
   updateUserData, 
   onNext, 
-  onBack 
+  onBack,
+  isProcessing = false
 }: OnboardingSubscriptionProps) => {
   const [selectedPlan, setSelectedPlan] = useState<string>(
     userData.subscription?.id || ""
   );
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isLocalProcessing, setIsLocalProcessing] = useState(false);
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId);
@@ -89,7 +90,9 @@ export const OnboardingSubscription = ({
       return;
     }
 
-    setIsProcessing(true);
+    if (isProcessing) return;
+    
+    setIsLocalProcessing(true);
     
     // Get the selected plan details
     const plan = pricingPlans.find(p => p.id === selectedPlan);
@@ -105,14 +108,16 @@ export const OnboardingSubscription = ({
         }
       });
       
-      setIsProcessing(false);
+      setIsLocalProcessing(false);
       toast.success(`You've subscribed to the ${plan?.name} plan!`);
       onNext();
     }, 1500);
   };
 
   const handleFreeTrial = () => {
-    setIsProcessing(true);
+    if (isProcessing) return;
+    
+    setIsLocalProcessing(true);
     
     // Simulate free trial API call
     setTimeout(() => {
@@ -125,11 +130,13 @@ export const OnboardingSubscription = ({
         }
       });
       
-      setIsProcessing(false);
+      setIsLocalProcessing(false);
       toast.success("Your 24-hour free trial has started!");
       onNext();
     }, 1500);
   };
+
+  const isButtonDisabled = isProcessing || isLocalProcessing;
 
   return (
     <div className="bg-dark-200 rounded-xl border border-gray-800 p-8 animate-fade-in">
@@ -147,10 +154,10 @@ export const OnboardingSubscription = ({
         <Button 
           className="bg-gold hover:bg-gold-dark text-black font-semibold w-full sm:w-auto"
           onClick={handleFreeTrial}
-          disabled={isProcessing}
+          disabled={isButtonDisabled}
         >
           <Clock className="mr-2 h-5 w-5" />
-          {isProcessing ? "Processing..." : "Start 24-Hour Free Trial"}
+          {isButtonDisabled ? "Processing..." : "Start 24-Hour Free Trial"}
         </Button>
       </div>
 
@@ -216,16 +223,17 @@ export const OnboardingSubscription = ({
           variant="outline"
           className="border-gray-700 text-gray-300"
           onClick={onBack}
+          disabled={isButtonDisabled}
         >
           Back
         </Button>
         <Button 
           className="bg-gray-600 hover:bg-gray-500 text-white font-semibold flex-1"
           onClick={handleSubscribe}
-          disabled={isProcessing || !selectedPlan}
+          disabled={isButtonDisabled || !selectedPlan}
         >
           <CreditCard className="mr-2 h-5 w-5" />
-          {isProcessing ? "Processing..." : "Subscribe to Selected Plan"}
+          {isButtonDisabled ? "Processing..." : "Subscribe to Selected Plan"}
         </Button>
       </div>
     </div>
