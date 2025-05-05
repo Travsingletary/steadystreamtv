@@ -6,6 +6,7 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, Minimize, Maximize } from 
 import VideoPlayer from "@/components/VideoPlayer";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
+import FooterSection from "@/components/FooterSection";
 
 const Player = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -59,12 +60,26 @@ const Player = () => {
       <Navbar />
       <div className="pt-24 pb-16">
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-8 text-gradient-gold">Web Player</h1>
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-4xl font-bold text-gradient-gold">Web Player</h1>
+            <img
+              src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+              alt="SteadyStream Logo"
+              className="h-12 md:h-16"
+            />
+          </div>
           
           <div className="grid md:grid-cols-3 gap-6">
             {/* Channel List */}
             <div className="bg-dark-200 rounded-xl p-4 border border-gray-800">
-              <h2 className="text-xl font-semibold mb-4 text-gold">Channels</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gold">Channels</h2>
+                <img
+                  src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                  alt="SteadyStream Logo"
+                  className="h-8"
+                />
+              </div>
               <div className="space-y-2">
                 <Input 
                   type="text" 
@@ -100,12 +115,23 @@ const Player = () => {
                       <img
                         src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
                         alt="SteadyStream Logo"
-                        className="w-24 h-24 mb-4"
+                        className="w-32 h-32 mb-4"
                       />
                       <h3 className="text-xl font-semibold text-gold mb-2">SteadyStream TV Web Player</h3>
                       <p className="text-gray-400">
                         Select a channel from the list to start streaming
                       </p>
+                    </div>
+                  )}
+                  
+                  {/* Watermark Logo in Player */}
+                  {currentChannel && (
+                    <div className="absolute top-4 right-4 opacity-50">
+                      <img
+                        src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                        alt="SteadyStream Logo"
+                        className="h-8"
+                      />
                     </div>
                   )}
                 </div>
@@ -138,7 +164,12 @@ const Player = () => {
                       </Button>
                     </div>
                     
-                    <div className="text-center text-sm">
+                    <div className="text-center text-sm flex items-center gap-2">
+                      <img
+                        src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                        alt="SteadyStream Logo"
+                        className="h-5 hidden xs:block"
+                      />
                       {currentChannel || "No channel selected"}
                     </div>
                     
@@ -171,27 +202,60 @@ const Player = () => {
           
           {/* User info section */}
           <div className="mt-12 bg-dark-200 rounded-xl p-6 border border-gray-800">
-            <h2 className="text-2xl font-semibold mb-4 text-gold">Access on Any Device</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-semibold text-gold">Access on Any Device</h2>
+              <img
+                src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                alt="SteadyStream Logo"
+                className="h-10"
+              />
+            </div>
             <p className="text-gray-300 mb-4">
               Enjoy SteadyStream TV on your preferred device. Our web player is perfect for computers and mobile devices,
               while our dedicated apps are available for Fire Stick, Android, and iOS.
             </p>
             <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <InfoCard title="10,000+ Channels" description="Access to a vast library of content" />
-              <InfoCard title="HD & 4K Quality" description="Crystal clear streaming quality" />
-              <InfoCard title="24/7 Support" description="Help available whenever you need it" />
-              <InfoCard title="DVR Functions" description="Record and watch later" />
+              <InfoCard 
+                title="10,000+ Channels" 
+                description="Access to a vast library of content"
+                showLogo={true} 
+              />
+              <InfoCard 
+                title="HD & 4K Quality" 
+                description="Crystal clear streaming quality"
+                showLogo={true} 
+              />
+              <InfoCard 
+                title="24/7 Support" 
+                description="Help available whenever you need it"
+                showLogo={true} 
+              />
+              <InfoCard 
+                title="DVR Functions" 
+                description="Record and watch later"
+                showLogo={true} 
+              />
             </div>
           </div>
         </div>
       </div>
+      <FooterSection />
     </div>
   );
 };
 
-const InfoCard = ({ title, description }) => (
+const InfoCard = ({ title, description, showLogo = false }) => (
   <div className="bg-dark-300 p-4 rounded-lg border border-gray-700">
-    <h3 className="font-semibold text-gold mb-2">{title}</h3>
+    <div className="flex items-center justify-between mb-2">
+      <h3 className="font-semibold text-gold">{title}</h3>
+      {showLogo && (
+        <img
+          src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+          alt="SteadyStream Logo"
+          className="h-5"
+        />
+      )}
+    </div>
     <p className="text-gray-400 text-sm">{description}</p>
   </div>
 );
