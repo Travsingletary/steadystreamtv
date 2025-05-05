@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock } from "lucide-react";
+import { CheckCircle, Clock, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 interface UserData {
@@ -33,8 +33,7 @@ const pricingPlans = [
       "24/7 Basic Support",
       "3 Connection Types"
     ],
-    isPopular: false,
-    trial: "7-day free trial"
+    isPopular: false
   },
   {
     id: "premium",
@@ -49,8 +48,7 @@ const pricingPlans = [
       "All Connection Types",
       "DVR Functionality"
     ],
-    isPopular: true,
-    trial: "14-day free trial"
+    isPopular: true
   },
   {
     id: "ultimate",
@@ -66,8 +64,7 @@ const pricingPlans = [
       "Advanced DVR Functionality",
       "Premium Sports Packages"
     ],
-    isPopular: false,
-    trial: "30-day free trial"
+    isPopular: false
   }
 ];
 
@@ -104,12 +101,32 @@ export const OnboardingSubscription = ({
           id: selectedPlan,
           name: plan?.name,
           price: plan?.price,
-          trialEndDate: new Date(Date.now() + (plan?.id === "ultimate" ? 30 : plan?.id === "premium" ? 14 : 7) * 24 * 60 * 60 * 1000)
+          trialEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hour trial
         }
       });
       
       setIsProcessing(false);
-      toast.success(`You've started your ${plan?.trial || "free trial"} with the ${plan?.name} plan!`);
+      toast.success(`You've subscribed to the ${plan?.name} plan!`);
+      onNext();
+    }, 1500);
+  };
+
+  const handleFreeTrial = () => {
+    setIsProcessing(true);
+    
+    // Simulate free trial API call
+    setTimeout(() => {
+      updateUserData({ 
+        subscription: {
+          id: "free-trial",
+          name: "Free Trial",
+          price: 0,
+          trialEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hour trial
+        }
+      });
+      
+      setIsProcessing(false);
+      toast.success("Your 24-hour free trial has started!");
       onNext();
     }, 1500);
   };
@@ -117,12 +134,31 @@ export const OnboardingSubscription = ({
   return (
     <div className="bg-dark-200 rounded-xl border border-gray-800 p-8 animate-fade-in">
       <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
-      <p className="text-gray-400 mb-2">
-        Select a subscription plan that fits your streaming needs.
+      <p className="text-gray-400 mb-6">
+        Select a subscription plan that fits your streaming needs or start with a free trial.
       </p>
-      <p className="text-gold flex items-center gap-2 mb-8">
-        <Clock className="h-4 w-4" /> All plans include a free trial period - no payment required today
-      </p>
+
+      <div className="bg-dark-100 border border-gold p-6 rounded-lg mb-8 text-center">
+        <h2 className="text-xl font-bold mb-2 text-gold">Try SteadyStream Free</h2>
+        <p className="text-gray-300 mb-4">
+          Get full access to all premium features for 24 hours.
+          No credit card required.
+        </p>
+        <Button 
+          className="bg-gold hover:bg-gold-dark text-black font-semibold w-full sm:w-auto"
+          onClick={handleFreeTrial}
+          disabled={isProcessing}
+        >
+          <Clock className="mr-2 h-5 w-5" />
+          {isProcessing ? "Processing..." : "Start 24-Hour Free Trial"}
+        </Button>
+      </div>
+
+      <div className="flex items-center mb-8">
+        <div className="flex-grow h-px bg-gray-700"></div>
+        <p className="px-4 text-gray-400">OR CHOOSE A PLAN</p>
+        <div className="flex-grow h-px bg-gray-700"></div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {pricingPlans.map((plan) => (
@@ -147,9 +183,6 @@ export const OnboardingSubscription = ({
             <div className="mb-4">
               <span className="text-3xl font-bold">${plan.price}</span>
               <span className="text-gray-400">/month</span>
-            </div>
-            <div className="text-gold text-sm mb-4">
-              {plan.trial}
             </div>
             <ul className="space-y-3 mb-4">
               {plan.features.slice(0, 4).map((feature, index) => (
@@ -187,11 +220,12 @@ export const OnboardingSubscription = ({
           Back
         </Button>
         <Button 
-          className="bg-gold hover:bg-gold-dark text-black font-semibold flex-1"
+          className="bg-gray-600 hover:bg-gray-500 text-white font-semibold flex-1"
           onClick={handleSubscribe}
           disabled={isProcessing || !selectedPlan}
         >
-          {isProcessing ? "Processing..." : "Start Your Free Trial"}
+          <CreditCard className="mr-2 h-5 w-5" />
+          {isProcessing ? "Processing..." : "Subscribe to Selected Plan"}
         </Button>
       </div>
     </div>
