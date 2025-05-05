@@ -43,6 +43,44 @@ const HeroSection = () => {
                 <span className="text-gray-200">24/7 Support</span>
               </div>
             </div>
+            
+            {/* Lifestyle Images Gallery */}
+            <div className="mt-8 grid grid-cols-2 gap-3">
+              <div className="relative rounded-lg overflow-hidden">
+                <img 
+                  src="https://images.unsplash.com/photo-1649972904349-6e44c42644a7" 
+                  alt="Streaming on laptop" 
+                  className="w-full h-32 object-cover transition-transform hover:scale-105 duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                  <span className="text-white text-xs p-2">Watch anywhere</span>
+                </div>
+                <div className="absolute top-2 right-2">
+                  <img
+                    src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                    alt="SteadyStream Logo"
+                    className="h-5 w-5 opacity-80"
+                  />
+                </div>
+              </div>
+              <div className="relative rounded-lg overflow-hidden">
+                <img 
+                  src="https://images.unsplash.com/photo-1721322800607-8c38375eef04" 
+                  alt="Living room streaming" 
+                  className="w-full h-32 object-cover transition-transform hover:scale-105 duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+                  <span className="text-white text-xs p-2">Family entertainment</span>
+                </div>
+                <div className="absolute top-2 right-2">
+                  <img
+                    src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                    alt="SteadyStream Logo"
+                    className="h-5 w-5 opacity-80"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           
           <div className="md:w-1/2 flex justify-center animate-fade-in" style={{ animationDelay: "0.3s" }}>
@@ -63,7 +101,14 @@ const HeroSection = () => {
                   </div>
                 </div>
                 <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-dark-200 px-6 py-2 rounded-full border border-gold/20">
-                  <span className="text-gold font-semibold">SteadyStream</span>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                      alt="SteadyStream Logo"
+                      className="h-5 w-5"
+                    />
+                    <span className="text-gold font-semibold">SteadyStream</span>
+                  </div>
                 </div>
               </div>
             </div>
