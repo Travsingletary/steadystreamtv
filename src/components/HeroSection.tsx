@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Tv } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -71,17 +72,26 @@ const HeroSection = () => {
           animationDelay: "0.3s"
         }} className="md:w-1/2 flex justify-center animate-fade-in px-0 py-[20px]">
             <div className="relative">
-              <div className="tv-glow">
-                <div className="bg-dark-300 border-2 border-gold/30 rounded-xl overflow-hidden w-full max-w-md aspect-video">
-                  <div className="relative rounded-3xl bg-black px-[48px] my-[7px] mx-0 py-[14px]">
-                    <img 
-                      alt="Family on couch with remote control" 
-                      src="https://images.unsplash.com/photo-1600210492493-0946911123ea" 
-                      className="w-full h-full object-cover rounded" 
-                    />
+              {/* Modern Flatscreen TV Design */}
+              <div className="tv-flatscreen">
+                {/* TV frame with slim bezels */}
+                <div className="bg-dark-300 border border-gray-700 rounded-md shadow-lg overflow-hidden w-full max-w-md">
+                  {/* TV Stand */}
+                  <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-1/3 h-2 bg-gray-700 rounded-b-lg"></div>
+                  
+                  {/* TV Screen with 16:9 aspect ratio */}
+                  <div className="px-[2px] py-[2px]">
+                    <AspectRatio ratio={16/9} className="overflow-hidden bg-black">
+                      <img 
+                        alt="Family enjoying entertainment" 
+                        src="https://images.unsplash.com/photo-1600210492493-0946911123ea" 
+                        className="w-full h-full object-cover transition-transform hover:scale-[1.02] duration-700"
+                      />
+                    </AspectRatio>
                   </div>
                 </div>
                 
+                {/* TV Brand Logo below */}
                 <div className="relative flex justify-center mt-6">
                   <img 
                     alt="SteadyStream TV" 
