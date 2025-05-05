@@ -1,7 +1,5 @@
-
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Tv } from "lucide-react";
-
 const HeroSection = () => {
   return <section id="home" className="pt-24 pb-16 md:pt-32 md:pb-24 relative">
       {/* Background with gradient overlay */}
@@ -9,14 +7,10 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-black via-black/95 to-black"></div>
       
       <div className="container mx-auto px-4 relative z-10">
-        <div className="flex flex-col md:flex-row gap-8 items-center px-0 py-[66px]">
-          <div className="md:w-1/2 space-y-6 animate-fade-in">
+        <div className="flex flex-col md:flex-row gap-8 items-center px-0 py-[92px] bg-transparent">
+          <div className="md:w-1/2 space-y-6 animate-fade-in rounded-2xl px-[37px] mx-[149px] my-0 py-0">
             <div className="flex items-center gap-4 mb-2">
-              <img 
-                src="/public/lovable-uploads/b114f8e2-8a2c-42ff-a8f1-767f163457ea.png" 
-                alt="STEADYSTREAM" 
-                className="h-16 w-auto"
-              />
+              <img src="/public/lovable-uploads/b114f8e2-8a2c-42ff-a8f1-767f163457ea.png" alt="STEADYSTREAM" className="h-16 w-auto object-none" />
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
               Premium TV <span className="text-gradient-gold">Streaming</span> Service
@@ -54,5 +48,4 @@ const HeroSection = () => {
       </div>
     </section>;
 };
-
 export default HeroSection;
