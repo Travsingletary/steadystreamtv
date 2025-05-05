@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
-import { supabase } from "@/integrations/supabase/client";
 import { ResellerStats } from "@/components/dashboard/ResellerStats";
 import { CustomersList } from "@/components/dashboard/CustomersList";
 import { AddCustomer } from "@/components/dashboard/AddCustomer";
@@ -35,58 +34,44 @@ const Dashboard = () => {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
 
   useEffect(() => {
-    checkAuth();
-    fetchUserData();
+    // Simulate authentication check and data loading
+    setTimeout(() => {
+      const mockUserData = {
+        user: {
+          id: "user-123",
+          email: "demo@example.com"
+        },
+        reseller: {
+          id: "reseller-123",
+          user_id: "user-123",
+          credits: 25,
+          total_customers: 12,
+          active_customers: 8,
+          username: "demoreseller",
+          panel_url: "https://steadystream.tv/panel",
+          api_key: "sk_demo_123456789"
+        }
+      };
+      
+      setUserData(mockUserData);
+      setLoading(false);
+    }, 1000);
   }, []);
-
-  const checkAuth = async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
-      navigate("/onboarding");
-    }
-  };
-
-  const fetchUserData = async () => {
-    setLoading(true);
-    try {
-      // Get authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Get reseller data
-      const { data: resellerData, error } = await supabase
-        .from('resellers')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) throw error;
-
-      setUserData({
-        user,
-        reseller: resellerData
-      });
-
-      setLoading(false);
-    } catch (error: any) {
-      toast({
-        title: "Error loading dashboard",
-        description: error.message,
-      });
-      setLoading(false);
-    }
-  };
 
   const toggleAddCustomer = () => {
     setShowAddCustomer(!showAddCustomer);
   };
 
   const handleRefreshData = () => {
-    fetchUserData();
-    toast({
-      title: "Dashboard refreshed",
-      description: "Your data has been updated",
-    });
+    // Simulate refresh
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      toast({
+        title: "Dashboard refreshed",
+        description: "Your data has been updated",
+      });
+    }, 1000);
   };
 
   if (loading) {
@@ -183,16 +168,29 @@ const Dashboard = () => {
                   userId={userData.user.id} 
                   onSuccess={() => {
                     setShowAddCustomer(false);
-                    fetchUserData();
+                    toast({ 
+                      title: "Customer added", 
+                      description: "New customer has been added successfully" 
+                    });
                   }} 
                 />
               ) : (
-                <CustomersList resellerId={userData.reseller.id} onUpdate={fetchUserData} />
+                <CustomersList resellerId={userData.reseller.id} onUpdate={() => {
+                  toast({ 
+                    title: "Customer list updated", 
+                    description: "Your customer list has been refreshed" 
+                  });
+                }} />
               )}
             </TabsContent>
 
             <TabsContent value="credits">
-              <CreditsManager userData={userData} onUpdate={fetchUserData} />
+              <CreditsManager userData={userData} onUpdate={() => {
+                toast({ 
+                  title: "Credits updated", 
+                  description: "Your credit balance has been updated" 
+                });
+              }} />
             </TabsContent>
 
             <TabsContent value="settings">

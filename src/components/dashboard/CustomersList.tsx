@@ -1,10 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, RotateCw, Eye, Edit, Copy } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface CustomersListProps {
   resellerId: string;
@@ -13,106 +12,7 @@ interface CustomersListProps {
 
 export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpdate }) => {
   const { toast } = useToast();
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchCustomers();
-  }, [resellerId]);
-
-  const fetchCustomers = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('reseller_id', resellerId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setCustomers(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error loading customers",
-        description: error.message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCopyCredentials = (username: string, password: string) => {
-    const text = `Username: ${username}\nPassword: ${password}`;
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Credentials copied",
-      description: "Customer login details copied to clipboard",
-    });
-  };
-
-  const handleRenewSubscription = async (customerId: string) => {
-    try {
-      // Logic for renewing subscription
-      toast({
-        title: "Subscription renewed",
-        description: "Customer subscription has been renewed for 30 days",
-      });
-      onUpdate();
-    } catch (error: any) {
-      toast({
-        title: "Error renewing subscription",
-        description: error.message,
-      });
-    }
-  };
-
-  const handleDeleteCustomer = async (customerId: string) => {
-    if (!confirm("Are you sure you want to delete this customer? This action cannot be undone.")) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', customerId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Customer deleted",
-        description: "Customer has been removed from your account",
-      });
-      
-      fetchCustomers();
-      onUpdate();
-    } catch (error: any) {
-      toast({
-        title: "Error deleting customer",
-        description: error.message,
-      });
-    }
-  };
-
-  if (loading) {
-    return (
-      <Card className="bg-dark-200 border-gray-800 p-6 text-center">
-        <RotateCw className="h-10 w-10 animate-spin mx-auto text-gold" />
-        <p className="mt-4">Loading customers...</p>
-      </Card>
-    );
-  }
-
-  if (customers.length === 0) {
-    return (
-      <Card className="bg-dark-200 border-gray-800 p-6 text-center">
-        <h3 className="text-xl font-semibold mb-2">No Customers Yet</h3>
-        <p className="text-gray-400 mb-4">
-          You haven't added any customers to your reseller account.
-        </p>
-      </Card>
-    );
-  }
+  const [loading, setLoading] = useState(false);
 
   // Demo data until we connect to Supabase
   const demoCustomers = [
@@ -150,6 +50,71 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
       expiry_date: "2025-05-03"
     }
   ];
+
+  const handleCopyCredentials = (username: string, password: string) => {
+    const text = `Username: ${username}\nPassword: ${password}`;
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Credentials copied",
+      description: "Customer login details copied to clipboard",
+    });
+  };
+
+  const handleRenewSubscription = async (customerId: string) => {
+    try {
+      // Logic for renewing subscription
+      toast({
+        title: "Subscription renewed",
+        description: "Customer subscription has been renewed for 30 days",
+      });
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        title: "Error renewing subscription",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleDeleteCustomer = async (customerId: string) => {
+    if (!confirm("Are you sure you want to delete this customer? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      // Demo deletion for now
+      toast({
+        title: "Customer deleted",
+        description: "Customer has been removed from your account",
+      });
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting customer",
+        description: error.message,
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="bg-dark-200 border-gray-800 p-6 text-center">
+        <RotateCw className="h-10 w-10 animate-spin mx-auto text-gold" />
+        <p className="mt-4">Loading customers...</p>
+      </Card>
+    );
+  }
+
+  if (demoCustomers.length === 0) {
+    return (
+      <Card className="bg-dark-200 border-gray-800 p-6 text-center">
+        <h3 className="text-xl font-semibold mb-2">No Customers Yet</h3>
+        <p className="text-gray-400 mb-4">
+          You haven't added any customers to your reseller account.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <div className="overflow-x-auto">
