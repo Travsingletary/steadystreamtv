@@ -24,6 +24,7 @@ import { ResellerStats } from "@/components/dashboard/ResellerStats";
 import { CustomersList } from "@/components/dashboard/CustomersList";
 import { AddCustomer } from "@/components/dashboard/AddCustomer";
 import { CreditsManager } from "@/components/dashboard/CreditsManager";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -34,28 +35,113 @@ const Dashboard = () => {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
 
   useEffect(() => {
-    // Simulate authentication check and data loading
-    setTimeout(() => {
-      const mockUserData = {
-        user: {
-          id: "user-123",
-          email: "demo@example.com"
-        },
-        reseller: {
-          id: "reseller-123",
-          user_id: "user-123",
-          credits: 25,
-          total_customers: 12,
-          active_customers: 8,
-          username: "demoreseller",
-          panel_url: "https://steadystream.tv/panel",
-          api_key: "sk_demo_123456789"
+    const fetchUserData = async () => {
+      setLoading(true);
+      try {
+        // Get the current user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          // Redirect to login page if not authenticated
+          navigate('/');
+          return;
         }
-      };
-      
-      setUserData(mockUserData);
-      setLoading(false);
-    }, 1000);
+        
+        // Check if the user has a reseller profile
+        const { data: reseller, error: resellerError } = await supabase
+          .from('resellers')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (resellerError && resellerError.code !== 'PGRST116') {
+          throw resellerError;
+        }
+        
+        if (!reseller) {
+          // Create a new reseller profile if one doesn't exist
+          const { data: newReseller, error: createError } = await supabase
+            .from('resellers')
+            .insert([
+              { 
+                user_id: user.id,
+                credits: 25, // Starting credits
+                username: user.email,
+                panel_url: "https://steadystream.tv/panel"
+              }
+            ])
+            .select()
+            .single();
+          
+          if (createError) throw createError;
+          
+          // Check active customers for this reseller
+          const { count: activeCustomersCount } = await supabase
+            .from('customers')
+            .select('*', { count: 'exact', head: true })
+            .eq('reseller_id', newReseller.id)
+            .eq('status', 'active');
+          
+          // Get total customers count
+          const { count: totalCustomersCount } = await supabase
+            .from('customers')
+            .select('*', { count: 'exact', head: true })
+            .eq('reseller_id', newReseller.id);
+          
+          setUserData({
+            user,
+            reseller: {
+              ...newReseller,
+              active_customers: activeCustomersCount || 0,
+              total_customers: totalCustomersCount || 0
+            }
+          });
+        } else {
+          // Check active customers for this reseller
+          const { count: activeCustomersCount } = await supabase
+            .from('customers')
+            .select('*', { count: 'exact', head: true })
+            .eq('reseller_id', reseller.id)
+            .eq('status', 'active');
+          
+          // Get total customers count
+          const { count: totalCustomersCount } = await supabase
+            .from('customers')
+            .select('*', { count: 'exact', head: true })
+            .eq('reseller_id', reseller.id);
+          
+          setUserData({
+            user,
+            reseller: {
+              ...reseller,
+              active_customers: activeCustomersCount || 0,
+              total_customers: totalCustomersCount || 0
+            }
+          });
+        }
+      } catch (error: any) {
+        console.error("Error fetching user data:", error);
+        toast({
+          title: "Error loading data",
+          description: error.message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUserData();
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        navigate('/');
+      }
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const toggleAddCustomer = () => {
@@ -63,7 +149,7 @@ const Dashboard = () => {
   };
 
   const handleRefreshData = () => {
-    // Simulate refresh
+    // Reload user data
     setLoading(true);
     setTimeout(() => {
       setLoading(false);

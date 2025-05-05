@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Users, CreditCard, Calendar, MonitorPlay } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ResellerStatsProps {
   userData: {
@@ -17,6 +18,51 @@ interface ResellerStatsProps {
 }
 
 export const ResellerStats: React.FC<ResellerStatsProps> = ({ userData }) => {
+  const [recentCustomers, setRecentCustomers] = useState([]);
+  const [expiringCount, setExpiringCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Get recent customers
+        const { data: customers } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('reseller_id', userData.reseller.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        setRecentCustomers(customers || []);
+        
+        // Get expiring soon count (subscriptions expiring in 7 days)
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+        
+        const now = new Date();
+        
+        const { count } = await supabase
+          .from('customers')
+          .select('*', { count: 'exact', head: true })
+          .eq('reseller_id', userData.reseller.id)
+          .eq('status', 'active')
+          .lt('expiry_date', sevenDaysFromNow.toISOString())
+          .gt('expiry_date', now.toISOString());
+        
+        setExpiringCount(count || 0);
+      } catch (error) {
+        console.error("Error fetching stats data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (userData?.reseller?.id) {
+      fetchData();
+    }
+  }, [userData]);
+
   const stats = [
     {
       title: "Available Credits",
@@ -38,7 +84,7 @@ export const ResellerStats: React.FC<ResellerStatsProps> = ({ userData }) => {
     },
     {
       title: "Expiring Soon",
-      value: 0, // This would be calculated from a query
+      value: expiringCount,
       icon: <Calendar className="h-8 w-8 text-orange-500" />,
       description: "Subscriptions expiring in 7 days"
     }

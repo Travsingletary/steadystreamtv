@@ -1,9 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, RotateCw, Eye, Edit, Copy } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from '@/integrations/supabase/types';
+
+type Customer = Database['public']['Tables']['customers']['Row'];
 
 interface CustomersListProps {
   resellerId: string;
@@ -12,44 +16,34 @@ interface CustomersListProps {
 
 export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpdate }) => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  // Demo data until we connect to Supabase
-  const demoCustomers = [
-    {
-      id: "cust-1",
-      name: "John Smith",
-      email: "john@example.com",
-      plan: "Basic",
-      status: "active",
-      username: "jsmith",
-      password: "pass123",
-      created_at: "2025-05-01",
-      expiry_date: "2025-06-01"
-    },
-    {
-      id: "cust-2",
-      name: "Sarah Johnson",
-      email: "sarah@example.com",
-      plan: "Premium",
-      status: "active",
-      username: "sjohnson",
-      password: "pass456",
-      created_at: "2025-05-02",
-      expiry_date: "2025-06-02"
-    },
-    {
-      id: "cust-3",
-      name: "Michael Brown",
-      email: "michael@example.com",
-      plan: "Ultimate",
-      status: "expired",
-      username: "mbrown",
-      password: "pass789",
-      created_at: "2025-04-03",
-      expiry_date: "2025-05-03"
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('reseller_id', resellerId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error: any) {
+      console.error('Error fetching customers:', error);
+      toast({
+        title: "Error loading customers",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [resellerId]);
 
   const handleCopyCredentials = (username: string, password: string) => {
     const text = `Username: ${username}\nPassword: ${password}`;
@@ -62,17 +56,43 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
 
   const handleRenewSubscription = async (customerId: string) => {
     try {
-      // Logic for renewing subscription
+      setLoading(true);
+      // Add 30 days to expiry_date
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('expiry_date')
+        .eq('id', customerId)
+        .single();
+      
+      if (!customer) throw new Error("Customer not found");
+      
+      const currentExpiry = new Date(customer.expiry_date);
+      const newExpiry = new Date(currentExpiry);
+      newExpiry.setDate(newExpiry.getDate() + 30);
+      
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          expiry_date: newExpiry.toISOString(),
+          status: 'active'
+        })
+        .eq('id', customerId);
+      
+      if (error) throw error;
+      
       toast({
         title: "Subscription renewed",
         description: "Customer subscription has been renewed for 30 days",
       });
+      fetchCustomers();
       onUpdate();
     } catch (error: any) {
       toast({
         title: "Error renewing subscription",
         description: error.message,
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,17 +102,27 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
     }
 
     try {
-      // Demo deletion for now
+      setLoading(true);
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', customerId);
+      
+      if (error) throw error;
+      
       toast({
         title: "Customer deleted",
         description: "Customer has been removed from your account",
       });
+      fetchCustomers();
       onUpdate();
     } catch (error: any) {
       toast({
         title: "Error deleting customer",
         description: error.message,
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -105,7 +135,7 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
     );
   }
 
-  if (demoCustomers.length === 0) {
+  if (customers.length === 0) {
     return (
       <Card className="bg-dark-200 border-gray-800 p-6 text-center">
         <h3 className="text-xl font-semibold mb-2">No Customers Yet</h3>
@@ -130,12 +160,12 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
           </tr>
         </thead>
         <tbody>
-          {demoCustomers.map((customer, index) => (
+          {customers.map((customer, index) => (
             <tr 
               key={customer.id} 
               className={`
                 border-b border-gray-800 hover:bg-dark-300/50
-                ${index === demoCustomers.length - 1 ? 'border-b-0' : ''}
+                ${index === customers.length - 1 ? 'border-b-0' : ''}
               `}
             >
               <td className="py-4 px-4">
@@ -167,7 +197,9 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
                   {customer.status}
                 </span>
               </td>
-              <td className="py-4 px-4 text-gray-400">{customer.expiry_date}</td>
+              <td className="py-4 px-4 text-gray-400">
+                {new Date(customer.expiry_date).toLocaleDateString()}
+              </td>
               <td className="py-4 px-4 text-right">
                 <div className="flex justify-end space-x-1">
                   <Button variant="outline" size="icon" className="w-8 h-8">
