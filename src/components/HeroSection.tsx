@@ -1,13 +1,13 @@
 
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Tv } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+  
   const handleStartStreaming = () => {
-    const pricingSection = document.getElementById('pricing');
-    if (pricingSection) {
-      pricingSection.scrollIntoView({ behavior: 'smooth' });
-    }
+    navigate("/onboarding");
   };
   
   const handleViewPlans = () => {

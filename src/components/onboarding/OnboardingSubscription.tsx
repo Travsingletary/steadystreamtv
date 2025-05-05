@@ -1,0 +1,197 @@
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, Clock } from "lucide-react";
+import { toast } from "sonner";
+
+interface OnboardingSubscriptionProps {
+  userData: {
+    name: string;
+    email: string;
+    preferredDevice: string;
+    genres: string[];
+    subscription: any;
+  };
+  updateUserData: (data: Partial<typeof userData>) => void;
+  onNext: () => void;
+  onBack: () => void;
+}
+
+// Pricing plan data - using the same data as in PricingSection
+const pricingPlans = [
+  {
+    id: "standard",
+    name: "Standard",
+    price: 20,
+    features: [
+      "7,000+ Live TV Channels",
+      "Standard VOD Library",
+      "HD Quality Streaming",
+      "2 Devices Simultaneously",
+      "24/7 Basic Support",
+      "3 Connection Types"
+    ],
+    isPopular: false,
+    trial: "7-day free trial"
+  },
+  {
+    id: "premium",
+    name: "Premium",
+    price: 35,
+    features: [
+      "10,000+ Live TV Channels",
+      "Extended VOD Library",
+      "Full HD Streaming",
+      "4 Devices Simultaneously",
+      "24/7 Premium Support",
+      "All Connection Types",
+      "DVR Functionality"
+    ],
+    isPopular: true,
+    trial: "14-day free trial"
+  },
+  {
+    id: "ultimate",
+    name: "Ultimate",
+    price: 45,
+    features: [
+      "10,000+ Live TV Channels",
+      "Complete VOD Library",
+      "4K Ultra HD Streaming",
+      "6 Devices Simultaneously",
+      "24/7 Priority Support",
+      "All Connection Types",
+      "Advanced DVR Functionality",
+      "Premium Sports Packages"
+    ],
+    isPopular: false,
+    trial: "30-day free trial"
+  }
+];
+
+export const OnboardingSubscription = ({ 
+  userData, 
+  updateUserData, 
+  onNext, 
+  onBack 
+}: OnboardingSubscriptionProps) => {
+  const [selectedPlan, setSelectedPlan] = useState<string>(
+    userData.subscription?.id || ""
+  );
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSelectPlan = (planId: string) => {
+    setSelectedPlan(planId);
+  };
+
+  const handleSubscribe = () => {
+    if (!selectedPlan) {
+      toast.error("Please select a subscription plan");
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    // Get the selected plan details
+    const plan = pricingPlans.find(p => p.id === selectedPlan);
+    
+    // Simulate subscription API call
+    setTimeout(() => {
+      updateUserData({ 
+        subscription: {
+          id: selectedPlan,
+          name: plan?.name,
+          price: plan?.price,
+          trialEndDate: new Date(Date.now() + (plan?.id === "ultimate" ? 30 : plan?.id === "premium" ? 14 : 7) * 24 * 60 * 60 * 1000)
+        }
+      });
+      
+      setIsProcessing(false);
+      toast.success(`You've started your ${plan?.trial || "free trial"} with the ${plan?.name} plan!`);
+      onNext();
+    }, 1500);
+  };
+
+  return (
+    <div className="bg-dark-200 rounded-xl border border-gray-800 p-8 animate-fade-in">
+      <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
+      <p className="text-gray-400 mb-2">
+        Select a subscription plan that fits your streaming needs.
+      </p>
+      <p className="text-gold flex items-center gap-2 mb-8">
+        <Clock className="h-4 w-4" /> All plans include a free trial period - no payment required today
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {pricingPlans.map((plan) => (
+          <div
+            key={plan.id}
+            className={`rounded-lg p-6 border transition-all duration-300 cursor-pointer relative ${
+              selectedPlan === plan.id
+                ? "border-gold shadow-gold/30 shadow-lg"
+                : "border-gray-700 hover:border-gray-500"
+            } ${plan.isPopular ? "bg-dark-100" : "bg-dark-300"}`}
+            onClick={() => handleSelectPlan(plan.id)}
+          >
+            {plan.isPopular && (
+              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <div className="bg-gold text-black text-xs font-bold uppercase px-3 py-1 rounded-full">
+                  Most Popular
+                </div>
+              </div>
+            )}
+            
+            <h3 className="text-xl font-bold mb-2 mt-2">{plan.name}</h3>
+            <div className="mb-4">
+              <span className="text-3xl font-bold">${plan.price}</span>
+              <span className="text-gray-400">/month</span>
+            </div>
+            <div className="text-gold text-sm mb-4">
+              {plan.trial}
+            </div>
+            <ul className="space-y-3 mb-4">
+              {plan.features.slice(0, 4).map((feature, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <CheckCircle className="text-gold h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-300 text-sm">{feature}</span>
+                </li>
+              ))}
+              {plan.features.length > 4 && (
+                <li className="text-sm text-gray-400">
+                  +{plan.features.length - 4} more features
+                </li>
+              )}
+            </ul>
+            
+            <div className={`h-4 w-4 absolute top-4 right-4 rounded-full border-2 ${
+              selectedPlan === plan.id 
+                ? "border-gold bg-gold" 
+                : "border-gray-500"
+            }`}>
+              {selectedPlan === plan.id && (
+                <div className="h-2 w-2 rounded-full bg-black absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button 
+          variant="outline"
+          className="border-gray-700 text-gray-300"
+          onClick={onBack}
+        >
+          Back
+        </Button>
+        <Button 
+          className="bg-gold hover:bg-gold-dark text-black font-semibold flex-1"
+          onClick={handleSubscribe}
+          disabled={isProcessing || !selectedPlan}
+        >
+          {isProcessing ? "Processing..." : "Start Your Free Trial"}
+        </Button>
+      </div>
+    </div>
+  );
+};
