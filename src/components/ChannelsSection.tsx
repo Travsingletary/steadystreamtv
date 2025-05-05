@@ -1,31 +1,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import TvLogoGrid from "@/components/TvLogoGrid";
 
-// Channel categories and sample logos
+// Channel categories
 const categories = ["Entertainment", "Sports", "Movies", "News", "Kids", "International"];
-
-// Sample channel data (in real implementation, this would be more comprehensive)
-const channelsByCategory = {
-  Entertainment: [
-    "HBO", "AMC", "FX", "TNT", "USA", "Paramount", "Showtime", "ABC", "NBC", "CBS",
-  ],
-  Sports: [
-    "ESPN", "Fox Sports", "NBC Sports", "MLB Network", "NFL Network", "NBA TV", "CBS Sports", "Golf Channel", "Tennis Channel", "UFC",
-  ],
-  Movies: [
-    "HBO", "Showtime", "Starz", "Cinemax", "The Movie Channel", "Sony Movies", "Action Max", "IFC", "Sundance", "TCM",
-  ],
-  News: [
-    "CNN", "Fox News", "MSNBC", "BBC World", "Al Jazeera", "Bloomberg", "CNBC", "Sky News", "Euronews", "RT",
-  ],
-  Kids: [
-    "Disney Channel", "Nickelodeon", "Cartoon Network", "PBS Kids", "Boomerang", "Discovery Kids", "Baby TV", "Nick Jr.", "Disney Junior", "Universal Kids",
-  ],
-  International: [
-    "Star Plus", "Zee TV", "Univision", "Telemundo", "TV5 Monde", "RAI", "Deutsche Welle", "Globo", "TVE", "NHK World",
-  ]
-};
 
 const ChannelsSection = () => {
   const [activeCategory, setActiveCategory] = useState("Entertainment");
@@ -60,11 +39,9 @@ const ChannelsSection = () => {
           ))}
         </div>
 
-        {/* Channel grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 opacity-0 animate-fade-in">
-          {channelsByCategory[activeCategory as keyof typeof channelsByCategory].map((channel, index) => (
-            <ChannelLogo key={index} name={channel} />
-          ))}
+        {/* TV Logo Grid */}
+        <div className="opacity-0 animate-fade-in">
+          <TvLogoGrid category={activeCategory} />
         </div>
 
         <div className="text-center mt-10">
@@ -79,11 +56,5 @@ const ChannelsSection = () => {
     </section>
   );
 };
-
-const ChannelLogo = ({ name }: { name: string }) => (
-  <div className="bg-dark-300 rounded-lg flex items-center justify-center h-20 border border-gray-800 hover:border-gold/30 transition-all duration-300">
-    <span className="text-lg font-bold text-gradient-gold">{name}</span>
-  </div>
-);
 
 export default ChannelsSection;
