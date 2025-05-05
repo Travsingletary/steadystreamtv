@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Minimize, Maximize } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
-import { useToast } from "@/components/ui/toast";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 
 const Player = () => {
