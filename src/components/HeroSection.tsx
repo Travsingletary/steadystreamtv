@@ -69,16 +69,26 @@ const HeroSection = () => {
           
           <div style={{
           animationDelay: "0.3s"
-        }} className="md:w-1/2 flex justify-center animate-fade-in px-0 py-[220px]">
+        }} className="md:w-1/2 flex justify-center animate-fade-in px-0 py-[20px]">
             <div className="relative">
               <div className="tv-glow">
                 <div className="bg-dark-300 border-2 border-gold/30 rounded-xl overflow-hidden w-full max-w-md aspect-video">
                   <div className="relative rounded-3xl bg-black px-[48px] my-[7px] mx-0 py-[14px]">
-                    <img alt="SteadyStream TV" src="/lovable-uploads/f52a5114-91be-4cee-8320-5125cabacc9f.png" className="w-full h-full object-contain" />
-                    
+                    <img 
+                      alt="Family enjoying TV" 
+                      src="https://images.unsplash.com/photo-1721322800607-8c38375eef04" 
+                      className="w-full h-full object-cover rounded" 
+                    />
                   </div>
                 </div>
                 
+                <div className="relative flex justify-center mt-6">
+                  <img 
+                    alt="SteadyStream TV" 
+                    src="/lovable-uploads/f52a5114-91be-4cee-8320-5125cabacc9f.png" 
+                    className="w-1/2 h-auto object-contain" 
+                  />
+                </div>
               </div>
             </div>
           </div>
