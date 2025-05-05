@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { tv, Home, List, Monitor, Play } from "lucide-react";
+import { Tv, Home, List, Monitor, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Navbar = () => {
@@ -51,11 +51,14 @@ const Navbar = () => {
           <NavLink href="#devices" icon={<Monitor size={16} />}>
             Devices
           </NavLink>
-          <NavLink href="#channels" icon={<tv size={16} />}>
+          <NavLink href="#channels" icon={<Tv size={16} />}>
             Channels
           </NavLink>
           <NavLink href="#pricing" icon={<Play size={16} />}>
             Plans
+          </NavLink>
+          <NavLink href="/player" icon={<Play size={16} />}>
+            Web Player
           </NavLink>
         </nav>
 
@@ -92,6 +95,9 @@ const Navbar = () => {
             </MobileNavLink>
             <MobileNavLink href="#pricing" onClick={() => setMobileMenuOpen(false)}>
               Plans
+            </MobileNavLink>
+            <MobileNavLink href="/player" onClick={() => setMobileMenuOpen(false)}>
+              Web Player
             </MobileNavLink>
             <Button className="bg-gold hover:bg-gold-dark text-black font-medium w-full">
               Get Started
