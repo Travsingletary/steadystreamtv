@@ -1,12 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Tv, Home, List, Monitor, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -15,29 +12,14 @@ const Navbar = () => {
         setIsScrolled(false);
       }
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  return (
-    <header
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-dark-100/95 backdrop-blur-md py-3 shadow-lg"
-          : "bg-transparent py-5"
-      }`}
-    >
-      <div className="container mx-auto px-4 flex items-center justify-between">
+  return <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? "bg-dark-100/95 backdrop-blur-md py-3 shadow-lg" : "bg-transparent py-5"}`}>
+      <div className="container mx-auto px-4 flex items-center justify-between py-[65px]">
         <a href="#home" className="flex items-center gap-2">
-          <img
-            src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
-            alt="SteadyStream Logo"
-            className="h-10"
-          />
-          <span className="font-bold text-gold text-xl hidden sm:block">
-            SteadyStream TV
-          </span>
+          <img src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png" alt="SteadyStream Logo" className="h-10 object-none" />
+          
         </a>
 
         {/* Desktop Navigation */}
@@ -69,17 +51,13 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Menu Button */}
-        <button
-          className="md:hidden text-white p-2 focus:outline-none"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
+        <button className="md:hidden text-white p-2 focus:outline-none" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           <List className="h-6 w-6" />
         </button>
       </div>
 
       {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-dark-200 border-t border-gray-800">
+      {mobileMenuOpen && <div className="md:hidden bg-dark-200 border-t border-gray-800">
           <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
             <MobileNavLink href="#home" onClick={() => setMobileMenuOpen(false)}>
               Home
@@ -103,46 +81,30 @@ const Navbar = () => {
               Get Started
             </Button>
           </div>
-        </div>
-      )}
-    </header>
-  );
+        </div>}
+    </header>;
 };
-
 const NavLink = ({
   href,
   children,
-  icon,
+  icon
 }: {
   href: string;
   children: React.ReactNode;
   icon: React.ReactNode;
-}) => (
-  <a
-    href={href}
-    className="text-gray-300 hover:text-gold transition-colors flex items-center gap-1.5 text-sm font-medium"
-  >
+}) => <a href={href} className="text-gray-300 hover:text-gold transition-colors flex items-center gap-1.5 text-sm font-medium">
     {icon}
     {children}
-  </a>
-);
-
+  </a>;
 const MobileNavLink = ({
   href,
   children,
-  onClick,
+  onClick
 }: {
   href: string;
   children: React.ReactNode;
   onClick: () => void;
-}) => (
-  <a
-    href={href}
-    className="text-gray-300 hover:text-gold py-2 transition-colors block text-center font-medium"
-    onClick={onClick}
-  >
+}) => <a href={href} className="text-gray-300 hover:text-gold py-2 transition-colors block text-center font-medium" onClick={onClick}>
     {children}
-  </a>
-);
-
+  </a>;
 export default Navbar;
