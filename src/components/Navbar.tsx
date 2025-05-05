@@ -1,9 +1,12 @@
+
 import { useState, useEffect } from "react";
 import { Tv, Home, List, Monitor, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -15,10 +18,15 @@ const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+  
   return <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? "bg-dark-100/95 backdrop-blur-md py-3 shadow-lg" : "bg-transparent py-5"}`}>
       <div className="container mx-auto px-4 flex items-center justify-between">
         <a href="#home" className="flex items-center gap-2">
-          
+          <img 
+            src="/public/lovable-uploads/b114f8e2-8a2c-42ff-a8f1-767f163457ea.png"
+            alt="STEADYSTREAM" 
+            className="h-12 w-auto object-contain"
+          />
         </a>
 
         {/* Desktop Navigation */}
@@ -83,6 +91,7 @@ const Navbar = () => {
         </div>}
     </header>;
 };
+
 const NavLink = ({
   href,
   children,
@@ -95,6 +104,7 @@ const NavLink = ({
     {icon}
     {children}
   </a>;
+
 const MobileNavLink = ({
   href,
   children,
@@ -106,4 +116,5 @@ const MobileNavLink = ({
 }) => <a href={href} className="text-gray-300 hover:text-gold py-2 transition-colors block text-center font-medium" onClick={onClick}>
     {children}
   </a>;
+
 export default Navbar;
