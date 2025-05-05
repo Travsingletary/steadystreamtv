@@ -1,6 +1,22 @@
+
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Tv } from "lucide-react";
+
 const HeroSection = () => {
+  const handleStartStreaming = () => {
+    const pricingSection = document.getElementById('pricing');
+    if (pricingSection) {
+      pricingSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+  
+  const handleViewPlans = () => {
+    const pricingSection = document.getElementById('pricing');
+    if (pricingSection) {
+      pricingSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+  
   return <section id="home" className="pt-24 pb-16 md:pt-32 md:pb-24 relative">
       {/* Background with gradient overlay */}
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1605810230434-7631ac76ec81')] bg-cover bg-center opacity-20"></div>
@@ -18,10 +34,19 @@ const HeroSection = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
-              <Button size="lg" className="bg-gold hover:bg-gold-dark text-black font-semibold">
+              <Button 
+                size="lg" 
+                className="bg-gold hover:bg-gold-dark text-black font-semibold"
+                onClick={handleStartStreaming}
+              >
                 Start Streaming Now
               </Button>
-              <Button size="lg" variant="outline" className="border-gold text-gold hover:bg-gold/10">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="border-gold text-gold hover:bg-gold/10"
+                onClick={handleViewPlans}
+              >
                 View Plans
               </Button>
             </div>
@@ -61,4 +86,5 @@ const HeroSection = () => {
       </div>
     </section>;
 };
+
 export default HeroSection;

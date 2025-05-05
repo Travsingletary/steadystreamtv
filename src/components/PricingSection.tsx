@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
+import { toast } from "sonner";
 
 // Pricing plan data
 const pricingPlans = [
@@ -50,6 +51,12 @@ const pricingPlans = [
 ];
 
 const PricingSection = () => {
+  const handleSubscribe = (planName: string, price: number) => {
+    toast.success(`You've selected the ${planName} plan at $${price}/month. Thank you for subscribing!`);
+    // Here you would typically redirect to a checkout page or open a subscription form
+    console.log(`Subscribing to ${planName} plan at $${price}/month`);
+  };
+
   return (
     <section id="pricing" className="py-16 bg-black">
       <div className="container mx-auto px-4">
@@ -67,7 +74,8 @@ const PricingSection = () => {
             <PricingCard 
               key={index} 
               plan={plan}
-              delay={0.1 * (index + 1)} 
+              delay={0.1 * (index + 1)}
+              onSubscribe={handleSubscribe}
             />
           ))}
         </div>
@@ -102,7 +110,8 @@ const PricingSection = () => {
 
 const PricingCard = ({ 
   plan,
-  delay
+  delay,
+  onSubscribe
 }: { 
   plan: {
     name: string;
@@ -111,6 +120,7 @@ const PricingCard = ({
     isPopular: boolean;
   };
   delay: number;
+  onSubscribe: (name: string, price: number) => void;
 }) => (
   <div 
     className={`rounded-xl p-6 border transition-all duration-300 relative flex flex-col opacity-0 animate-fade-in ${
@@ -143,6 +153,7 @@ const PricingCard = ({
     <Button 
       className={plan.isPopular ? "bg-gold hover:bg-gold-dark text-black" : "bg-gray-800 hover:bg-gray-700"}
       size="lg"
+      onClick={() => onSubscribe(plan.name, plan.price)}
     >
       Subscribe Now
     </Button>
