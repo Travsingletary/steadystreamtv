@@ -6,9 +6,18 @@ import { OnboardingPreferences } from "@/components/onboarding/OnboardingPrefere
 import { OnboardingSubscription } from "@/components/onboarding/OnboardingSubscription";
 import { OnboardingComplete } from "@/components/onboarding/OnboardingComplete";
 
+// Define a common UserData interface to be used across all components
+export interface UserData {
+  name: string;
+  email: string;
+  preferredDevice: string;
+  genres: string[];
+  subscription: any;
+}
+
 const Onboarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [userData, setUserData] = useState({
+  const [userData, setUserData] = useState<UserData>({
     name: "",
     email: "",
     preferredDevice: "",
@@ -16,7 +25,7 @@ const Onboarding = () => {
     subscription: null,
   });
 
-  const updateUserData = (data: Partial<typeof userData>) => {
+  const updateUserData = (data: Partial<UserData>) => {
     setUserData((prev) => ({ ...prev, ...data }));
   };
 

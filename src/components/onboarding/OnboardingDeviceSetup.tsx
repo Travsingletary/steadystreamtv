@@ -3,15 +3,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Smartphone, Monitor, Tv, Tablet, Play, ArrowRight } from "lucide-react";
 
+interface UserData {
+  name: string;
+  email: string;
+  preferredDevice: string;
+  genres: string[];
+  subscription: any;
+}
+
 interface OnboardingDeviceSetupProps {
-  userData: {
-    name: string;
-    email: string;
-    preferredDevice: string;
-    genres: string[];
-    subscription: any;
-  };
-  updateUserData: (data: Partial<typeof userData>) => void;
+  userData: UserData;
+  updateUserData: (data: Partial<UserData>) => void;
   onNext: () => void;
   onBack: () => void;
 }

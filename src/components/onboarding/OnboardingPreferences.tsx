@@ -4,15 +4,17 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CheckCircle } from "lucide-react";
 
+interface UserData {
+  name: string;
+  email: string;
+  preferredDevice: string;
+  genres: string[];
+  subscription: any;
+}
+
 interface OnboardingPreferencesProps {
-  userData: {
-    name: string;
-    email: string;
-    preferredDevice: string;
-    genres: string[];
-    subscription: any;
-  };
-  updateUserData: (data: Partial<typeof userData>) => void;
+  userData: UserData;
+  updateUserData: (data: Partial<UserData>) => void;
   onNext: () => void;
   onBack: () => void;
 }
