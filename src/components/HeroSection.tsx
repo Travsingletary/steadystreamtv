@@ -57,7 +57,11 @@ const HeroSection = () => {
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="bg-black/40 rounded-full p-4">
-                        <Tv size={48} className="text-gold" />
+                        <img
+                          src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
+                          alt="SteadyStream Logo"
+                          className="h-12 w-12"
+                        />
                       </div>
                     </div>
                   </div>

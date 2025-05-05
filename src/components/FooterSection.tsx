@@ -9,7 +9,7 @@ const FooterSection = () => {
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <img
-                src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
                 alt="SteadyStream Logo"
                 className="h-10"
               />

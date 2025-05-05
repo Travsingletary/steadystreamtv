@@ -63,7 +63,7 @@ const Player = () => {
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-4xl font-bold text-gradient-gold">Web Player</h1>
             <img
-              src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+              src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
               alt="SteadyStream Logo"
               className="h-12 md:h-16"
             />
@@ -75,7 +75,7 @@ const Player = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gold">Channels</h2>
                 <img
-                  src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                  src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
                   alt="SteadyStream Logo"
                   className="h-8"
                 />
@@ -113,7 +113,7 @@ const Player = () => {
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center flex-col p-6 text-center">
                       <img
-                        src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                        src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
                         alt="SteadyStream Logo"
                         className="w-32 h-32 mb-4"
                       />
@@ -128,7 +128,7 @@ const Player = () => {
                   {currentChannel && (
                     <div className="absolute top-4 right-4 opacity-50">
                       <img
-                        src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                        src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
                         alt="SteadyStream Logo"
                         className="h-8"
                       />
@@ -166,7 +166,7 @@ const Player = () => {
                     
                     <div className="text-center text-sm flex items-center gap-2">
                       <img
-                        src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                        src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
                         alt="SteadyStream Logo"
                         className="h-5 hidden xs:block"
                       />
@@ -205,7 +205,7 @@ const Player = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold text-gold">Access on Any Device</h2>
               <img
-                src="/public/lovable-uploads/1ef1cff2-803f-48c1-8c26-54512fd8f1b6.png"
+                src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
                 alt="SteadyStream Logo"
                 className="h-10"
               />
