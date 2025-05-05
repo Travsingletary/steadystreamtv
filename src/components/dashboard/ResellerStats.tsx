@@ -18,7 +18,7 @@ interface ResellerStatsProps {
 }
 
 export const ResellerStats: React.FC<ResellerStatsProps> = ({ userData }) => {
-  const [recentCustomers, setRecentCustomers] = useState([]);
+  const [recentCustomers, setRecentCustomers] = useState<any[]>([]);
   const [expiringCount, setExpiringCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -90,12 +90,23 @@ export const ResellerStats: React.FC<ResellerStatsProps> = ({ userData }) => {
     }
   ];
 
-  // Get recent customers
-  const recentCustomers = [
+  // Sample data for when no customers exist yet
+  const fallbackCustomers = [
     { name: "John Smith", email: "john@example.com", plan: "Basic", status: "active", date: "2025-05-01" },
     { name: "Sarah Johnson", email: "sarah@example.com", plan: "Premium", status: "active", date: "2025-05-02" },
     { name: "Michael Brown", email: "michael@example.com", plan: "Ultimate", status: "pending", date: "2025-05-03" }
   ];
+
+  // Use fetched data or fallback data if empty
+  const displayCustomers = recentCustomers.length > 0 
+    ? recentCustomers.map(customer => ({
+        name: customer.name,
+        email: customer.email,
+        plan: customer.plan,
+        status: customer.status,
+        date: new Date(customer.created_at).toISOString().split('T')[0]
+      }))
+    : fallbackCustomers;
 
   return (
     <div className="space-y-8">
@@ -131,7 +142,7 @@ export const ResellerStats: React.FC<ResellerStatsProps> = ({ userData }) => {
                 </tr>
               </thead>
               <tbody>
-                {recentCustomers.map((customer, index) => (
+                {displayCustomers.map((customer, index) => (
                   <tr key={index} className="border-b border-gray-800 text-sm">
                     <td className="py-3 px-2">
                       <div>
