@@ -75,8 +75,8 @@ const HeroSection = () => {
                 <div className="bg-dark-300 border-2 border-gold/30 rounded-xl overflow-hidden w-full max-w-md aspect-video">
                   <div className="relative rounded-3xl bg-black px-[48px] my-[7px] mx-0 py-[14px]">
                     <img 
-                      alt="Family laughing with remote control" 
-                      src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81" 
+                      alt="Family on couch with remote control" 
+                      src="https://images.unsplash.com/photo-1600210492493-0946911123ea" 
                       className="w-full h-full object-cover rounded" 
                     />
                   </div>
