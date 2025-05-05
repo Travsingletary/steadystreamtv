@@ -7,7 +7,7 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-black via-black/95 to-black"></div>
       
       <div className="container mx-auto px-4 relative z-10">
-        <div className="flex flex-col md:flex-row gap-8 items-center">
+        <div className="flex flex-col md:flex-row gap-8 items-center px-0 py-[66px]">
           <div className="md:w-1/2 space-y-6 animate-fade-in">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
               Premium TV <span className="text-gradient-gold">Streaming</span> Service
@@ -42,21 +42,7 @@ const HeroSection = () => {
             </div>
           </div>
           
-          <div style={{
-          animationDelay: "0.3s"
-        }} className="md:w-1/2 flex justify-center animate-fade-in px-0 py-[220px]">
-            <div className="relative">
-              <div className="tv-glow">
-                <div className="bg-dark-300 border-2 border-gold/30 rounded-xl overflow-hidden w-full max-w-md aspect-video">
-                  <div className="relative rounded-3xl bg-black px-[48px] my-[7px] mx-0 py-[14px]">
-                    <img alt="SteadyStream TV" src="/lovable-uploads/f52a5114-91be-4cee-8320-5125cabacc9f.png" className="w-full h-full object-contain" />
-                    
-                  </div>
-                </div>
-                
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
     </section>;

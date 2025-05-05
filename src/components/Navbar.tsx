@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tv, Home, List, Monitor, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,8 +17,8 @@ const Navbar = () => {
   }, []);
   return <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? "bg-dark-100/95 backdrop-blur-md py-3 shadow-lg" : "bg-transparent py-5"}`}>
       <div className="container mx-auto px-4 flex items-center justify-between py-[65px]">
-        <a href="#home" className="flex items-center gap-2">
-          <img src="/public/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png" alt="SteadyStream Logo" className="h-16 object-contain" />
+        <a href="#home" className="flex items-center gap-2 py-[34px]">
+          
           
         </a>
 
