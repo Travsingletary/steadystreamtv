@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface TvLogoProps {
   category: string;
@@ -12,6 +13,8 @@ const TvLogoGrid = ({ category }: TvLogoProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [logoStatus, setLogoStatus] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [logosChecked, setLogosChecked] = useState(false);
+  const { toast } = useToast();
 
   // Map category names to folder names in the GitHub repository
   const categoryToFolder: Record<string, string> = {
@@ -72,10 +75,27 @@ const TvLogoGrid = ({ category }: TvLogoProps) => {
       
       setLogoStatus(newLogoStatus);
       setIsLoading(false);
+      setLogosChecked(true);
+      
+      // Check if any logos were found
+      const foundLogosCount = Object.values(newLogoStatus).filter(Boolean).length;
+      if (foundLogosCount === 0) {
+        toast({
+          title: "No logos found",
+          description: "Run 'node scripts/download-logos.js' to download channel logos",
+          variant: "destructive"
+        });
+      } else if (foundLogosCount < logos.length / 2) {
+        toast({
+          title: "Some logos are missing",
+          description: "Run 'node scripts/download-logos.js' to download all logos",
+          variant: "default"
+        });
+      }
     };
     
     checkLogos();
-  }, [category]);
+  }, [category, toast]);
 
   // Get logos for the current category
   const logos = logosMap[category] || [];
@@ -140,11 +160,29 @@ const TvLogoGrid = ({ category }: TvLogoProps) => {
         </div>
       )}
       
-      <div className="mt-6 text-center">
-        <div className="inline-flex items-center gap-2 bg-dark-300 px-3 py-2 rounded-lg text-sm text-gray-400">
-          <AlertCircle className="h-4 w-4 text-gold" />
-          <span>Tip: Run the download-logos.js script to get actual channel logos</span>
-        </div>
+      <div className="mt-6">
+        {logosChecked && Object.values(logoStatus).some(status => !status) ? (
+          <div className="flex flex-col gap-3">
+            <div className="inline-flex items-center gap-2 bg-dark-300 px-3 py-2 rounded-lg text-sm text-gray-400">
+              <AlertCircle className="h-4 w-4 text-gold" />
+              <span>Run the download script to get actual channel logos:</span>
+            </div>
+            <div className="bg-dark-400 p-3 rounded-lg text-sm font-mono overflow-x-auto">
+              <code>node scripts/download-logos.js</code>
+            </div>
+            <div className="inline-flex items-center gap-2 bg-dark-300 px-3 py-2 rounded-lg text-sm text-gray-400">
+              <Info className="h-4 w-4 text-blue-400" />
+              <span>Logos will be saved to: <code className="bg-dark-500 px-1 py-0.5 rounded">/public/logos/{categoryToFolder[category]}/</code></span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center text-gray-400 text-sm">
+            {Object.values(logoStatus).every(status => status) && logosChecked ? 
+              "All channel logos loaded successfully" : 
+              "Run the download-logos.js script to get actual channel logos"
+            }
+          </div>
+        )}
       </div>
     </div>
   );
