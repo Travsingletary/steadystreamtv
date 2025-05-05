@@ -10,7 +10,7 @@ const HeroSection = () => {
         <div className="flex flex-col md:flex-row gap-8 items-center px-0 py-[92px] bg-transparent">
           <div className="md:w-1/2 space-y-6 animate-fade-in rounded-2xl px-[37px] mx-[149px] my-0 py-0">
             <div className="flex items-center gap-4 mb-2">
-              <img src="/public/lovable-uploads/b114f8e2-8a2c-42ff-a8f1-767f163457ea.png" alt="STEADYSTREAM" className="h-16 w-auto object-none" />
+              <img src="/public/lovable-uploads/b114f8e2-8a2c-42ff-a8f1-767f163457ea.png" alt="STEADYSTREAM" className="h-16 w-auto object-scale-down" />
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
               Premium TV <span className="text-gradient-gold">Streaming</span> Service
