@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Search, PlayCircle } from "lucide-react";
+import { Search, PlayCircle, Tv } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Channel } from "@/services/channelService";
