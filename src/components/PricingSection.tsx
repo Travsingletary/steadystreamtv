@@ -3,10 +3,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 // Pricing plan data
 const pricingPlans = [
   {
+    id: "standard",
     name: "Standard",
     price: 20,
     features: [
@@ -20,6 +23,7 @@ const pricingPlans = [
     isPopular: false
   },
   {
+    id: "premium",
     name: "Premium",
     price: 35,
     features: [
@@ -34,6 +38,7 @@ const pricingPlans = [
     isPopular: true
   },
   {
+    id: "ultimate",
     name: "Ultimate",
     price: 45,
     features: [
@@ -51,10 +56,20 @@ const pricingPlans = [
 ];
 
 const PricingSection = () => {
-  const handleSubscribe = (planName: string, price: number) => {
-    toast.success(`You've selected the ${planName} plan at $${price}/month. Thank you for subscribing!`);
-    // Here you would typically redirect to a checkout page or open a subscription form
-    console.log(`Subscribing to ${planName} plan at $${price}/month`);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubscribe = async (planId: string, price: number) => {
+    // Check if user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // User is logged in, process subscription through dashboard
+      navigate("/dashboard");
+    } else {
+      // User is not logged in, redirect to onboarding
+      navigate("/onboarding");
+    }
   };
 
   return (
@@ -76,6 +91,7 @@ const PricingSection = () => {
               plan={plan}
               delay={0.1 * (index + 1)}
               onSubscribe={handleSubscribe}
+              processingPayment={processingPayment}
             />
           ))}
         </div>
@@ -111,16 +127,19 @@ const PricingSection = () => {
 const PricingCard = ({ 
   plan,
   delay,
-  onSubscribe
+  onSubscribe,
+  processingPayment
 }: { 
   plan: {
+    id: string;
     name: string;
     price: number;
     features: string[];
     isPopular: boolean;
   };
   delay: number;
-  onSubscribe: (name: string, price: number) => void;
+  onSubscribe: (planId: string, price: number) => void;
+  processingPayment: boolean;
 }) => (
   <div 
     className={`rounded-xl p-6 border transition-all duration-300 relative flex flex-col opacity-0 animate-fade-in ${
@@ -153,9 +172,10 @@ const PricingCard = ({
     <Button 
       className={plan.isPopular ? "bg-gold hover:bg-gold-dark text-black" : "bg-gray-800 hover:bg-gray-700"}
       size="lg"
-      onClick={() => onSubscribe(plan.name, plan.price)}
+      onClick={() => onSubscribe(plan.id, plan.price)}
+      disabled={processingPayment}
     >
-      Subscribe Now
+      {processingPayment ? "Processing..." : "Subscribe Now"}
     </Button>
   </div>
 );

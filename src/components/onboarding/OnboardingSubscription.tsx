@@ -1,7 +1,9 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Clock, CreditCard } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserData {
   name: string;
@@ -84,48 +86,69 @@ export const OnboardingSubscription = ({
     setSelectedPlan(planId);
   };
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (!selectedPlan) {
       toast.error("Please select a subscription plan");
       return;
     }
 
-    if (isProcessing) return;
+    if (isProcessing || isLocalProcessing) return;
     
     setIsLocalProcessing(true);
     
-    // Get the selected plan details
-    const plan = pricingPlans.find(p => p.id === selectedPlan);
-    
-    // Simulate subscription API call
-    setTimeout(() => {
-      updateUserData({ 
-        subscription: {
-          id: selectedPlan,
-          name: plan?.name,
-          price: plan?.price,
-          trialEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hour trial
+    try {
+      // Get the selected plan details
+      const plan = pricingPlans.find(p => p.id === selectedPlan);
+      
+      // Call the create-payment function to create a Stripe checkout session
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          userId: 'onboarding', // We'll use a temporary ID until user is created
+          planId: selectedPlan,
+          customerEmail: userData.email,
+          customerName: userData.name,
+          isRecurring: true
         }
       });
       
+      if (error) throw error;
+      
+      if (data?.url) {
+        // Store plan details in user data before redirecting
+        updateUserData({ 
+          subscription: {
+            id: selectedPlan,
+            name: plan?.name,
+            price: plan?.price,
+            trialDays: 1 // 24 hour trial
+          }
+        });
+        
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      toast.error("Could not process your payment. Please try again.");
       setIsLocalProcessing(false);
-      toast.success(`You've subscribed to the ${plan?.name} plan!`);
-      onNext();
-    }, 1500);
+    }
   };
 
   const handleFreeTrial = () => {
-    if (isProcessing) return;
+    if (isProcessing || isLocalProcessing) return;
     
     setIsLocalProcessing(true);
     
-    // Simulate free trial API call
+    // Set up free trial subscription data
     setTimeout(() => {
       updateUserData({ 
         subscription: {
           id: "free-trial",
           name: "Free Trial",
           price: 0,
+          trialDays: 1,
           trialEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hour trial
         }
       });
@@ -133,7 +156,7 @@ export const OnboardingSubscription = ({
       setIsLocalProcessing(false);
       toast.success("Your 24-hour free trial has started!");
       onNext();
-    }, 1500);
+    }, 1000);
   };
 
   const isButtonDisabled = isProcessing || isLocalProcessing;

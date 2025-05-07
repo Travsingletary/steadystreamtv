@@ -144,6 +144,27 @@ export type Database = {
         }
         Relationships: []
       }
+      users_log: {
+        Row: {
+          action: string
+          changed_at: string
+          id: number
+          user_id: number
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          id?: number
+          user_id: number
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          id?: number
+          user_id?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
