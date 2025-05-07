@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Tv } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -64,7 +63,7 @@ const HeroSection = () => {
               {/* Modern Flatscreen TV Design */}
               <div className="tv-flatscreen">
                 {/* TV frame with slim bezels */}
-                <div className="bg-dark-300 border border-gray-700 shadow-lg overflow-hidden w-full max-w-md rounded">
+                <div className="border border-gray-700 shadow-lg overflow-hidden w-full max-w-md rounded bg-black">
                   {/* TV Stand */}
                   <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-1/3 h-2 bg-gray-700 rounded-b-lg"></div>
                   
