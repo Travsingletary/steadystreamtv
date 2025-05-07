@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import Index from './pages/Index';
@@ -10,6 +11,7 @@ import NotFound from './pages/NotFound';
 import Onboarding from './pages/Onboarding';
 import { Toaster } from './components/ui/toaster';
 import TestXtreamAccount from './pages/TestXtreamAccount';
+import ConnectApps from './pages/ConnectApps';
 
 function App() {
   return (
@@ -23,6 +25,7 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/player" element={<Player />} />
         <Route path="/test-xtream" element={<TestXtreamAccount />} />
+        <Route path="/connect-apps" element={<ConnectApps />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster />

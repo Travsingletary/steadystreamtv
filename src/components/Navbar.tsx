@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, X, User, Heart, Layout, LogOut } from "lucide-react";
+import { Menu, X, User, Heart, Layout, LogOut, Link as LinkIcon } from "lucide-react";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -78,6 +78,9 @@ const Navbar = () => {
                 <NavLink to="/dashboard" onClick={closeMenu}>
                   Dashboard
                 </NavLink>
+                <NavLink to="/connect-apps" onClick={closeMenu}>
+                  Connect Apps
+                </NavLink>
                 <div className="relative group ml-2">
                   <Button
                     variant="ghost"
@@ -108,6 +111,13 @@ const Navbar = () => {
                         onClick={closeMenu}
                       >
                         <Layout className="h-4 w-4" /> Dashboard
+                      </Link>
+                      <Link
+                        to="/connect-apps"
+                        className="block px-4 py-2 text-sm text-gray-200 hover:bg-dark-300 flex items-center gap-2"
+                        onClick={closeMenu}
+                      >
+                        <LinkIcon className="h-4 w-4" /> Connect Apps
                       </Link>
                       <button
                         onClick={handleSignOut}
@@ -174,6 +184,9 @@ const Navbar = () => {
               </MobileNavLink>
               <MobileNavLink to="/dashboard" onClick={closeMenu}>
                 Dashboard
+              </MobileNavLink>
+              <MobileNavLink to="/connect-apps" onClick={closeMenu}>
+                Connect Apps
               </MobileNavLink>
               <MobileNavLink to="/account" onClick={closeMenu}>
                 My Account
