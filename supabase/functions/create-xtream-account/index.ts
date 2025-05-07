@@ -1,167 +1,154 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Constants
-const SUPABASE_URL = "https://ojueihcytxwcioqtvwez.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const XTREAM_API_URL = Deno.env.get("XTREAM_API_URL") || "";
-const XTREAM_ADMIN_USERNAME = Deno.env.get("XTREAM_ADMIN_USERNAME") || "";
-const XTREAM_ADMIN_PASSWORD = Deno.env.get("XTREAM_ADMIN_PASSWORD") || "";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 
-// CORS headers
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-interface CreateXtreamAccountRequest {
-  userId: string;
-  plan: string;
+// Define request payload type
+type RequestPayload = {
+  userId: string
+  planType: string
+  email: string
+  name: string
 }
 
-// Map subscription tiers to Xtream connection limits
-const planToConnections = {
-  "standard": 2,
-  "premium": 4,
-  "ultimate": 6,
-  "free-trial": 2 // Free trial gets standard connections
-};
+// Plan mapping for MegaOTT packages
+const PLAN_MAPPING = {
+  'solo': { packageId: 1, duration: 30, maxConnections: 1 },
+  'duo': { packageId: 2, duration: 30, maxConnections: 2 },
+  'family': { packageId: 3, duration: 30, maxConnections: 3 }
+}
 
 serve(async (req) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Content-Type': 'application/json'
+  }
+
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers, status: 204 })
   }
 
   try {
-    const { userId, plan }: CreateXtreamAccountRequest = await req.json();
+    const payload = await req.json() as RequestPayload
+
+    // Create Supabase admin client with service role key
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
     // Validate request
-    if (!userId) {
+    if (!payload.userId || !payload.planType || !payload.email) {
       return new Response(
-        JSON.stringify({ error: "Missing userId parameter" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+        JSON.stringify({ error: 'Missing required fields' }),
+        { status: 400, headers }
+      )
     }
 
-    // Create Supabase client with service role key for admin access
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    
-    if (profileError) {
-      console.error("Error fetching user profile:", profileError);
+    // Get MegaOTT credentials from environment variables
+    const megaottApiUrl = 'https://megaott.net/api/v1/user'
+    const megaottUsername = Deno.env.get('MEGAOTT_USERNAME') || 'JX5E3YZZ'
+    const megaottPassword = Deno.env.get('MEGAOTT_PASSWORD') || '2N1xXXid'
+    const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY') || '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
+
+    // Get plan details
+    const planDetails = PLAN_MAPPING[payload.planType as keyof typeof PLAN_MAPPING]
+    if (!planDetails) {
       return new Response(
-        JSON.stringify({ error: "User profile not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+        JSON.stringify({ error: 'Invalid plan type' }),
+        { status: 400, headers }
+      )
     }
 
-    // Check if user already has Xtream credentials
-    if (profile.xtream_username && profile.xtream_password) {
-      console.log("User already has Xtream credentials");
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "User already has Xtream account", 
-          username: profile.xtream_username,
-          password: profile.xtream_password
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Generate credentials
-    const xtreamUsername = `steadystream_${userId.substring(0, 8)}`;
-    const xtreamPassword = generateRandomPassword(12);
-    const maxConnections = planToConnections[plan as keyof typeof planToConnections] || 2;
+    // Generate username and password
+    // Format: steady_[first letter of name][random string]
+    const nameLetter = payload.name.charAt(0).toLowerCase()
+    const randomString = Math.random().toString(36).substring(2, 8)
+    const username = `steady_${nameLetter}${randomString}`
     
-    // For demonstration purposes - in production, you would call your Xtream API
-    // to create the actual account using XTREAM_API_URL, XTREAM_ADMIN_USERNAME, XTREAM_ADMIN_PASSWORD
-    console.log(`Creating Xtream account for user ${userId} with plan ${plan}`);
-    console.log(`Would call ${XTREAM_API_URL} with admin credentials to create account`);
-    
-    // Simulate API call success
-    const xtreamResponse = {
-      success: true,
-      username: xtreamUsername,
-      password: xtreamPassword,
-      message: "Account created successfully",
-      max_connections: maxConnections
-    };
+    // Generate secure password
+    const password = Math.random().toString(36).substring(2, 10) + 
+                    Math.random().toString(36).substring(2, 10)
 
-    // If we had a real API, we would do something like this:
-    /*
-    const xtreamResponse = await fetch(`${XTREAM_API_URL}/create_user`, {
-      method: "POST",
+    // Calculate dates
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + planDetails.duration)
+
+    // Make request to MegaOTT API to create user
+    const response = await fetch(megaottApiUrl, {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${megaottApiKey}`
       },
       body: JSON.stringify({
-        username: XTREAM_ADMIN_USERNAME,
-        password: XTREAM_ADMIN_PASSWORD,
-        new_username: xtreamUsername,
-        new_password: xtreamPassword,
-        max_connections: maxConnections,
-        // other required parameters for your specific Xtream API
-      }),
-    }).then(res => res.json());
-    */
-    
-    // Store credentials in user profile
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({
-        xtream_username: xtreamUsername,
-        xtream_password: xtreamPassword
+        username: username,
+        password: password,
+        package_id: planDetails.packageId,
+        max_connections: planDetails.maxConnections,
+        exp_date: endDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        admin_notes: `SteadyStream customer: ${payload.name} (${payload.email})`
       })
-      .eq("id", userId);
-    
-    if (updateError) {
-      console.error("Error updating user profile with Xtream credentials:", updateError);
-      return new Response(
-        JSON.stringify({ error: "Failed to store credentials" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    })
+
+    const megaottResponse = await response.json()
+
+    if (!response.ok) {
+      console.error('MegaOTT API Error:', megaottResponse)
+      throw new Error(megaottResponse.message || 'Failed to create IPTV account')
     }
 
-    // Return success response
+    // Update the user profile with IPTV credentials
+    const { error: updateError } = await supabaseAdmin
+      .from('user_profiles')
+      .update({
+        iptv_username: username,
+        iptv_password: password,
+        subscription_status: 'active',
+        subscription_start_date: startDate.toISOString(),
+        subscription_end_date: endDate.toISOString()
+      })
+      .eq('user_id', payload.userId)
+
+    if (updateError) {
+      console.error('Supabase update error:', updateError)
+      throw updateError
+    }
+
+    // Generate playlist URLs
+    const baseUrl = `http://megaott.net/get.php?username=${username}&password=${password}`
+    const m3uUrl = `${baseUrl}&type=m3u_plus&output=ts`
+    const m3uPlusUrl = `${baseUrl}&type=m3u_plus&output=ts`
+    const xspfUrl = `${baseUrl}&type=xspf&output=ts`
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Xtream account created successfully",
-        username: xtreamUsername,
-        password: xtreamPassword
+        message: 'IPTV account created successfully',
+        data: {
+          username,
+          password,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          playlistUrls: {
+            m3u: m3uUrl,
+            m3u_plus: m3uPlusUrl,
+            xspf: xspfUrl
+          }
+        }
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      }
-    );
-    
+      { status: 200, headers }
+    )
   } catch (error) {
-    console.error("Error in create-xtream-account function:", error);
+    console.error('Error creating IPTV account:', error)
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      }
-    );
+      JSON.stringify({ 
+        error: error.message || 'Failed to create IPTV account',
+        detail: error.toString()
+      }),
+      { status: 500, headers }
+    )
   }
-});
-
-// Helper function to generate random password
-function generateRandomPassword(length: number): string {
-  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-  return password;
-}
+})
