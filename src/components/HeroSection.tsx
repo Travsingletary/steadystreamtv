@@ -69,10 +69,14 @@ const HeroSection = () => {
                   {/* TV Stand */}
                   <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-1/3 h-2 bg-gray-700 rounded-b-lg"></div>
                   
-                  {/* TV Screen with 16:9 aspect ratio */}
+                  {/* TV Screen with 16:9 aspect ratio and family image */}
                   <div className="px-[2px] py-[2px]">
                     <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-none bg-slate-950">
-                      
+                      <img 
+                        src="/lovable-uploads/60de453f-8cb1-417a-ad2f-209df6c72378.png" 
+                        alt="Family watching TV"
+                        className="w-full h-full object-cover"
+                      />
                     </AspectRatio>
                   </div>
                 </div>
