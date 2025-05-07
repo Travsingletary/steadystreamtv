@@ -8,6 +8,7 @@ import { OnboardingSubscription } from "@/components/onboarding/OnboardingSubscr
 import { OnboardingComplete } from "@/components/onboarding/OnboardingComplete";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Onboarding = () => {
   const [step, setStep] = useState(1);
@@ -15,11 +16,12 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [userData, setUserData] = useState({
     name: "",
     email: "",
     password: "",
-    preferredDevice: "web",
+    preferredDevice: isMobile ? "smartphone" : "web",
     genres: [],
     subscription: null,
     xtreamCredentials: null
@@ -39,6 +41,16 @@ const Onboarding = () => {
       });
     }
   }, [location, toast]);
+
+  // Set default device based on device detection
+  useEffect(() => {
+    if (isMobile !== undefined) {
+      setUserData(prev => ({
+        ...prev,
+        preferredDevice: isMobile ? "smartphone" : "web"
+      }));
+    }
+  }, [isMobile]);
 
   const updateUserData = (data) => {
     setUserData(prevData => ({
@@ -84,7 +96,17 @@ const Onboarding = () => {
         throw new Error("Failed to create user account");
       }
       
-      // Create user profile with preferences
+      // Map subscription plan to MegaOTT plan type
+      const planMapping = {
+        'free-trial': 'solo',
+        'standard': 'solo',
+        'premium': 'duo',
+        'ultimate': 'family'
+      };
+      
+      const planType = planMapping[userData.subscription.id] || 'solo';
+      
+      // Create profile with preferences
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: authData.user.id,
         name: userData.name,
@@ -103,7 +125,9 @@ const Onboarding = () => {
       const { data: xtreamData, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
         body: {
           userId: authData.user.id,
-          plan: userData.subscription.id
+          planType: planType,
+          name: userData.name,
+          email: userData.email
         }
       });
       
@@ -114,13 +138,26 @@ const Onboarding = () => {
       // Update user data with Xtream credentials
       updateUserData({
         xtreamCredentials: {
-          username: xtreamData.username,
-          password: xtreamData.password
+          username: xtreamData.data.username,
+          password: xtreamData.data.password,
+          playlistUrls: xtreamData.data.playlistUrls
         }
       });
       
       // Proceed to completion page
       handleNext();
+      
+      // Sign in user after successful onboarding
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: userData.email,
+        password: userData.password
+      });
+      
+      if (signInError) {
+        console.error("Error signing in:", signInError);
+        // Continue anyway as the account is created
+      }
+      
     } catch (error) {
       console.error("Onboarding error:", error);
       toast({

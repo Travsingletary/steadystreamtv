@@ -9,6 +9,8 @@ import NotFound from '@/pages/NotFound';
 import Onboarding from '@/pages/Onboarding';
 import Dashboard from '@/pages/Dashboard';
 import Favorites from '@/pages/Favorites';
+import Account from '@/pages/Account';
+import AdminDashboard from '@/pages/AdminDashboard';
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -50,6 +52,52 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Admin route component
+const AdminRoute = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+      
+      // In a real app, you would check if the user has admin role
+      // For now, we'll just allow any authenticated user to access admin routes
+      setIsAdmin(!!data.user);
+      setLoading(false);
+    };
+    
+    checkAdmin();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        setIsAdmin(!!session?.user);
+      }
+    );
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-gold border-r-transparent border-b-transparent border-l-transparent"></div>
+      </div>
+    );
+  }
+  
+  if (!user || !isAdmin) {
+    return <Navigate to="/onboarding" />;
+  }
+  
+  return children;
+};
+
 function App() {
   return (
     <Router>
@@ -70,6 +118,16 @@ function App() {
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
+        } />
+        <Route path="/account" element={
+          <ProtectedRoute>
+            <Account />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
         } />
         <Route path="*" element={<NotFound />} />
       </Routes>

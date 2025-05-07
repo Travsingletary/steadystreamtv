@@ -1,129 +1,118 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Users, 
-  CreditCard, 
-  BarChart, 
-  Settings, 
-  PlusCircle, 
-  RefreshCw, 
-  Zap, 
-  Search,
-  ChevronRight,
-  Link
-} from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
-import { ResellerStats } from "@/components/dashboard/ResellerStats";
-import { CustomersList } from "@/components/dashboard/CustomersList";
-import { AddCustomer } from "@/components/dashboard/AddCustomer";
-import { CreditsManager } from "@/components/dashboard/CreditsManager";
-import { supabase } from "@/integrations/supabase/client";
+import { CreditCard, Calendar, CheckCircle, Clock, Lock, User, Key } from "lucide-react";
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+
+  const searchParams = new URLSearchParams(location.search);
+  const paymentSuccess = searchParams.get("success") === "true";
+  const paymentCanceled = searchParams.get("canceled") === "true";
+  const sessionId = searchParams.get("session_id");
+
+  // Plans data
+  const plans = [
+    {
+      id: "standard",
+      name: "Standard",
+      price: 20,
+      description: "Our basic streaming package with all essential channels.",
+      features: [
+        "7,000+ Live TV Channels",
+        "Standard VOD Library",
+        "HD Quality Streaming",
+        "2 Devices Simultaneously",
+        "24/7 Basic Support",
+        "3 Connection Types"
+      ],
+      isPopular: false
+    },
+    {
+      id: "premium",
+      name: "Premium",
+      price: 35,
+      description: "Enhanced streaming with more channels and better quality.",
+      features: [
+        "10,000+ Live TV Channels",
+        "Extended VOD Library",
+        "Full HD Streaming",
+        "4 Devices Simultaneously",
+        "24/7 Premium Support",
+        "All Connection Types",
+        "DVR Functionality"
+      ],
+      isPopular: true
+    },
+    {
+      id: "ultimate",
+      name: "Ultimate",
+      price: 45,
+      description: "The ultimate streaming experience with all premium features.",
+      features: [
+        "10,000+ Live TV Channels",
+        "Complete VOD Library",
+        "4K Ultra HD Streaming",
+        "6 Devices Simultaneously",
+        "24/7 Priority Support",
+        "All Connection Types",
+        "Advanced DVR Functionality",
+        "Premium Sports Packages"
+      ],
+      isPopular: false
+    }
+  ];
 
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
+      
       try {
-        // Get the current user
+        // Get authenticated user
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
-          // Redirect to login page if not authenticated
-          navigate('/');
+          navigate("/onboarding");
           return;
         }
         
-        // Check if the user has a reseller profile
-        const { data: reseller, error: resellerError } = await supabase
-          .from('resellers')
+        setUser(user);
+        
+        // Get user profile
+        const { data: profile, error } = await supabase
+          .from('profiles')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .single();
-        
-        if (resellerError && resellerError.code !== 'PGRST116') {
-          throw resellerError;
+          
+        if (error) {
+          throw error;
         }
         
-        if (!reseller) {
-          // Create a new reseller profile if one doesn't exist
-          const { data: newReseller, error: createError } = await supabase
-            .from('resellers')
-            .insert([
-              { 
-                user_id: user.id,
-                credits: 25, // Starting credits
-                username: user.email,
-                panel_url: "https://steadystream.tv/panel"
-              }
-            ])
-            .select()
-            .single();
-          
-          if (createError) throw createError;
-          
-          // Check active customers for this reseller
-          const { count: activeCustomersCount } = await supabase
-            .from('customers')
-            .select('*', { count: 'exact', head: true })
-            .eq('reseller_id', newReseller.id)
-            .eq('status', 'active');
-          
-          // Get total customers count
-          const { count: totalCustomersCount } = await supabase
-            .from('customers')
-            .select('*', { count: 'exact', head: true })
-            .eq('reseller_id', newReseller.id);
-          
-          setUserData({
-            user,
-            reseller: {
-              ...newReseller,
-              active_customers: activeCustomersCount || 0,
-              total_customers: totalCustomersCount || 0
-            }
-          });
-        } else {
-          // Check active customers for this reseller
-          const { count: activeCustomersCount } = await supabase
-            .from('customers')
-            .select('*', { count: 'exact', head: true })
-            .eq('reseller_id', reseller.id)
-            .eq('status', 'active');
-          
-          // Get total customers count
-          const { count: totalCustomersCount } = await supabase
-            .from('customers')
-            .select('*', { count: 'exact', head: true })
-            .eq('reseller_id', reseller.id);
-          
-          setUserData({
-            user,
-            reseller: {
-              ...reseller,
-              active_customers: activeCustomersCount || 0,
-              total_customers: totalCustomersCount || 0
-            }
-          });
-        }
-      } catch (error: any) {
+        setProfile(profile);
+      } catch (error) {
         console.error("Error fetching user data:", error);
         toast({
-          title: "Error loading data",
-          description: error.message,
+          title: "Error",
+          description: "Failed to load your subscription information",
+          variant: "destructive"
         });
       } finally {
         setLoading(false);
@@ -132,39 +121,101 @@ const Dashboard = () => {
     
     fetchUserData();
     
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        navigate('/');
-      }
-    });
-    
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const toggleAddCustomer = () => {
-    setShowAddCustomer(!showAddCustomer);
-  };
-
-  const handleRefreshData = () => {
-    // Reload user data
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    // Show toast for payment status
+    if (paymentSuccess && sessionId) {
       toast({
-        title: "Dashboard refreshed",
-        description: "Your data has been updated",
+        title: "Payment Successful",
+        description: "Thank you for subscribing to SteadyStream TV!",
+        variant: "default",
       });
-    }, 1000);
+      // Clear URL params after showing toast
+      navigate('/dashboard', { replace: true });
+    } else if (paymentCanceled) {
+      toast({
+        title: "Payment Canceled",
+        description: "Your payment was canceled. You can try again anytime.",
+        variant: "default",
+      });
+      // Clear URL params after showing toast
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate, toast, paymentSuccess, paymentCanceled, sessionId]);
+
+  const handleSubscribe = async (planId: string, isRecurring: boolean = true) => {
+    if (processingPayment || !user) return;
+    
+    setProcessingPayment(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          userId: user.id,
+          planId: planId,
+          customerEmail: user.email,
+          customerName: profile?.name || user.email,
+          isRecurring: isRecurring
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+      
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast({
+        title: "Payment Error",
+        description: "Could not process your payment. Please try again.",
+        variant: "destructive"
+      });
+      setProcessingPayment(false);
+    }
   };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const isTrialActive = () => {
+    if (!profile?.trial_end_date) return false;
+    const trialEnd = new Date(profile.trial_end_date);
+    return trialEnd > new Date();
+  };
+
+  const getTrialTimeRemaining = () => {
+    if (!profile?.trial_end_date) return null;
+    
+    const now = new Date();
+    const trialEnd = new Date(profile.trial_end_date);
+    
+    if (trialEnd <= now) return null;
+    
+    const diffMs = trialEnd.getTime() - now.getTime();
+    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return {
+      hours: diffHrs,
+      minutes: diffMins
+    };
+  };
+
+  const trialRemaining = getTrialTimeRemaining();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin" />
-        <p className="ml-2">Loading your dashboard...</p>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-gold border-r-transparent border-b-transparent border-l-transparent"></div>
       </div>
     );
   }
@@ -173,227 +224,264 @@ const Dashboard = () => {
     <div className="min-h-screen bg-black text-white">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-24">
-        <div className="flex flex-col md:flex-row items-start justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2 text-gradient-gold">Reseller Dashboard</h1>
-            <p className="text-gray-400">
-              Manage your IPTV reseller business from one place
-            </p>
+      <div className="pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-start justify-between mb-8">
+            <div>
+              <h1 className="text-4xl font-bold text-gold mb-2">My Dashboard</h1>
+              <p className="text-gray-400">
+                Manage your subscription and streaming account
+              </p>
+            </div>
+            <div className="mt-4 md:mt-0">
+              <Button
+                variant="outline"
+                className="border-gray-700 text-white"
+                onClick={() => navigate('/account')}
+              >
+                <User className="mr-2 h-4 w-4" /> Account Settings
+              </Button>
+            </div>
           </div>
           
-          <div className="flex space-x-2 mt-4 md:mt-0">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleRefreshData}
-            >
-              <RefreshCw size={16} className="mr-2" />
-              Refresh
-            </Button>
+          {isTrialActive() && (
+            <Alert className="mb-8 bg-gold/20 border-gold text-gold">
+              <Clock className="h-4 w-4" />
+              <AlertTitle>Free Trial Active</AlertTitle>
+              <AlertDescription>
+                Your free trial ends in {trialRemaining?.hours} hours and {trialRemaining?.minutes} minutes. 
+                Subscribe to a plan to continue streaming.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="md:col-span-1">
+              <Card className="bg-dark-200 border-gray-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="text-gold" />
+                    Current Plan
+                  </CardTitle>
+                  <CardDescription>Your subscription details</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-400">Plan</p>
+                    <p className="font-medium">
+                      {profile?.subscription_tier === "standard" && "Standard Plan"}
+                      {profile?.subscription_tier === "premium" && "Premium Plan"}
+                      {profile?.subscription_tier === "ultimate" && "Ultimate Plan"}
+                      {profile?.subscription_tier === "free-trial" && "Free Trial"}
+                      {!profile?.subscription_tier && "No active subscription"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Status</p>
+                    <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                      profile?.subscription_status === 'active' 
+                        ? 'bg-green-900/30 text-green-500' 
+                        : 'bg-red-900/30 text-red-500'
+                    }`}>
+                      {profile?.subscription_status === 'active' ? 'Active' : 'Inactive'}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">{profile?.subscription_tier === "free-trial" ? "Trial Ends" : "Next Billing Date"}</p>
+                    <p className="font-medium">{formatDate(profile?.trial_end_date)}</p>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    className="w-full bg-gold hover:bg-gold-dark text-black font-semibold"
+                    onClick={() => navigate('/player')}
+                  >
+                    Start Streaming
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              <Card className="bg-dark-200 border-gray-800 mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="text-gold" />
+                    Streaming Access
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-400">IPTV Username</p>
+                    <p className="font-medium">{profile?.xtream_username || "Not available"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">IPTV Password</p>
+                    <p className="font-medium">{profile?.xtream_password || "Not available"}</p>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    className="w-full bg-dark-400 hover:bg-dark-500 text-white"
+                    onClick={() => navigate('/account')}
+                  >
+                    View Full Details
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
             
-            <Button 
-              variant="default" 
-              size="sm"
-              onClick={() => navigate("/player")}
-              className="bg-gold hover:bg-gold-dark text-black"
-            >
-              <Zap size={16} className="mr-2" />
-              Go to Player
-            </Button>
+            <div className="md:col-span-2">
+              <Tabs defaultValue="subscription">
+                <TabsList className="bg-dark-300 border-b border-gray-800 w-full rounded-t-lg">
+                  <TabsTrigger value="subscription" className="data-[state=active]:bg-dark-200">Subscription Plans</TabsTrigger>
+                  <TabsTrigger value="billing" className="data-[state=active]:bg-dark-200">Billing History</TabsTrigger>
+                </TabsList>
+                
+                <div className="bg-dark-200 border border-gray-800 border-t-0 rounded-b-lg p-6">
+                  <TabsContent value="subscription" className="mt-0">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium">Choose a Plan</h3>
+                        <div className="flex items-center gap-2">
+                          <Lock className="h-4 w-4 text-gold" />
+                          <span className="text-sm text-gold">Secure Payment</span>
+                        </div>
+                      </div>
+                      
+                      <Separator className="border-gray-700" />
+                      
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {plans.map((plan) => (
+                          <Card 
+                            key={plan.id} 
+                            className={`${
+                              profile?.subscription_tier === plan.id 
+                                ? 'bg-dark-100 border-gold' 
+                                : 'bg-dark-300 border-gray-700 hover:border-gray-500'
+                            } relative transition-all duration-300`}
+                          >
+                            {plan.isPopular && (
+                              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                <div className="bg-gold text-black text-xs font-bold uppercase px-3 py-1 rounded-full">
+                                  Most Popular
+                                </div>
+                              </div>
+                            )}
+                            
+                            {profile?.subscription_tier === plan.id && (
+                              <div className="absolute top-3 right-3">
+                                <div className="bg-gold text-black text-xs font-bold uppercase px-2 py-0.5 rounded">
+                                  Current Plan
+                                </div>
+                              </div>
+                            )}
+                            
+                            <CardHeader>
+                              <CardTitle className="text-xl">{plan.name}</CardTitle>
+                              <div className="text-3xl font-bold mt-2">
+                                ${plan.price}
+                                <span className="text-sm text-gray-400 font-normal">/month</span>
+                              </div>
+                              <CardDescription className="mt-2">
+                                {plan.description}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="space-y-2">
+                                {plan.features.map((feature, i) => (
+                                  <li key={i} className="flex items-start gap-2 text-sm">
+                                    <CheckCircle className="text-gold h-4 w-4 mt-0.5 flex-shrink-0" />
+                                    <span>{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </CardContent>
+                            <CardFooter>
+                              <Button 
+                                className={`w-full ${
+                                  profile?.subscription_tier === plan.id 
+                                    ? 'bg-dark-400 hover:bg-dark-300 text-white' 
+                                    : 'bg-gold hover:bg-gold-dark text-black'
+                                }`}
+                                onClick={() => handleSubscribe(plan.id)}
+                                disabled={processingPayment || profile?.subscription_tier === plan.id}
+                              >
+                                {processingPayment 
+                                  ? "Processing..." 
+                                  : profile?.subscription_tier === plan.id 
+                                    ? "Current Plan" 
+                                    : "Subscribe"}
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      <div className="bg-dark-300 rounded-lg p-4 border border-gray-700 mt-4">
+                        <div className="text-sm text-gray-300">
+                          <p className="mb-2 flex items-center gap-2">
+                            <Lock className="h-4 w-4 text-gold" />
+                            <span className="font-medium">Secure Payments</span>
+                          </p>
+                          <p>All payments are processed securely through Stripe. Your payment information is never stored on our servers.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="billing" className="mt-0">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium">Payment History</h3>
+                        <Button variant="outline" className="border-gray-700 text-white">
+                          Download Receipts
+                        </Button>
+                      </div>
+                      
+                      <Separator className="border-gray-700" />
+                      
+                      {profile?.subscription_tier === "free-trial" || !profile?.subscription_tier ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <div className="mb-4">
+                            <Calendar className="h-12 w-12 mx-auto text-gray-500" />
+                          </div>
+                          <h4 className="text-lg font-medium mb-2">No billing history yet</h4>
+                          <p>
+                            You're currently on the free trial. Subscribe to a plan to continue streaming after your trial ends.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="border border-gray-700 rounded-lg overflow-hidden">
+                          <div className="grid grid-cols-4 bg-dark-300 px-4 py-2 text-sm font-medium text-gray-300">
+                            <div>Date</div>
+                            <div>Description</div>
+                            <div>Amount</div>
+                            <div>Status</div>
+                          </div>
+                          <div className="divide-y divide-gray-700">
+                            <div className="grid grid-cols-4 px-4 py-3 text-sm">
+                              <div>{formatDate(profile?.updated_at || new Date().toISOString())}</div>
+                              <div>Monthly subscription - {profile?.subscription_tier}</div>
+                              <div>
+                                ${profile?.subscription_tier === "standard" ? "20.00" : 
+                                   profile?.subscription_tier === "premium" ? "35.00" : 
+                                   profile?.subscription_tier === "ultimate" ? "45.00" : "0.00"}
+                              </div>
+                              <div>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-900/30 text-green-500">
+                                  Paid
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                </div>
+              </Tabs>
+            </div>
           </div>
         </div>
-        
-        {userData?.reseller ? (
-          <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="mb-8 bg-dark-200 p-1 border border-gray-800">
-              <TabsTrigger value="overview" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-                <BarChart size={16} className="mr-2" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="customers" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-                <Users size={16} className="mr-2" />
-                Customers
-              </TabsTrigger>
-              <TabsTrigger value="credits" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-                <CreditCard size={16} className="mr-2" />
-                Credits
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-                <Settings size={16} className="mr-2" />
-                Settings
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview">
-              <ResellerStats userData={userData} />
-            </TabsContent>
-
-            <TabsContent value="customers">
-              <Card className="bg-dark-200 border-gray-800 p-4 mb-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                    <Input 
-                      placeholder="Search customers by name or email..." 
-                      className="pl-10 bg-dark-300 border-gray-700"
-                    />
-                  </div>
-                  <Button 
-                    onClick={toggleAddCustomer}
-                    className="bg-gold hover:bg-gold-dark text-black"
-                  >
-                    <PlusCircle size={16} className="mr-2" />
-                    {showAddCustomer ? "Cancel" : "Add Customer"}
-                  </Button>
-                </div>
-              </Card>
-
-              {showAddCustomer ? (
-                <AddCustomer 
-                  userId={userData.user.id} 
-                  onSuccess={() => {
-                    setShowAddCustomer(false);
-                    toast({ 
-                      title: "Customer added", 
-                      description: "New customer has been added successfully" 
-                    });
-                  }} 
-                />
-              ) : (
-                <CustomersList resellerId={userData.reseller.id} onUpdate={() => {
-                  toast({ 
-                    title: "Customer list updated", 
-                    description: "Your customer list has been refreshed" 
-                  });
-                }} />
-              )}
-            </TabsContent>
-
-            <TabsContent value="credits">
-              <CreditsManager userData={userData} onUpdate={() => {
-                toast({ 
-                  title: "Credits updated", 
-                  description: "Your credit balance has been updated" 
-                });
-              }} />
-            </TabsContent>
-
-            <TabsContent value="settings">
-              <Card className="bg-dark-200 border-gray-800 p-6">
-                <h2 className="text-xl font-bold mb-4">Panel Credentials</h2>
-                
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-gray-400 mb-1">Panel URL</p>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={userData.reseller.panel_url || "https://steadystream.tv/panel"} 
-                          readOnly
-                          className="bg-dark-300 border-gray-700"
-                        />
-                        <Button 
-                          size="icon" 
-                          variant="outline"
-                          onClick={() => {
-                            navigator.clipboard.writeText(userData.reseller.panel_url || "https://steadystream.tv/panel");
-                            toast({ title: "Copied to clipboard" });
-                          }}
-                        >
-                          <Link size={16} />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm text-gray-400 mb-1">Username</p>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={userData.reseller.username || userData.user.email} 
-                          readOnly
-                          className="bg-dark-300 border-gray-700"
-                        />
-                        <Button 
-                          size="icon" 
-                          variant="outline"
-                          onClick={() => {
-                            navigator.clipboard.writeText(userData.reseller.username || userData.user.email);
-                            toast({ title: "Copied to clipboard" });
-                          }}
-                        >
-                          <Link size={16} />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm text-gray-400 mb-1">API Key</p>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={userData.reseller.api_key || "••••••••••••••••••••"} 
-                          readOnly
-                          className="bg-dark-300 border-gray-700"
-                        />
-                        <Button 
-                          size="icon" 
-                          variant="outline"
-                          onClick={() => {
-                            navigator.clipboard.writeText(userData.reseller.api_key || "");
-                            toast({ title: "Copied to clipboard" });
-                          }}
-                        >
-                          <Link size={16} />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-dark-300 rounded-lg p-4 border border-gray-700">
-                    <h3 className="font-semibold mb-2">Quick Guide</h3>
-                    <ul className="space-y-2 text-sm text-gray-300">
-                      <li className="flex items-start gap-2">
-                        <ChevronRight size={16} className="text-gold mt-1 flex-shrink-0" />
-                        Use these credentials to access your reseller panel
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <ChevronRight size={16} className="text-gold mt-1 flex-shrink-0" />
-                        The panel allows you to create and manage customer subscriptions
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <ChevronRight size={16} className="text-gold mt-1 flex-shrink-0" />
-                        Each new subscription costs 1 credit
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <ChevronRight size={16} className="text-gold mt-1 flex-shrink-0" />
-                        Contact support if you need to regenerate your API key
-                      </li>
-                    </ul>
-                    
-                    <div className="mt-4">
-                      <Button 
-                        className="bg-gold hover:bg-gold-dark text-black w-full"
-                        onClick={() => window.open(userData.reseller.panel_url || "https://steadystream.tv/panel", "_blank")}
-                      >
-                        Open Reseller Panel
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <Card className="bg-dark-200 border-gray-800 p-6 text-center">
-            <h2 className="text-xl font-bold mb-2">Reseller Account Not Setup</h2>
-            <p className="text-gray-400 mb-4">
-              You haven't set up your reseller account yet. Contact support to get started.
-            </p>
-            <Button className="bg-gold hover:bg-gold-dark text-black">
-              Contact Support
-            </Button>
-          </Card>
-        )}
       </div>
       
       <FooterSection />
