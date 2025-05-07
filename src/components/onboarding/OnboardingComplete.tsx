@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Calendar, Mail, User, Smartphone, Key, QrCode } from "lucide-react";
+import { CheckCircle, Calendar, Mail, User, Smartphone, Key, QrCode, Download, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface OnboardingCompleteProps {
@@ -15,6 +15,7 @@ interface OnboardingCompleteProps {
     xtreamCredentials?: {
       username: string;
       password: string;
+      playlistUrl?: string;
     };
   };
 }
@@ -22,6 +23,7 @@ interface OnboardingCompleteProps {
 export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -33,6 +35,14 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
       navigate("/player");
     }
   }, [countdown, navigate]);
+
+  // Generate QR code for playlist URL
+  useEffect(() => {
+    if (userData.xtreamCredentials?.playlistUrl) {
+      const playlistUrl = encodeURIComponent(userData.xtreamCredentials.playlistUrl);
+      setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${playlistUrl}`);
+    }
+  }, [userData.xtreamCredentials]);
 
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return "N/A";
@@ -65,6 +75,23 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
         description: `${label} has been copied to your clipboard.`
       });
     });
+  };
+
+  const downloadPlaylist = () => {
+    if (userData.xtreamCredentials?.playlistUrl) {
+      const element = document.createElement("a");
+      element.setAttribute("href", userData.xtreamCredentials.playlistUrl);
+      element.setAttribute("download", `steadystream-${userData.name.toLowerCase()}.m3u`);
+      element.style.display = "none";
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      
+      toast({
+        title: "Download Started",
+        description: "Your playlist file is being downloaded."
+      });
+    }
   };
 
   const getDeviceInstructions = () => {
@@ -195,7 +222,7 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
                     className="text-xs border-gray-700"
                     onClick={() => copyToClipboard(userData.xtreamCredentials!.username, "Username")}
                   >
-                    Copy Username
+                    <Copy className="h-3 w-3 mr-1" /> Copy Username
                   </Button>
                   <Button 
                     variant="outline" 
@@ -203,13 +230,35 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
                     className="text-xs border-gray-700"
                     onClick={() => copyToClipboard(userData.xtreamCredentials!.password, "Password")}
                   >
-                    Copy Password
+                    <Copy className="h-3 w-3 mr-1" /> Copy Password
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Save these credentials if you plan to use external players
                 </p>
               </div>
+            </div>
+          )}
+
+          {userData.xtreamCredentials?.playlistUrl && (
+            <div className="flex flex-col items-center mt-4 pt-4 border-t border-gray-700">
+              <h4 className="text-sm text-gray-400 mb-3">Your Playlist QR Code</h4>
+              {qrCodeUrl && (
+                <div className="bg-white p-3 rounded-lg mb-3">
+                  <img src={qrCodeUrl} alt="Playlist QR Code" className="w-32 h-32" />
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mb-3 text-center">
+                Scan this QR code with your mobile device to easily access your playlist
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs border-gray-700"
+                onClick={downloadPlaylist}
+              >
+                <Download className="h-3 w-3 mr-1" /> Download Playlist File
+              </Button>
             </div>
           )}
         </div>

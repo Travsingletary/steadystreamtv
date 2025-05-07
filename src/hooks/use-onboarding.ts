@@ -18,6 +18,7 @@ export interface OnboardingUserData {
   xtreamCredentials?: {
     username: string;
     password: string;
+    playlistUrl?: string;
   };
 }
 
@@ -103,18 +104,7 @@ export const useOnboarding = () => {
 
       if (authError) throw authError;
       
-      // Create Xtream account via Supabase Edge Function
-      const { data: xtreamData, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
-        body: { 
-          name: userData.name, 
-          email: userData.email,
-          plan: userData.subscription?.plan || 'basic'
-        }
-      });
-
-      if (xtreamError) throw xtreamError;
-      
-      // Add user info to profiles table
+      // Create user profile
       if (authData?.user?.id) {
         const trialEndDate = new Date();
         trialEndDate.setDate(trialEndDate.getDate() + (userData.subscription?.trialDays || 7));
@@ -128,21 +118,32 @@ export const useOnboarding = () => {
             genres: userData.genres,
             subscription_status: 'trial',
             subscription_tier: userData.subscription?.plan || 'basic',
-            trial_end_date: trialEndDate.toISOString(),
-            xtream_username: xtreamData?.username,
-            xtream_password: xtreamData?.password
+            trial_end_date: trialEndDate.toISOString()
           });
         
         if (profileError) throw profileError;
+        
+        // Create Xtream account via Supabase Edge Function
+        const { data: xtreamData, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
+          body: { 
+            userId: authData.user.id,
+            planType: (userData.subscription?.plan || 'solo').toLowerCase(), 
+            email: userData.email,
+            name: userData.name
+          }
+        });
+
+        if (xtreamError) throw xtreamError;
+        
+        // Store Xtream credentials in user data for completion screen
+        updateUserData({ 
+          xtreamCredentials: { 
+            username: xtreamData?.data?.username, 
+            password: xtreamData?.data?.password,
+            playlistUrl: xtreamData?.data?.playlistUrl
+          }
+        });
       }
-      
-      // Store Xtream credentials in user data for completion screen
-      updateUserData({ 
-        xtreamCredentials: { 
-          username: xtreamData?.username, 
-          password: xtreamData?.password 
-        }
-      });
 
       // Move to completion step
       setStep(5);
