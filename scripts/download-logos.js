@@ -3,8 +3,8 @@
  * This is a utility script to download TV logos from the tv-logo/tv-logos GitHub repository
  * 
  * How to use:
- * 1. Create a 'public/logos' folder in your project root
- * 2. Run this script with Node.js: node scripts/download-logos.js
+ * 1. Create a 'public/logos' folder in your project root (this script will do it for you)
+ * 2. Run this script with Node.js from the project root: node scripts/download-logos.js
  * 3. Logos will be downloaded to their respective category folders
  */
 
@@ -12,10 +12,27 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
+// Determine project root directory - will work regardless of where the script is called from
+const findProjectRoot = () => {
+  let currentDir = process.cwd();
+  while (!fs.existsSync(path.join(currentDir, 'package.json'))) {
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      throw new Error('Could not find project root directory (no package.json found)');
+    }
+    currentDir = parentDir;
+  }
+  return currentDir;
+};
+
+const projectRoot = findProjectRoot();
+console.log(`Project root detected at: ${projectRoot}`);
+
 // Create base logos directory if it doesn't exist
-const baseDir = path.join(__dirname, '../public/logos');
+const baseDir = path.join(projectRoot, 'public/logos');
 if (!fs.existsSync(baseDir)) {
   fs.mkdirSync(baseDir, { recursive: true });
+  console.log(`Created logos directory at: ${baseDir}`);
 }
 
 // Define categories and their corresponding GitHub folders
@@ -81,8 +98,16 @@ function downloadFile(url, filePath) {
 
 // Main function to download all logos
 async function downloadAllLogos() {
+  // Create summary counters
+  let totalAttempted = 0;
+  let totalSuccessful = 0;
+  let totalFailed = 0;
+  
+  console.log('Starting logo download process...');
+  console.log(`Base directory: ${baseDir}`);
+  
   for (const [category, logos] of Object.entries(categories)) {
-    console.log(`Downloading ${category} logos...`);
+    console.log(`\nDownloading ${category} logos...`);
     
     // Create category directory
     const categoryDir = path.join(baseDir, category);
@@ -91,21 +116,35 @@ async function downloadAllLogos() {
     }
     
     // Download each logo
+    let categorySuccessful = 0;
     for (const logo of logos) {
+      totalAttempted++;
       const url = `${baseUrl}${logo}.png`;
       const filePath = path.join(categoryDir, `${logo}.png`);
       
       try {
         await downloadFile(url, filePath);
-        console.log(`  Downloaded: ${logo}.png`);
+        console.log(`  ✅ Downloaded: ${logo}.png`);
+        categorySuccessful++;
+        totalSuccessful++;
       } catch (error) {
-        console.error(`  Error: ${error}`);
+        console.error(`  ❌ Error: ${error}`);
+        totalFailed++;
       }
     }
+    console.log(`  Category progress: ${categorySuccessful}/${logos.length} logos downloaded`);
   }
   
-  console.log('Download completed!');
+  console.log('\n=== Download Summary ===');
+  console.log(`Total attempted: ${totalAttempted}`);
+  console.log(`Successfully downloaded: ${totalSuccessful}`);
+  console.log(`Failed downloads: ${totalFailed}`);
+  console.log(`Success rate: ${((totalSuccessful / totalAttempted) * 100).toFixed(2)}%`);
+  console.log('\nDownload completed!');
 }
 
 // Run the download function
-downloadAllLogos();
+downloadAllLogos()
+  .then(() => console.log('Script finished successfully'))
+  .catch((err) => console.error('Script error:', err));
+
