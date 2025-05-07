@@ -7,6 +7,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Mail, User, Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -37,6 +38,7 @@ interface OnboardingWelcomeProps {
 
 export const OnboardingWelcome = ({ userData, updateUserData, onNext }: OnboardingWelcomeProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,15 +51,36 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      updateUserData({
-        name: values.name,
-        email: values.email,
-        password: values.password,
+    
+    // Validate password length and complexity
+    if (values.password.length < 8) {
+      toast({
+        title: "Password Error",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive",
       });
       setIsLoading(false);
-      onNext();
+      return;
+    }
+    
+    // Simulate API call
+    setTimeout(() => {
+      try {
+        updateUserData({
+          name: values.name,
+          email: values.email,
+          password: values.password,
+        });
+        onNext();
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "There was an error processing your information.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }, 1000);
   };
 
@@ -132,6 +155,7 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
                   </div>
                 </FormControl>
                 <FormMessage />
+                <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters long.</p>
               </FormItem>
             )}
           />
