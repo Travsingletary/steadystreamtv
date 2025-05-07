@@ -20,10 +20,10 @@ const ConnectApps = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Tv className="text-gold" />
-                TiviMate
+                TiviMate for Fire Stick
               </CardTitle>
               <CardDescription>
-                Premium IPTV Player for Android TV
+                Premium IPTV Player specifically for Amazon Fire Stick devices
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -33,16 +33,16 @@ const ConnectApps = () => {
                 className="h-32 object-contain mb-4" 
               />
               <p className="text-gray-300 mb-4">
-                TiviMate is one of the best IPTV players for Android TV devices. Connect your SteadyStream
-                account to enjoy channels with a premium interface.
+                TiviMate is one of the best IPTV players specifically designed for Amazon Fire Stick devices. 
+                Connect your SteadyStream account to enjoy channels with a premium interface.
               </p>
               <div className="bg-dark-300 p-3 rounded-md">
-                <p className="text-sm font-medium mb-2">Quick Setup URL:</p>
+                <p className="text-sm font-medium mb-2">Quick Setup URL for Fire Stick:</p>
                 <code className="text-xs bg-gray-800 p-2 rounded block overflow-auto mb-2">
                   https://gangstageeks.com/tivimate/rs6/steady/
                 </code>
                 <p className="text-xs text-gray-400">
-                  Use this URL in TiviMate app to automatically configure your SteadyStream account
+                  Use this URL in TiviMate app on your Fire Stick to automatically configure your SteadyStream account
                 </p>
               </div>
             </CardContent>
@@ -65,7 +65,7 @@ const ConnectApps = () => {
                 Mobile Companion App
               </CardTitle>
               <CardDescription>
-                Access SteadyStream on the go
+                Access SteadyStream on all other devices
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -75,16 +75,16 @@ const ConnectApps = () => {
                 className="h-32 object-contain mb-4" 
               />
               <p className="text-gray-300 mb-4">
-                Our companion application lets you watch your favorite channels on mobile devices
-                with an optimized interface. Perfect for streaming on the go.
+                Our companion application works on smartphones, tablets, computers, and all other devices.
+                Perfect for streaming when you're not using a Fire Stick.
               </p>
               <div className="bg-dark-300 p-3 rounded-md">
-                <p className="text-sm font-medium mb-2">App URL:</p>
+                <p className="text-sm font-medium mb-2">App URL for all other devices:</p>
                 <code className="text-xs bg-gray-800 p-2 rounded block overflow-auto mb-2">
                   https://lovable.dev/projects/05293635-2b01-4b2d-a7ff-eb9cb8dbed19
                 </code>
                 <p className="text-xs text-gray-400">
-                  Open this URL on your mobile device to access the companion app
+                  Open this URL on any device to access the companion app
                 </p>
               </div>
             </CardContent>
@@ -94,7 +94,7 @@ const ConnectApps = () => {
                 onClick={() => window.open("https://lovable.dev/projects/05293635-2b01-4b2d-a7ff-eb9cb8dbed19", "_blank")}
               >
                 <ExternalLink className="h-4 w-4" />
-                Open Mobile App
+                Open Companion App
               </Button>
             </CardFooter>
           </Card>
@@ -107,13 +107,13 @@ const ConnectApps = () => {
             <Card className="bg-dark-300 border border-gray-800">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Monitor className="h-4 w-4 text-gold" />
-                  Smart TVs
+                  <Tv className="h-4 w-4 text-gold" />
+                  Fire Stick
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-300">
-                  Use TiviMate or IPTV Smarters on your smart TV for the best experience. Download directly from your TV's app store.
+                  Download TiviMate on your Fire Stick and use our setup URL for the best experience on Amazon Fire devices.
                 </p>
               </CardContent>
             </Card>
@@ -127,7 +127,7 @@ const ConnectApps = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-300">
-                  Install our companion app or use IPTV Smarters on iOS and Android for on-the-go streaming.
+                  Use our companion app on iOS and Android for on-the-go streaming from your smartphone or tablet.
                 </p>
               </CardContent>
             </Card>
@@ -141,7 +141,7 @@ const ConnectApps = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-300">
-                  Use VLC Media Player or our web player on desktop and laptop computers to watch all channels.
+                  Access our companion app or use VLC Media Player on desktop and laptop computers to watch all channels.
                 </p>
               </CardContent>
             </Card>
