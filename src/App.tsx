@@ -8,6 +8,7 @@ import Index from '@/pages/Index';
 import NotFound from '@/pages/NotFound';
 import Onboarding from '@/pages/Onboarding';
 import Dashboard from '@/pages/Dashboard';
+import Favorites from '@/pages/Favorites';
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -57,6 +58,11 @@ function App() {
         <Route path="/player" element={
           <ProtectedRoute>
             <Player />
+          </ProtectedRoute>
+        } />
+        <Route path="/favorites" element={
+          <ProtectedRoute>
+            <Favorites />
           </ProtectedRoute>
         } />
         <Route path="/onboarding" element={<Onboarding />} />

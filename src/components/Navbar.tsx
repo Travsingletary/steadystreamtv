@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, MonitorPlay, LayoutDashboard, LogOut } from "lucide-react";
+import { Menu, X, User, MonitorPlay, LayoutDashboard, LogOut, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -91,6 +90,7 @@ const Navbar = () => {
   const authLinks = user ? [
     { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={16} className="mr-2" /> },
     { name: "Player", path: "/player", icon: <MonitorPlay size={16} className="mr-2" /> },
+    { name: "Favorites", path: "/favorites", icon: <Heart size={16} className="mr-2" /> },
     { name: "Profile", path: "/profile", icon: <User size={16} className="mr-2" /> }
   ] : [];
 
