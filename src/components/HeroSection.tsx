@@ -1,9 +1,7 @@
-
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Tv } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-
 const HeroSection = () => {
   const navigate = useNavigate();
   const handleStartStreaming = () => {
@@ -65,18 +63,14 @@ const HeroSection = () => {
               {/* Modern Flatscreen TV Design */}
               <div className="tv-flatscreen">
                 {/* TV frame with slim bezels */}
-                <div className="bg-dark-300 border border-gray-700 rounded-md shadow-lg overflow-hidden w-full max-w-md">
+                <div className="bg-dark-300 border border-gray-700 shadow-lg overflow-hidden w-full max-w-md mx-[240px] px-[15px] my-0 py-[8px] rounded">
                   {/* TV Stand */}
                   <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-1/3 h-2 bg-gray-700 rounded-b-lg"></div>
                   
                   {/* TV Screen with 16:9 aspect ratio and family image */}
-                  <div className="px-[2px] py-[2px]">
+                  <div className="py-0 px-0 my-0 mx-[55px]">
                     <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-none bg-slate-950">
-                      <img 
-                        src="/lovable-uploads/60de453f-8cb1-417a-ad2f-209df6c72378.png" 
-                        alt="Family watching TV"
-                        className="w-full h-full object-cover"
-                      />
+                      <img src="/lovable-uploads/60de453f-8cb1-417a-ad2f-209df6c72378.png" alt="Family watching TV" className="w-full h-full object-cover" />
                     </AspectRatio>
                   </div>
                 </div>
