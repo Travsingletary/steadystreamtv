@@ -14,10 +14,25 @@ const path = require('path');
 
 // Determine project root directory - will work regardless of where the script is called from
 const findProjectRoot = () => {
+  // Check if the script is run from the project root
+  if (fs.existsSync(path.join(process.cwd(), 'package.json'))) {
+    return process.cwd();
+  }
+
+  // Check if the script is run from /scripts directory
+  if (fs.existsSync(path.join(process.cwd(), '..', 'package.json'))) {
+    return path.join(process.cwd(), '..');
+  }
+
+  // Try to find the project root by navigating up directories
   let currentDir = process.cwd();
   while (!fs.existsSync(path.join(currentDir, 'package.json'))) {
     const parentDir = path.dirname(currentDir);
     if (parentDir === currentDir) {
+      // If we can't find the project root, try to use script's location as reference
+      if (__dirname && fs.existsSync(path.join(__dirname, '..', 'package.json'))) {
+        return path.join(__dirname, '..');
+      }
       throw new Error('Could not find project root directory (no package.json found)');
     }
     currentDir = parentDir;
@@ -25,8 +40,19 @@ const findProjectRoot = () => {
   return currentDir;
 };
 
-const projectRoot = findProjectRoot();
-console.log(`Project root detected at: ${projectRoot}`);
+// Try to find the project root
+let projectRoot;
+try {
+  projectRoot = findProjectRoot();
+  console.log(`Project root detected at: ${projectRoot}`);
+} catch (error) {
+  console.error(`Warning: ${error.message}`);
+  console.log('Falling back to relative path from script location...');
+  
+  // Fallback approach: Use script directory as reference and assume project structure
+  projectRoot = path.resolve(__dirname, '..');
+  console.log(`Using fallback project root: ${projectRoot}`);
+}
 
 // Create base logos directory if it doesn't exist
 const baseDir = path.join(projectRoot, 'public/logos');
@@ -90,6 +116,7 @@ function downloadFile(url, filePath) {
         reject(`Failed to download ${url}: ${response.statusCode}`);
       }
     }).on('error', (err) => {
+      file.close();
       fs.unlink(filePath, () => {}); // Delete the file
       reject(`Failed to download ${url}: ${err.message}`);
     });
@@ -103,6 +130,7 @@ async function downloadAllLogos() {
   let totalSuccessful = 0;
   let totalFailed = 0;
   
+  console.log('\n====== TV LOGO DOWNLOADER ======');
   console.log('Starting logo download process...');
   console.log(`Base directory: ${baseDir}`);
   
@@ -141,10 +169,14 @@ async function downloadAllLogos() {
   console.log(`Failed downloads: ${totalFailed}`);
   console.log(`Success rate: ${((totalSuccessful / totalAttempted) * 100).toFixed(2)}%`);
   console.log('\nDownload completed!');
+  
+  console.log('\n=== How to use these logos ===');
+  console.log('The logos are now available in your application at:');
+  console.log(`${baseDir}/{category}/{channel-name}.png`);
+  console.log('Example: /public/logos/sports/espn.png\n');
 }
 
 // Run the download function
 downloadAllLogos()
   .then(() => console.log('Script finished successfully'))
   .catch((err) => console.error('Script error:', err));
-
