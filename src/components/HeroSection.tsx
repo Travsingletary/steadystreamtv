@@ -1,7 +1,9 @@
+
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Tv } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+
 const HeroSection = () => {
   const navigate = useNavigate();
   const handleStartStreaming = () => {
@@ -75,9 +77,9 @@ const HeroSection = () => {
                   </div>
                 </div>
                 
-                {/* TV Brand Logo below */}
+                {/* Only the TV Brand Logo with larger size */}
                 <div className="relative flex justify-center mt-6">
-                  <img alt="SteadyStream TV" src="/lovable-uploads/02b1a674-0365-4ccb-b387-38a69c2c5b7c.png" className="w-1/2 h-auto object-cover" />
+                  <img alt="SteadyStream TV" src="/lovable-uploads/02b1a674-0365-4ccb-b387-38a69c2c5b7c.png" className="w-3/4 h-auto object-cover" />
                 </div>
               </div>
             </div>
