@@ -15,12 +15,18 @@
 const { findProjectRoot, initLogosDirectory } = require('./utils/path-utils');
 const { downloadAllLogos } = require('./downloader');
 const { displaySummary, showRunningInstructions } = require('./helpers/ui-helpers');
+const logger = require('./utils/logger');
+
+// Set log level from environment variable if present
+if (process.env.LOG_LEVEL) {
+  logger.setLogLevel(process.env.LOG_LEVEL);
+}
 
 async function main() {
   try {
     // Find project root
     const projectRoot = findProjectRoot();
-    console.log(`Project root detected at: ${projectRoot}`);
+    logger.info(`Project root detected at: ${projectRoot}`);
     
     // Initialize logos directory
     const baseDir = initLogosDirectory(projectRoot);
@@ -35,13 +41,13 @@ async function main() {
     const anyLogosExist = stats.totalSuccessful > 0;
     
     if (!anyLogosExist) {
-      console.warn("\n⚠️ WARNING: No logos were found after download!");
+      logger.warn("No logos were found after download!");
       showRunningInstructions();
     } else {
-      console.log('Script finished successfully');
+      logger.success('Script finished successfully');
     }
   } catch (err) {
-    console.error('Script error:', err);
+    logger.error('Script error:', err);
     showRunningInstructions();
   }
 }

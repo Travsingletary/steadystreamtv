@@ -2,10 +2,11 @@
 /**
  * Core downloader functionality for the TV Logo Downloader
  */
-const { categories, baseUrl } = require('./config/categories');
+const path = require('path');
 const { downloadFile } = require('./utils/download-utils');
 const { createCategoryDirectory } = require('./utils/path-utils');
-const path = require('path');
+const { getConfig } = require('./config/categories-loader');
+const logger = require('./utils/logger');
 
 /**
  * Downloads all logos for all categories
@@ -13,18 +14,32 @@ const path = require('path');
  * @returns {Promise} A promise that resolves with download statistics
  */
 async function downloadAllLogos(baseDir) {
+  // Load configuration
+  const config = getConfig();
+  const { baseUrl, categories } = config;
+  
+  if (!categories || Object.keys(categories).length === 0) {
+    logger.error('No categories found to download');
+    return {
+      totalAttempted: 0,
+      totalSuccessful: 0,
+      totalFailed: 0,
+      categoryStats: {}
+    };
+  }
+  
   // Create summary counters
   let totalAttempted = 0;
   let totalSuccessful = 0;
   let totalFailed = 0;
   let categoryStats = {};
   
-  console.log('\n====== TV LOGO DOWNLOADER ======');
-  console.log('Starting logo download process...');
-  console.log(`Base directory: ${baseDir}`);
+  logger.section('TV LOGO DOWNLOADER');
+  logger.info('Starting logo download process...');
+  logger.info(`Base directory: ${baseDir}`);
   
   for (const [category, logos] of Object.entries(categories)) {
-    console.log(`\nDownloading ${category} logos...`);
+    logger.info(`\nDownloading ${category} logos...`);
     
     // Create category directory
     const categoryDir = createCategoryDirectory(baseDir, category);
@@ -38,11 +53,10 @@ async function downloadAllLogos(baseDir) {
       
       try {
         await downloadFile(url, filePath);
-        console.log(`  ✅ Downloaded: ${logo}.png`);
         categorySuccessful++;
         totalSuccessful++;
       } catch (error) {
-        console.error(`  ❌ Error: ${error}`);
+        logger.error(error);
         totalFailed++;
       }
     }
@@ -53,7 +67,7 @@ async function downloadAllLogos(baseDir) {
       failed: logos.length - categorySuccessful
     };
     
-    console.log(`  Category progress: ${categorySuccessful}/${logos.length} logos downloaded`);
+    logger.progress(`Category progress for ${category}`, categorySuccessful, logos.length);
   }
   
   return {

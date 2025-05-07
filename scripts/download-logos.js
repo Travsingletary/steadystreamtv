@@ -13,11 +13,17 @@
  *    OR with npx: npx @iptv/download-logos
  */
 
-// This file now serves as a compatibility wrapper around the modular version
-// For backward compatibility, we'll require and run the main module
+// This file serves as a compatibility wrapper around the modular version
 console.log('Starting TV Logo Downloader...');
 console.log('Note: This script has been refactored into a modular structure.');
 console.log('The actual implementation is now in scripts/logo-downloader/');
+
+// You can set the log level with an environment variable:
+// LOG_LEVEL=DEBUG node scripts/download-logos.js
+if (!process.env.LOG_LEVEL) {
+  // Default to INFO if not set
+  process.env.LOG_LEVEL = 'INFO';
+}
 
 // Forward the execution to the modular implementation
 require('./logo-downloader/index.js');

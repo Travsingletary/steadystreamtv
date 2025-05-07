@@ -5,6 +5,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 /**
  * Downloads a file from URL to a specific path
@@ -22,11 +23,14 @@ const downloadFile = (url, filePath) => {
 
     const file = fs.createWriteStream(filePath);
     
+    logger.debug(`Downloading: ${url} to ${filePath}`);
+    
     https.get(url, (response) => {
       if (response.statusCode === 200) {
         response.pipe(file);
         file.on('finish', () => {
           file.close();
+          logger.success(`Downloaded: ${path.basename(filePath)}`);
           resolve();
         });
       } else {

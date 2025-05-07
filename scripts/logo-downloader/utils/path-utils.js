@@ -4,21 +4,22 @@
  */
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 /**
  * Finds the project root directory using multiple detection strategies
  * @returns {string} The absolute path to the project root
  */
 const findProjectRoot = () => {
-  console.log(`Current working directory: ${process.cwd()}`);
+  logger.debug(`Current working directory: ${process.cwd()}`);
   
   // Try using the current script path first
   const scriptPath = module.filename;
-  console.log(`Script is located at: ${scriptPath}`);
+  logger.debug(`Script is located at: ${scriptPath}`);
   
   if (scriptPath) {
     const scriptDir = path.dirname(scriptPath);
-    console.log(`Script directory: ${scriptDir}`);
+    logger.debug(`Script directory: ${scriptDir}`);
     
     // Check if script dir is project root
     if (fs.existsSync(path.join(scriptDir, '..', 'package.json'))) {
@@ -33,11 +34,11 @@ const findProjectRoot = () => {
   
   // If the script path approach fails, try from current working directory
   let currentDir = process.cwd();
-  console.log(`Searching for project root from: ${currentDir}`);
+  logger.debug(`Searching for project root from: ${currentDir}`);
   
   // First check if we're already in the project root
   if (fs.existsSync(path.join(currentDir, 'package.json'))) {
-    console.log("Found package.json in current directory");
+    logger.debug("Found package.json in current directory");
     return currentDir;
   }
   
@@ -46,7 +47,7 @@ const findProjectRoot = () => {
   for (let i = 0; i < maxLevelsUp; i++) {
     const packagePath = path.join(currentDir, 'package.json');
     if (fs.existsSync(packagePath)) {
-      console.log(`Found package.json at ${packagePath}`);
+      logger.debug(`Found package.json at ${packagePath}`);
       return currentDir;
     }
     
@@ -61,12 +62,12 @@ const findProjectRoot = () => {
   // Last resort: use a hardcoded path for the public directory
   const publicDir = path.resolve(process.cwd(), 'public');
   if (fs.existsSync(publicDir)) {
-    console.log(`Using found public directory at: ${publicDir}`);
+    logger.debug(`Using found public directory at: ${publicDir}`);
     return path.dirname(publicDir);
   }
   
-  console.warn('⚠️ WARNING: Could not find project root!');
-  console.warn('Using current directory as fallback.');
+  logger.warn('Could not find project root!');
+  logger.warn('Using current directory as fallback.');
   return process.cwd();
 };
 
@@ -77,16 +78,15 @@ const findProjectRoot = () => {
  */
 const initLogosDirectory = (projectRoot) => {
   const baseDir = path.join(projectRoot, 'public', 'logos');
-  console.log(`Logos will be saved to: ${baseDir}`);
+  logger.info(`Logos will be saved to: ${baseDir}`);
 
   // Create base logos directory if it doesn't exist
   if (!fs.existsSync(baseDir)) {
     try {
       fs.mkdirSync(baseDir, { recursive: true });
-      console.log(`Created logos directory at: ${baseDir}`);
+      logger.info(`Created logos directory at: ${baseDir}`);
     } catch (error) {
-      console.error(`Failed to create directory: ${baseDir}`);
-      console.error(error);
+      logger.error(`Failed to create directory: ${baseDir}`, error);
       process.exit(1);
     }
   }
@@ -104,6 +104,7 @@ const createCategoryDirectory = (baseDir, category) => {
   const categoryDir = path.join(baseDir, category);
   if (!fs.existsSync(categoryDir)) {
     fs.mkdirSync(categoryDir, { recursive: true });
+    logger.debug(`Created category directory: ${category}`);
   }
   return categoryDir;
 };
