@@ -57,7 +57,7 @@ const Navbar = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center" onClick={closeMenu}>
               <img
-                src="/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"
+                src="/lovable-uploads/595f3348-0a60-4bbf-ad62-144c2ab406c1.png"
                 alt="SteadyStream Logo"
                 className="h-8"
               />

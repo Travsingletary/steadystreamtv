@@ -140,13 +140,13 @@ const TvLogoGrid = ({ category }: TvLogoProps) => {
                   onError={(e) => {
                     // Fallback for images that fail to load
                     const target = e.target as HTMLImageElement;
-                    target.src = "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png";
+                    target.src = "/lovable-uploads/0951aea1-2e5f-4aa0-9de1-ec13d0eb3489.png";
                   }}
                 />
               ) : (
                 <div className="h-12 w-full flex items-center justify-center mb-2">
                   <img 
-                    src="/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png" 
+                    src="/lovable-uploads/0951aea1-2e5f-4aa0-9de1-ec13d0eb3489.png" 
                     alt="SteadyStream TV" 
                     className="h-10 w-auto object-contain"
                   />
