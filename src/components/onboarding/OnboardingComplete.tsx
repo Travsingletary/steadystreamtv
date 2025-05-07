@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Calendar, Mail, User, Smartphone, Key } from "lucide-react";
+import { CheckCircle, Calendar, Mail, User, Smartphone, Key, QrCode } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface OnboardingCompleteProps {
   userData: {
@@ -21,6 +22,7 @@ interface OnboardingCompleteProps {
 export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (countdown > 0) {
@@ -54,6 +56,79 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
 
   const handleGoToPlayer = () => {
     navigate("/player");
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: "Copied!",
+        description: `${label} has been copied to your clipboard.`
+      });
+    });
+  };
+
+  const getDeviceInstructions = () => {
+    // Return device-specific instructions
+    switch (userData.preferredDevice) {
+      case "firestick":
+        return (
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <h4 className="font-medium mb-3">Fire TV Stick Setup Instructions</h4>
+            <ol className="list-decimal list-inside space-y-2 text-gray-300">
+              <li>On your Fire TV, search for "Downloader" app and install it</li>
+              <li>Open Downloader and enter this URL: <span className="font-medium text-gold">steadystream.tv/firestick</span></li>
+              <li>Install the SteadyStream app when prompted</li>
+              <li>Open the app and sign in with your email and password</li>
+              <li>Your device will be automatically activated</li>
+            </ol>
+            <div className="mt-4 flex gap-3">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs border-gray-700"
+                onClick={() => copyToClipboard("steadystream.tv/firestick", "Download URL")}
+              >
+                <QrCode className="h-3 w-3 mr-1" /> Copy URL
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs border-gray-700"
+                onClick={() => copyToClipboard(`${userData.email}`, "Email")}
+              >
+                <Mail className="h-3 w-3 mr-1" /> Copy Email
+              </Button>
+            </div>
+          </div>
+        );
+      case "smart-tv":
+        return (
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <h4 className="font-medium mb-3">Smart TV Setup Instructions</h4>
+            <ol className="list-decimal list-inside space-y-2 text-gray-300">
+              <li>On your Smart TV, open the app store</li>
+              <li>Search for "SteadyStream TV" and install it</li>
+              <li>Open the app and select "Sign In"</li>
+              <li>Enter your email address and password</li>
+              <li>Your account will be automatically linked</li>
+            </ol>
+          </div>
+        );
+      case "smartphone":
+        return (
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <h4 className="font-medium mb-3">Smartphone Setup Instructions</h4>
+            <ol className="list-decimal list-inside space-y-2 text-gray-300">
+              <li>Open the App Store (iOS) or Play Store (Android)</li>
+              <li>Search for "SteadyStream TV" and install the app</li>
+              <li>Open the app and sign in with your account email and password</li>
+              <li>Enable notifications for updates about new content</li>
+            </ol>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -113,6 +188,24 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
                 <p className="text-sm text-gray-400">Streaming Credentials</p>
                 <p className="font-medium">Username: {userData.xtreamCredentials.username}</p>
                 <p className="font-medium">Password: {userData.xtreamCredentials.password}</p>
+                <div className="flex gap-2 mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="text-xs border-gray-700"
+                    onClick={() => copyToClipboard(userData.xtreamCredentials!.username, "Username")}
+                  >
+                    Copy Username
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="text-xs border-gray-700"
+                    onClick={() => copyToClipboard(userData.xtreamCredentials!.password, "Password")}
+                  >
+                    Copy Password
+                  </Button>
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Save these credentials if you plan to use external players
                 </p>
@@ -136,6 +229,8 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
             )}
           </div>
         </div>
+
+        {getDeviceInstructions()}
       </div>
 
       <div className="space-y-4">
