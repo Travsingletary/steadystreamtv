@@ -77,7 +77,7 @@ const HeroSection = () => {
                 
                 {/* TV Brand Logo below */}
                 <div className="relative flex justify-center mt-6">
-                  <img alt="SteadyStream TV" src="/lovable-uploads/02b1a674-0365-4ccb-b387-38a69c2c5b7c.png" className="w-1/2 h-auto object-contain" />
+                  <img alt="SteadyStream TV" src="/lovable-uploads/02b1a674-0365-4ccb-b387-38a69c2c5b7c.png" className="w-1/2 h-auto object-cover" />
                 </div>
               </div>
             </div>
