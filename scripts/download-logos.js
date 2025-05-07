@@ -9,40 +9,53 @@
  * 
  * How to use:
  * 1. Make sure you're in the project root directory
- * 2. Run: node ./scripts/download-logos.js
- *    OR npm run download-logos (if you add this script to package.json)
+ * 2. Run: node scripts/download-logos.js
+ *    OR with npx: npx @iptv/download-logos
  */
 
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-// Print the current execution directory to help with debugging
-console.log(`Current directory: ${process.cwd()}`);
+// Get the absolute path of the current script
+const scriptPath = __filename;
+console.log(`Script is located at: ${scriptPath}`);
+console.log(`Current working directory: ${process.cwd()}`);
 
-// Find the project root - this is the directory that contains package.json
+// Find the project root directory
 const findProjectRoot = () => {
+  // Try using the current script path first
+  if (scriptPath) {
+    const scriptDir = path.dirname(scriptPath);
+    console.log(`Script directory: ${scriptDir}`);
+    
+    // Check if script dir is project root
+    if (fs.existsSync(path.join(scriptDir, '..', 'package.json'))) {
+      return path.resolve(scriptDir, '..');
+    }
+    
+    // Check if script dir's parent is project root
+    if (fs.existsSync(path.join(scriptDir, '..', '..', 'package.json'))) {
+      return path.resolve(scriptDir, '..', '..');
+    }
+  }
+  
+  // If the script path approach fails, try from current working directory
   let currentDir = process.cwd();
+  console.log(`Searching for project root from: ${currentDir}`);
   
   // First check if we're already in the project root
   if (fs.existsSync(path.join(currentDir, 'package.json'))) {
+    console.log("Found package.json in current directory");
     return currentDir;
   }
   
-  // If running from scripts directory
-  if (fs.existsSync(path.join(currentDir, '..', 'package.json'))) {
-    return path.join(currentDir, '..');
-  }
-  
-  // Check if running from node_modules/.bin
-  if (fs.existsSync(path.join(currentDir, '..', '..', 'package.json'))) {
-    return path.join(currentDir, '..', '..');
-  }
-
   // Try to locate by traversing up
   const maxLevelsUp = 5;
   for (let i = 0; i < maxLevelsUp; i++) {
-    if (fs.existsSync(path.join(currentDir, 'package.json'))) {
+    const packagePath = path.join(currentDir, 'package.json');
+    if (fs.existsSync(packagePath)) {
+      console.log(`Found package.json at ${packagePath}`);
       return currentDir;
     }
     
@@ -54,23 +67,15 @@ const findProjectRoot = () => {
     currentDir = parentDir;
   }
   
-  // Use script location as fallback
-  if (__dirname) {
-    const scriptDir = __dirname;
-    console.log(`Script directory detected as: ${scriptDir}`);
-    
-    if (fs.existsSync(path.join(scriptDir, 'package.json'))) {
-      return scriptDir;
-    }
-    
-    if (fs.existsSync(path.join(scriptDir, '..', 'package.json'))) {
-      return path.join(scriptDir, '..');
-    }
+  // Last resort: use a hardcoded path for the public directory
+  const publicDir = path.resolve(process.cwd(), 'public');
+  if (fs.existsSync(publicDir)) {
+    console.log(`Using found public directory at: ${publicDir}`);
+    return path.dirname(publicDir);
   }
   
-  // Emergency fallback - use current directory but warn the user
-  console.warn('⚠️ WARNING: Could not find project root with package.json!');
-  console.warn('Creating logos directory in current working directory instead.');
+  console.warn('⚠️ WARNING: Could not find project root!');
+  console.warn('Using current directory as fallback.');
   return process.cwd();
 };
 
@@ -80,13 +85,14 @@ try {
   projectRoot = findProjectRoot();
   console.log(`Project root detected at: ${projectRoot}`);
 } catch (error) {
-  console.error(`Error: ${error.message}`);
+  console.error(`Error finding project root: ${error.message}`);
   console.log('Falling back to current directory...');
   projectRoot = process.cwd();
 }
 
 // Define logos directory path
 const baseDir = path.join(projectRoot, 'public', 'logos');
+console.log(`Logos will be saved to: ${baseDir}`);
 
 // Create base logos directory if it doesn't exist
 if (!fs.existsSync(baseDir)) {
@@ -215,7 +221,37 @@ async function downloadAllLogos() {
   console.log('Example: /public/logos/sports/espn.png\n');
 }
 
+// Provide detailed help on running the script
+function showRunningInstructions() {
+  console.log("\n=== HOW TO RUN THIS SCRIPT ===");
+  console.log("If you're getting 'module not found' errors, try one of these approaches:");
+  console.log("1. Make the script executable:");
+  console.log("   chmod +x scripts/download-logos.js");
+  console.log("   ./scripts/download-logos.js");
+  console.log("\n2. Use the full path:");
+  console.log(`   node ${scriptPath}`);
+  console.log("\n3. Run from project root:");
+  console.log("   cd /path/to/your/project");
+  console.log("   node scripts/download-logos.js");
+}
+
 // Run the download function
 downloadAllLogos()
-  .then(() => console.log('Script finished successfully'))
-  .catch((err) => console.error('Script error:', err));
+  .then(() => {
+    console.log('Script finished successfully');
+    
+    // Check if we can verify the logos were actually downloaded
+    const anyLogosExist = Object.keys(categories).some(category => {
+      const categoryDir = path.join(baseDir, category);
+      return fs.existsSync(categoryDir) && fs.readdirSync(categoryDir).length > 0;
+    });
+    
+    if (!anyLogosExist) {
+      console.warn("\n⚠️ WARNING: No logos were found after download!");
+      showRunningInstructions();
+    }
+  })
+  .catch((err) => {
+    console.error('Script error:', err);
+    showRunningInstructions();
+  });
