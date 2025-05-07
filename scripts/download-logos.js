@@ -1,67 +1,106 @@
 
+#!/usr/bin/env node
+
 /**
- * This is a utility script to download TV logos from the tv-logo/tv-logos GitHub repository
+ * TV Logo Downloader Script
+ * 
+ * This utility downloads TV channel logos from the tv-logo/tv-logos GitHub repository
+ * and organizes them by category in your project's public/logos folder.
  * 
  * How to use:
- * 1. Create a 'public/logos' folder in your project root (this script will do it for you)
- * 2. Run this script with Node.js from the project root: node scripts/download-logos.js
- * 3. Logos will be downloaded to their respective category folders
+ * 1. Make sure you're in the project root directory
+ * 2. Run: node ./scripts/download-logos.js
+ *    OR npm run download-logos (if you add this script to package.json)
  */
 
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-// Determine project root directory - will work regardless of where the script is called from
+// Print the current execution directory to help with debugging
+console.log(`Current directory: ${process.cwd()}`);
+
+// Find the project root - this is the directory that contains package.json
 const findProjectRoot = () => {
-  // Check if the script is run from the project root
-  if (fs.existsSync(path.join(process.cwd(), 'package.json'))) {
-    return process.cwd();
-  }
-
-  // Check if the script is run from /scripts directory
-  if (fs.existsSync(path.join(process.cwd(), '..', 'package.json'))) {
-    return path.join(process.cwd(), '..');
-  }
-
-  // Try to find the project root by navigating up directories
   let currentDir = process.cwd();
-  while (!fs.existsSync(path.join(currentDir, 'package.json'))) {
+  
+  // First check if we're already in the project root
+  if (fs.existsSync(path.join(currentDir, 'package.json'))) {
+    return currentDir;
+  }
+  
+  // If running from scripts directory
+  if (fs.existsSync(path.join(currentDir, '..', 'package.json'))) {
+    return path.join(currentDir, '..');
+  }
+  
+  // Check if running from node_modules/.bin
+  if (fs.existsSync(path.join(currentDir, '..', '..', 'package.json'))) {
+    return path.join(currentDir, '..', '..');
+  }
+
+  // Try to locate by traversing up
+  const maxLevelsUp = 5;
+  for (let i = 0; i < maxLevelsUp; i++) {
+    if (fs.existsSync(path.join(currentDir, 'package.json'))) {
+      return currentDir;
+    }
+    
     const parentDir = path.dirname(currentDir);
     if (parentDir === currentDir) {
-      // If we can't find the project root, try to use script's location as reference
-      if (__dirname && fs.existsSync(path.join(__dirname, '..', 'package.json'))) {
-        return path.join(__dirname, '..');
-      }
-      throw new Error('Could not find project root directory (no package.json found)');
+      break; // We've reached the root of the file system
     }
+    
     currentDir = parentDir;
   }
-  return currentDir;
+  
+  // Use script location as fallback
+  if (__dirname) {
+    const scriptDir = __dirname;
+    console.log(`Script directory detected as: ${scriptDir}`);
+    
+    if (fs.existsSync(path.join(scriptDir, 'package.json'))) {
+      return scriptDir;
+    }
+    
+    if (fs.existsSync(path.join(scriptDir, '..', 'package.json'))) {
+      return path.join(scriptDir, '..');
+    }
+  }
+  
+  // Emergency fallback - use current directory but warn the user
+  console.warn('⚠️ WARNING: Could not find project root with package.json!');
+  console.warn('Creating logos directory in current working directory instead.');
+  return process.cwd();
 };
 
-// Try to find the project root
+// Try to determine project root
 let projectRoot;
 try {
   projectRoot = findProjectRoot();
   console.log(`Project root detected at: ${projectRoot}`);
 } catch (error) {
-  console.error(`Warning: ${error.message}`);
-  console.log('Falling back to relative path from script location...');
-  
-  // Fallback approach: Use script directory as reference and assume project structure
-  projectRoot = path.resolve(__dirname, '..');
-  console.log(`Using fallback project root: ${projectRoot}`);
+  console.error(`Error: ${error.message}`);
+  console.log('Falling back to current directory...');
+  projectRoot = process.cwd();
 }
+
+// Define logos directory path
+const baseDir = path.join(projectRoot, 'public', 'logos');
 
 // Create base logos directory if it doesn't exist
-const baseDir = path.join(projectRoot, 'public/logos');
 if (!fs.existsSync(baseDir)) {
-  fs.mkdirSync(baseDir, { recursive: true });
-  console.log(`Created logos directory at: ${baseDir}`);
+  try {
+    fs.mkdirSync(baseDir, { recursive: true });
+    console.log(`Created logos directory at: ${baseDir}`);
+  } catch (error) {
+    console.error(`Failed to create directory: ${baseDir}`);
+    console.error(error);
+    process.exit(1);
+  }
 }
 
-// Define categories and their corresponding GitHub folders
+// Define categories and their corresponding logos
 const categories = {
   entertainment: [
     'hbo', 'amc', 'fx', 'tnt', 'usa', 'paramount', 'showtime', 'abc', 'nbc', 'cbs',
@@ -172,7 +211,7 @@ async function downloadAllLogos() {
   
   console.log('\n=== How to use these logos ===');
   console.log('The logos are now available in your application at:');
-  console.log(`${baseDir}/{category}/{channel-name}.png`);
+  console.log('/public/logos/{category}/{channel-name}.png');
   console.log('Example: /public/logos/sports/espn.png\n');
 }
 
