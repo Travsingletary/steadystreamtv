@@ -6,121 +6,76 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Mail, User, Lock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { SignInForm } from "./SignInForm";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  password: z.string().min(8, {
-    message: "Password must be at least 8 characters.",
+  password: z.string().min(1, {
+    message: "Password is required.",
   }),
 });
 
-interface UserData {
-  name: string;
-  email: string;
-  password?: string;
-  preferredDevice: string;
-  genres: string[];
-  subscription: any;
+interface SignInFormProps {
+  switchToSignUp: () => void;
 }
 
-interface OnboardingWelcomeProps {
-  userData: UserData;
-  updateUserData: (data: Partial<UserData>) => void;
-  onNext: () => void;
-}
-
-export const OnboardingWelcome = ({ userData, updateUserData, onNext }: OnboardingWelcomeProps) => {
+export const SignInForm = ({ switchToSignUp }: SignInFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignIn, setIsSignIn] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: userData.name || "",
-      email: userData.email || "",
-      password: userData.password || "",
+      email: "",
+      password: "",
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     
-    // Validate password length and complexity
-    if (values.password.length < 8) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
       toast({
-        title: "Password Error",
-        description: "Password must be at least 8 characters long.",
+        title: "Signed in successfully",
+        description: "Welcome back!",
+      });
+      
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Sign in failed",
+        description: error.message || "There was an error signing in. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
-      return;
     }
-    
-    // Simulate API call
-    setTimeout(() => {
-      try {
-        updateUserData({
-          name: values.name,
-          email: values.email,
-          password: values.password,
-        });
-        onNext();
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.message || "There was an error processing your information.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }, 1000);
   };
-
-  if (isSignIn) {
-    return <SignInForm switchToSignUp={() => setIsSignIn(false)} />;
-  }
 
   return (
     <div className="bg-dark-200 rounded-xl border border-gray-800 p-8 animate-fade-in">
-      <h1 className="text-3xl font-bold mb-2">Welcome to SteadyStream TV</h1>
+      <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
       <p className="text-gray-400 mb-8">
-        Let's get you set up with your personalized streaming experience. 
-        We'll guide you through a few quick steps to customize your SteadyStream TV.
+        Sign in to your SteadyStream TV account to access your personalized streaming experience.
       </p>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Your Name</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                    <Input 
-                      placeholder="Enter your name" 
-                      className="pl-10 bg-dark-300 border-gray-700" 
-                      {...field} 
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
           <FormField
             control={form.control}
             name="email"
@@ -153,7 +108,7 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                     <Input 
-                      placeholder="Create a password" 
+                      placeholder="Enter your password" 
                       type="password" 
                       className="pl-10 bg-dark-300 border-gray-700" 
                       {...field} 
@@ -161,7 +116,6 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
                   </div>
                 </FormControl>
                 <FormMessage />
-                <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters long.</p>
               </FormItem>
             )}
           />
@@ -172,18 +126,18 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
               className="w-full bg-gold hover:bg-gold-dark text-black font-semibold"
               disabled={isLoading}
             >
-              {isLoading ? "Processing..." : "Continue"}
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
             
             <div className="mt-4 text-center">
               <p className="text-gray-400">
-                Already have an account?{" "}
+                Don't have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => setIsSignIn(true)}
+                  onClick={switchToSignUp}
                   className="text-gold hover:underline"
                 >
-                  Sign In
+                  Sign Up
                 </button>
               </p>
             </div>

@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, X, User, Heart, Layout, LogOut, Link as LinkIcon } from "lucide-react";
+import { Menu, X, User, Heart, Layout, LogOut, Link as LinkIcon, LogIn } from "lucide-react";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -49,6 +49,8 @@ const Navbar = () => {
 
   // Only show sign-up button on homepage and when not logged in
   const showSignUpButton = location.pathname === "/" && !user;
+  // Show sign-in button when not logged in
+  const showSignInButton = !user && !loading;
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-black/90 backdrop-blur-sm z-50 border-b border-gray-800">
@@ -130,14 +132,25 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              showSignUpButton && (
-                <Button
-                  className="bg-gold hover:bg-gold-dark text-black"
-                  onClick={() => navigate("/onboarding")}
-                >
-                  Get Started
-                </Button>
-              )
+              <div className="flex items-center space-x-2">
+                {showSignInButton && (
+                  <Button
+                    variant="ghost"
+                    className="text-white hover:bg-gray-800"
+                    onClick={() => navigate("/onboarding")}
+                  >
+                    <LogIn className="h-4 w-4 mr-2" /> Sign In
+                  </Button>
+                )}
+                {showSignUpButton && (
+                  <Button
+                    className="bg-gold hover:bg-gold-dark text-black"
+                    onClick={() => navigate("/onboarding")}
+                  >
+                    Get Started
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 
@@ -199,19 +212,24 @@ const Navbar = () => {
               </button>
             </>
           ) : (
-            showSignUpButton && (
-              <div className="px-4 py-2">
-                <Button
-                  className="bg-gold hover:bg-gold-dark text-black w-full"
-                  onClick={() => {
-                    navigate("/onboarding");
-                    closeMenu();
-                  }}
-                >
-                  Get Started
-                </Button>
-              </div>
-            )
+            <div className="space-y-2 p-2">
+              <MobileNavLink to="/onboarding" onClick={closeMenu}>
+                Sign In
+              </MobileNavLink>
+              {showSignUpButton && (
+                <div className="px-4 py-2">
+                  <Button
+                    className="bg-gold hover:bg-gold-dark text-black w-full"
+                    onClick={() => {
+                      navigate("/onboarding");
+                      closeMenu();
+                    }}
+                  >
+                    Get Started
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
