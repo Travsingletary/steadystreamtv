@@ -12,6 +12,11 @@ type RequestPayload = {
   isRecurring: boolean
 }
 
+// Helper function for consistent logging
+const log = (message: string, data?: any) => {
+  console.log(`[CREATE-PAYMENT] ${message}`, data ? JSON.stringify(data) : '');
+};
+
 // Plan mapping for Stripe
 const PLAN_MAPPING = {
   'standard': {
@@ -31,20 +36,22 @@ const PLAN_MAPPING = {
   }
 }
 
-serve(async (req) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Content-Type': 'application/json'
-  }
+// Configure CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers, status: 204 })
+    return new Response(null, { headers: corsHeaders, status: 204 })
   }
 
   try {
+    log("Function started");
     const payload = await req.json() as RequestPayload
+    log("Received payload", payload);
 
     // Create Supabase admin client with service role key
     const supabaseAdmin = createClient(
@@ -54,28 +61,36 @@ serve(async (req) => {
 
     // Validate request
     if (!payload.userId || !payload.planId) {
+      log("Missing required fields", { userId: payload.userId, planId: payload.planId });
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || 'sk_test_your_stripe_key', {
+    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
+    if (!stripeKey) {
+      log("Missing Stripe secret key");
+      throw new Error('STRIPE_SECRET_KEY is not set');
+    }
+
+    const stripe = new Stripe(stripeKey, {
       apiVersion: '2023-10-16',
     })
 
     // Get plan details
     const planDetails = PLAN_MAPPING[payload.planId as keyof typeof PLAN_MAPPING]
     if (!planDetails) {
+      log("Invalid plan type", { planId: payload.planId });
       return new Response(
         JSON.stringify({ error: 'Invalid plan type' }),
-        { status: 400, headers }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Check if user already has a Stripe customer ID
-    let customerId
+    let customerId;
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('stripe_customer_id')
@@ -83,7 +98,8 @@ serve(async (req) => {
       .single()
 
     if (profile?.stripe_customer_id) {
-      customerId = profile.stripe_customer_id
+      customerId = profile.stripe_customer_id;
+      log("Found existing Stripe customer", { customerId });
     } else {
       // Create a new customer in Stripe
       const customer = await stripe.customers.create({
@@ -93,13 +109,8 @@ serve(async (req) => {
           userId: payload.userId
         }
       })
-      customerId = customer.id
-
-      // Save the customer ID to the user's profile
-      await supabaseAdmin
-        .from('profiles')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', payload.userId)
+      customerId = customer.id;
+      log("Created new Stripe customer", { customerId });
     }
 
     // Create LineItems based on plan
@@ -125,11 +136,23 @@ serve(async (req) => {
       mode: payload.isRecurring ? 'subscription' : 'payment',
       success_url: `${origin}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/dashboard?canceled=true`,
+      client_reference_id: payload.userId, // Important: Pass user ID to webhook
       metadata: {
         userId: payload.userId,
         planId: payload.planId
       }
     })
+
+    log("Checkout session created", { sessionId: session.id });
+
+    // Update user profile with subscription tier
+    await supabaseAdmin
+      .from('profiles')
+      .update({
+        subscription_tier: payload.planId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', payload.userId);
 
     return new Response(
       JSON.stringify({
@@ -137,16 +160,16 @@ serve(async (req) => {
         url: session.url,
         sessionId: session.id
       }),
-      { status: 200, headers }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Payment error:', error)
+    log("Payment error:", error);
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Failed to create payment session',
         detail: error.toString()
       }),
-      { status: 500, headers }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
