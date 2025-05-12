@@ -7,20 +7,24 @@ This directory contains TV channel logos used in the SteadyStream TV application
 
 The logos in this application are sourced from the [tv-logo/tv-logos](https://github.com/tv-logo/tv-logos) GitHub repository.
 
-To download more logos:
+To download logos:
 
 1. Run the download script:
    ```
    node download-logos.cjs
    ```
 
-2. The script will create category folders and download logos for:
-   - Entertainment channels
-   - Sports channels
-   - Movie channels 
-   - News channels
-   - Kids channels
-   - International channels
+2. The script will:
+   - Search for logos in multiple regions (world-wide, united-states, united-kingdom)
+   - Try multiple file name patterns to find each logo
+   - Create placeholder images for logos that can't be found
+   - Organize logos into category folders:
+     - Entertainment channels
+     - Sports channels
+     - Movie channels 
+     - News channels
+     - Kids channels
+     - International channels
 
 ## Adding Custom Logos
 
@@ -31,6 +35,10 @@ public/logos/[category]/[channel-name].png
 ```
 
 For best results, use PNG format with transparent backgrounds.
+
+## About Placeholder Logos
+
+If a logo cannot be found in the repository, the script will generate a placeholder image with the channel name. You can replace these placeholders with actual logos as needed.
 
 ## Credits
 

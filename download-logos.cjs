@@ -18,7 +18,10 @@ const path = require('path');
 
 // Configuration
 const config = {
-  baseUrl: 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-wide/',
+  // Updated base URL to include the correct path structure
+  baseUrl: 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/',
+  // We'll try both world-wide and usa folders for logos
+  regions: ['world-wide', 'united-states', 'united-kingdom'],
   categories: {
     entertainment: [
       "hbo", "amc", "fx", "tnt", "usa", "paramount", "showtime", "abc", "nbc", "cbs",
@@ -101,7 +104,7 @@ function downloadFile(url, filePath) {
         file.on('finish', () => {
           file.close();
           logger.success(`Downloaded: ${path.basename(filePath)}`);
-          resolve();
+          resolve(true);
         });
       } else if (response.statusCode === 404) {
         file.close();
@@ -120,6 +123,51 @@ function downloadFile(url, filePath) {
   });
 }
 
+// Try different URL patterns for downloading logos
+async function tryDownloadLogo(logoName, filePath) {
+  // Different URL patterns to try
+  const urlPatterns = [
+    // Pattern 1: {region}/{logo}/{logo}.png (most common)
+    (region) => `${config.baseUrl}${region}/${logoName}/${logoName}.png`,
+    
+    // Pattern 2: {region}/{logo}-icon.png
+    (region) => `${config.baseUrl}${region}/${logoName}/${logoName}-icon.png`,
+    
+    // Pattern 3: {region}/{logo}/icon.png
+    (region) => `${config.baseUrl}${region}/${logoName}/icon.png`,
+    
+    // Pattern 4: {region}/{logo}-light.png
+    (region) => `${config.baseUrl}${region}/${logoName}/${logoName}-light.png`,
+    
+    // Pattern 5: {region}/{logo}/light.png
+    (region) => `${config.baseUrl}${region}/${logoName}/light.png`,
+    
+    // Pattern 6: Just the logo (older repositories)
+    (region) => `${config.baseUrl}${region}/${logoName}.png`
+  ];
+  
+  // Try each region
+  for (const region of config.regions) {
+    // Try each URL pattern
+    for (const patternFn of urlPatterns) {
+      const url = patternFn(region);
+      try {
+        logger.info(`Trying: ${url}`);
+        await downloadFile(url, filePath);
+        logger.success(`Successfully downloaded ${logoName} from ${region}`);
+        return true; // Success, exit the function
+      } catch (error) {
+        // Continue to next pattern
+        logger.warn(`Pattern failed for ${logoName}: ${error}`);
+      }
+    }
+  }
+  
+  // If we get here, all patterns failed
+  logger.error(`All download attempts failed for ${logoName}`);
+  return false;
+}
+
 // Download all logos for a specific category
 async function downloadCategoryLogos(baseDir, category, logos) {
   logger.info(`\nDownloading ${category} logos...`);
@@ -132,19 +180,44 @@ async function downloadCategoryLogos(baseDir, category, logos) {
   
   // Download each logo
   for (const logo of logos) {
-    const url = `${config.baseUrl}${logo}.png`;
     const filePath = path.join(categoryDir, `${logo}.png`);
     
     try {
-      await downloadFile(url, filePath);
-      successful++;
+      const success = await tryDownloadLogo(logo, filePath);
+      if (success) {
+        successful++;
+      } else {
+        failed++;
+        // Create placeholder if logo couldn't be downloaded
+        await createPlaceholderLogo(filePath, logo);
+        logger.warn(`Created placeholder for ${logo}`);
+      }
     } catch (error) {
       logger.error(`Failed to download ${logo}: ${error}`);
       failed++;
+      
+      // Create placeholder if logo couldn't be downloaded
+      await createPlaceholderLogo(filePath, logo);
+      logger.warn(`Created placeholder for ${logo}`);
     }
   }
   
   return { successful, failed };
+}
+
+// Create a simple placeholder logo with the channel name
+async function createPlaceholderLogo(filePath, channelName) {
+  // Basic placeholder creation using HTTP request to placeholder service
+  // We'll use a placeholder service that generates images with text
+  const placeholderUrl = `https://placehold.co/300x200/222222/FFCC00?text=${encodeURIComponent(channelName)}`;
+  
+  try {
+    await downloadFile(placeholderUrl, filePath);
+    return true;
+  } catch (error) {
+    logger.error(`Failed to create placeholder for ${channelName}: ${error}`);
+    return false;
+  }
 }
 
 // Main function
