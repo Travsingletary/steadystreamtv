@@ -11,7 +11,7 @@ To download more logos:
 
 1. Run the download script:
    ```
-   node scripts/download-logos.js
+   node scripts/download-logos.cjs
    ```
 
 2. The script will create category folders and download logos for:
