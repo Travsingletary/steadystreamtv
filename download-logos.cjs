@@ -261,3 +261,6 @@ async function main() {
 
 // Run the main function
 main();
+
+// Export for ESM compatibility
+module.exports = main;
