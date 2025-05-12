@@ -18,7 +18,7 @@ const path = require('path');
 
 // Configuration
 const config = {
-  baseUrl: 'https://raw.githubusercontent.com/tv-logo/tv-logos/master/countries/world-wide/',
+  baseUrl: 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-wide/',
   categories: {
     entertainment: [
       "hbo", "amc", "fx", "tnt", "usa", "paramount", "showtime", "abc", "nbc", "cbs",
