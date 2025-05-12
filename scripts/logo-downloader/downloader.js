@@ -80,4 +80,5 @@ async function downloadAllLogos(baseDir) {
 
 module.exports = {
   downloadAllLogos
-};
+};node scripts/download-logos.js
+
