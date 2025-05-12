@@ -33,6 +33,10 @@ const downloadFile = (url, filePath) => {
           logger.success(`Downloaded: ${path.basename(filePath)}`);
           resolve();
         });
+      } else if (response.statusCode === 404) {
+        file.close();
+        fs.unlink(filePath, () => {});
+        reject(`Logo not found at ${url}: 404 Not Found`);
       } else {
         file.close();
         fs.unlink(filePath, () => {}); // Delete the file

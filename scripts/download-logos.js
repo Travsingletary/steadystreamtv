@@ -21,8 +21,8 @@ console.log('The actual implementation is now in scripts/logo-downloader/');
 // You can set the log level with an environment variable:
 // LOG_LEVEL=DEBUG node scripts/download-logos.js
 if (!process.env.LOG_LEVEL) {
-  // Default to INFO if not set
-  process.env.LOG_LEVEL = 'INFO';
+  // Setting to DEBUG for more verbose output
+  process.env.LOG_LEVEL = 'DEBUG';
 }
 
 // Forward the execution to the modular implementation

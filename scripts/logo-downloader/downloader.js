@@ -37,6 +37,7 @@ async function downloadAllLogos(baseDir) {
   logger.section('TV LOGO DOWNLOADER');
   logger.info('Starting logo download process...');
   logger.info(`Base directory: ${baseDir}`);
+  logger.info(`Base URL: ${baseUrl}`);
   
   for (const [category, logos] of Object.entries(categories)) {
     logger.info(`\nDownloading ${category} logos...`);
@@ -51,12 +52,14 @@ async function downloadAllLogos(baseDir) {
       const url = `${baseUrl}${logo}.png`;
       const filePath = path.join(categoryDir, `${logo}.png`);
       
+      logger.info(`Downloading: ${logo}.png from ${url}`);
+      
       try {
         await downloadFile(url, filePath);
         categorySuccessful++;
         totalSuccessful++;
       } catch (error) {
-        logger.error(error);
+        logger.error(`Failed to download ${logo}: ${error}`);
         totalFailed++;
       }
     }
@@ -80,5 +83,4 @@ async function downloadAllLogos(baseDir) {
 
 module.exports = {
   downloadAllLogos
-};node scripts/download-logos.js
-
+};

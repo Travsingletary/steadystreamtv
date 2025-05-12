@@ -68,7 +68,9 @@ const TvLogoGrid = ({ category }: TvLogoProps) => {
         try {
           const response = await fetch(`/logos/${categoryToFolder[category]}/${logo}.png`, { method: 'HEAD' });
           newLogoStatus[logo] = response.ok;
+          console.log(`Checked logo ${logo}: ${response.ok ? 'Found' : 'Not found'}`);
         } catch (error) {
+          console.error(`Error checking logo ${logo}:`, error);
           newLogoStatus[logo] = false;
         }
       }
@@ -89,6 +91,12 @@ const TvLogoGrid = ({ category }: TvLogoProps) => {
         toast({
           title: "Some logos are missing",
           description: "Run 'node scripts/download-logos.js' to download all logos",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Logos loaded",
+          description: `Found ${foundLogosCount} out of ${logos.length} logos`,
           variant: "default"
         });
       }
