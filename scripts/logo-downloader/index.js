@@ -54,3 +54,6 @@ async function main() {
 
 // Run the main function
 main();
+
+// For ES module compatibility
+module.exports = main;

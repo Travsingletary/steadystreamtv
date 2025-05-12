@@ -25,5 +25,14 @@ if (!process.env.LOG_LEVEL) {
   process.env.LOG_LEVEL = 'DEBUG';
 }
 
+// Import and execute the module implementation
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { createRequire } from 'module';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
+
 // Forward the execution to the modular implementation
-require('./logo-downloader/index.js');
+const logoDownloader = require('./logo-downloader/index.js');

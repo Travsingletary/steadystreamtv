@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, Info } from "lucide-react";
+import { AlertCircle, Info, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface TvLogoProps {
   category: string;
@@ -14,6 +15,7 @@ const TvLogoGrid = ({ category }: TvLogoProps) => {
   const [logoStatus, setLogoStatus] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [logosChecked, setLogosChecked] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
   // Map category names to folder names in the GitHub repository
@@ -54,56 +56,65 @@ const TvLogoGrid = ({ category }: TvLogoProps) => {
     ]
   };
 
-  // Load logos and check their status
-  useEffect(() => {
-    const checkLogos = async () => {
-      setIsLoading(true);
-      const newLogoStatus: Record<string, boolean> = {};
-      
-      // Get logos for the current category
-      const logos = logosMap[category] || [];
-      
-      // Check each logo
-      for (const logo of logos) {
-        try {
-          const response = await fetch(`/logos/${categoryToFolder[category]}/${logo}.png`, { method: 'HEAD' });
-          newLogoStatus[logo] = response.ok;
-          console.log(`Checked logo ${logo}: ${response.ok ? 'Found' : 'Not found'}`);
-        } catch (error) {
-          console.error(`Error checking logo ${logo}:`, error);
-          newLogoStatus[logo] = false;
-        }
-      }
-      
-      setLogoStatus(newLogoStatus);
-      setIsLoading(false);
-      setLogosChecked(true);
-      
-      // Check if any logos were found
-      const foundLogosCount = Object.values(newLogoStatus).filter(Boolean).length;
-      if (foundLogosCount === 0) {
-        toast({
-          title: "No logos found",
-          description: "Run 'node scripts/download-logos.js' to download channel logos",
-          variant: "destructive"
-        });
-      } else if (foundLogosCount < logos.length / 2) {
-        toast({
-          title: "Some logos are missing",
-          description: "Run 'node scripts/download-logos.js' to download all logos",
-          variant: "default"
-        });
-      } else {
-        toast({
-          title: "Logos loaded",
-          description: `Found ${foundLogosCount} out of ${logos.length} logos`,
-          variant: "default"
-        });
-      }
-    };
+  // Function to check logos and update their status
+  const checkLogos = async () => {
+    setIsLoading(true);
+    const newLogoStatus: Record<string, boolean> = {};
     
+    // Get logos for the current category
+    const logos = logosMap[category] || [];
+    
+    // Check each logo
+    for (const logo of logos) {
+      try {
+        const response = await fetch(`/logos/${categoryToFolder[category]}/${logo}.png`, { method: 'HEAD' });
+        newLogoStatus[logo] = response.ok;
+        console.log(`Checked logo ${logo}: ${response.ok ? 'Found' : 'Not found'}`);
+      } catch (error) {
+        console.error(`Error checking logo ${logo}:`, error);
+        newLogoStatus[logo] = false;
+      }
+    }
+    
+    setLogoStatus(newLogoStatus);
+    setIsLoading(false);
+    setLogosChecked(true);
+    
+    // Check if any logos were found
+    const foundLogosCount = Object.values(newLogoStatus).filter(Boolean).length;
+    if (foundLogosCount === 0) {
+      toast({
+        title: "No logos found",
+        description: "Run 'node scripts/download-logos.js' to download channel logos",
+        variant: "destructive"
+      });
+    } else if (foundLogosCount < logos.length / 2) {
+      toast({
+        title: "Some logos are missing",
+        description: "Run 'node scripts/download-logos.js' to download all logos",
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "Logos loaded",
+        description: `Found ${foundLogosCount} out of ${logos.length} logos`,
+        variant: "default"
+      });
+    }
+  };
+
+  // Load logos and check their status when category changes
+  useEffect(() => {
     checkLogos();
-  }, [category, toast]);
+  }, [category]);
+  
+  // Function to refresh logos
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    checkLogos().then(() => {
+      setIsRefreshing(false);
+    });
+  };
 
   // Get logos for the current category
   const logos = logosMap[category] || [];
@@ -115,14 +126,23 @@ const TvLogoGrid = ({ category }: TvLogoProps) => {
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="mb-4 flex gap-2">
         <Input
           type="text"
           placeholder="Search channels..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-dark-300 border-gray-700"
+          className="bg-dark-300 border-gray-700 flex-1"
         />
+        <Button 
+          variant="outline" 
+          onClick={handleRefresh} 
+          disabled={isRefreshing}
+          className="border-gray-700"
+          title="Refresh logos"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </Button>
       </div>
       
       {isLoading ? (
