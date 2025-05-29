@@ -4,7 +4,7 @@ import { OnboardingDeviceSetup } from "@/components/onboarding/OnboardingDeviceS
 import { OnboardingPreferences } from "@/components/onboarding/OnboardingPreferences";
 import { OnboardingSubscription } from "@/components/onboarding/OnboardingSubscription";
 import { OnboardingComplete } from "@/components/onboarding/OnboardingComplete";
-import { OnboardingUserData } from "@/hooks/use-onboarding";
+import { OnboardingUserData } from "@/types/onboarding";
 
 interface OnboardingStepsProps {
   step: number;
