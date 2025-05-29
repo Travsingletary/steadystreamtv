@@ -51,13 +51,43 @@ serve(async (req) => {
   try {
     log("Function started");
     
-    // Log all available environment variables (for debugging)
-    log("Available environment variables", {
-      hasSupabaseUrl: !!Deno.env.get('SUPABASE_URL'),
-      hasSupabaseKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
-      hasStripeKey: !!Deno.env.get('STRIPE_SECRET_KEY'),
-      stripeKeyPrefix: Deno.env.get('STRIPE_SECRET_KEY')?.substring(0, 7) || 'not found'
+    // Get and validate Stripe secret key FIRST before doing anything else
+    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+    log("Checking Stripe secret key", {
+      hasStripeKey: !!stripeKey,
+      keyPrefix: stripeKey?.substring(0, 7) || 'not found',
+      keyLength: stripeKey?.length || 0
     });
+
+    if (!stripeKey) {
+      log("ERROR: Missing Stripe secret key");
+      return new Response(
+        JSON.stringify({ 
+          error: 'Payment service configuration error',
+          detail: 'STRIPE_SECRET_KEY not configured. Please add your Stripe secret key in Supabase Edge Function secrets.',
+          action: 'Configure STRIPE_SECRET_KEY in Supabase Dashboard > Edge Functions > Secrets'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!stripeKey.startsWith('sk_')) {
+      log("ERROR: Invalid Stripe secret key format", { 
+        keyPrefix: stripeKey.substring(0, 10),
+        expectedFormat: 'sk_test_... or sk_live_...'
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid Stripe secret key format',
+          detail: 'Stripe secret key must start with "sk_test_" (for test mode) or "sk_live_" (for live mode)',
+          current: `Key starts with: "${stripeKey.substring(0, 7)}"`,
+          expected: 'Key should start with: "sk_test_" or "sk_live_"'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    log("Stripe key validation passed");
     
     const payload = await req.json() as RequestPayload
     log("Received payload", payload);
@@ -77,30 +107,7 @@ serve(async (req) => {
       )
     }
 
-    // Initialize Stripe with better error handling
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-    if (!stripeKey) {
-      log("Missing Stripe secret key - check Supabase secrets configuration");
-      return new Response(
-        JSON.stringify({ 
-          error: 'Payment service configuration error',
-          detail: 'STRIPE_SECRET_KEY not configured in Supabase secrets'
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    if (!stripeKey.startsWith('sk_')) {
-      log("Invalid Stripe secret key format", { keyPrefix: stripeKey.substring(0, 7) });
-      return new Response(
-        JSON.stringify({ 
-          error: 'Payment service configuration error',
-          detail: 'Invalid Stripe secret key format'
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
+    // Initialize Stripe
     const stripe = new Stripe(stripeKey, {
       apiVersion: '2023-10-16',
     })
