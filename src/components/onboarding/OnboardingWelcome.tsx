@@ -19,6 +19,8 @@ const formSchema = z.object({
   }),
   password: z.string().min(8, {
     message: "Password must be at least 8 characters.",
+  }).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~])/, {
+    message: "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.",
   }),
 });
 
@@ -54,11 +56,16 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     
-    // Validate password length and complexity
-    if (values.password.length < 8) {
+    // Validate password complexity
+    const hasLowercase = /[a-z]/.test(values.password);
+    const hasUppercase = /[A-Z]/.test(values.password);
+    const hasNumber = /\d/.test(values.password);
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(values.password);
+    
+    if (!hasLowercase || !hasUppercase || !hasNumber || !hasSpecial) {
       toast({
         title: "Password Error",
-        description: "Password must be at least 8 characters long.",
+        description: "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.",
         variant: "destructive",
       });
       setIsLoading(false);
@@ -161,7 +168,9 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
                   </div>
                 </FormControl>
                 <FormMessage />
-                <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters long.</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Password must contain at least 8 characters including uppercase, lowercase, number, and special character.
+                </p>
               </FormItem>
             )}
           />
