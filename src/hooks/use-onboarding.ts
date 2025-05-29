@@ -38,6 +38,30 @@ export const useOnboarding = () => {
     subscription: null
   });
 
+  // Generate a secure password that meets Supabase requirements
+  const generateSecurePassword = () => {
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+    const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    // Ensure at least one character from each category
+    let password = '';
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+    
+    // Fill the rest with random characters from all categories
+    const allChars = lowercase + uppercase + numbers + symbols;
+    for (let i = 4; i < 16; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    // Shuffle the password to avoid predictable patterns
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+  };
+
   // Update user data by merging with existing data
   const updateUserData = (data: Partial<OnboardingUserData>) => {
     setUserData(prev => ({ ...prev, ...data }));
@@ -92,9 +116,9 @@ export const useOnboarding = () => {
       console.log("Starting onboarding completion process...");
       console.log("User data:", userData);
       
-      // Generate a secure random password
-      const password = `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`.substring(0, 12);
-      console.log("Generated password for user");
+      // Generate a secure random password that meets Supabase requirements
+      const password = generateSecurePassword();
+      console.log("Generated secure password for user");
       
       // Sign up user with Supabase
       console.log("Creating Supabase user...");
