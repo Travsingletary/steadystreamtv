@@ -34,25 +34,34 @@ const ConnectApps = () => {
               />
               <p className="text-gray-300 mb-4">
                 TiviMate is one of the best IPTV players specifically designed for Amazon Fire Stick devices. 
-                Connect your SteadyStream account to enjoy channels with a premium interface.
+                Download and install using the link below, then use our setup URL to configure your SteadyStream account.
               </p>
+              <div className="bg-dark-300 p-3 rounded-md mb-4">
+                <p className="text-sm font-medium mb-2">Download Link:</p>
+                <code className="text-xs bg-gray-800 p-2 rounded block overflow-auto mb-2">
+                  aftv.news/1592817
+                </code>
+                <p className="text-xs text-gray-400 mb-3">
+                  Use downloader code: <span className="text-gold font-medium">1592817</span>
+                </p>
+              </div>
               <div className="bg-dark-300 p-3 rounded-md">
-                <p className="text-sm font-medium mb-2">Quick Setup URL for Fire Stick:</p>
+                <p className="text-sm font-medium mb-2">Setup URL after installation:</p>
                 <code className="text-xs bg-gray-800 p-2 rounded block overflow-auto mb-2">
                   https://gangstageeks.com/tivimate/rs6/steady/
                 </code>
                 <p className="text-xs text-gray-400">
-                  Use this URL in TiviMate app on your Fire Stick to automatically configure your SteadyStream account
+                  Use this URL in TiviMate app to automatically configure your SteadyStream account
                 </p>
               </div>
             </CardContent>
             <CardFooter>
               <Button 
                 className="w-full flex items-center gap-2"
-                onClick={() => window.open("https://gangstageeks.com/tivimate/rs6/steady/", "_blank")}
+                onClick={() => window.open("https://aftv.news/1592817", "_blank")}
               >
                 <ExternalLink className="h-4 w-4" />
-                Open TiviMate Setup
+                Download TiviMate
               </Button>
             </CardFooter>
           </Card>
@@ -113,7 +122,7 @@ const ConnectApps = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-300">
-                  Download TiviMate on your Fire Stick and use our setup URL for the best experience on Amazon Fire devices.
+                  Download TiviMate using the downloader code 1592817, then use our setup URL for the best Fire Stick experience.
                 </p>
               </CardContent>
             </Card>
