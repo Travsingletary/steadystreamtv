@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -197,9 +196,34 @@ const Dashboard = () => {
       addDebugInfo(`Edge function response: ${JSON.stringify(data)}`);
       
       if (data?.url) {
-        addDebugInfo(`Redirecting to Stripe checkout: ${data.url}`);
-        // Redirect to Stripe checkout
-        window.location.href = data.url;
+        addDebugInfo(`Opening Stripe checkout in new tab: ${data.url}`);
+        
+        // Show user feedback before opening new tab
+        toast({
+          title: "Redirecting to Payment",
+          description: "A new tab will open with your secure Stripe payment page.",
+          variant: "default",
+        });
+        
+        // Open Stripe checkout in a new tab to avoid iframe restrictions
+        const newWindow = window.open(data.url, '_blank');
+        
+        if (!newWindow) {
+          // Fallback if popup was blocked
+          addDebugInfo("Popup blocked, providing manual link");
+          toast({
+            title: "Popup Blocked",
+            description: "Please allow popups and try again, or click the payment link below.",
+            variant: "destructive",
+          });
+          
+          // You could also show a modal with the link here
+          console.log("Direct payment link:", data.url);
+        } else {
+          addDebugInfo("New tab opened successfully");
+        }
+        
+        setProcessingPayment(false);
       } else {
         addDebugInfo("No checkout URL returned from function");
         throw new Error("No checkout URL returned from payment function");
@@ -316,6 +340,16 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           )}
+          
+          {/* Payment Instructions Alert */}
+          <Alert className="mb-8 bg-blue-900/30 border-blue-500 text-blue-100">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Payment Process</AlertTitle>
+            <AlertDescription>
+              When you click "Subscribe", a new tab will open with your secure Stripe payment page. 
+              Please complete your payment there and return to this page.
+            </AlertDescription>
+          </Alert>
           
           {isTrialActive() && (
             <Alert className="mb-8 bg-gold/20 border-gold text-gold">
