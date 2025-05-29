@@ -117,18 +117,26 @@ serve(async (req) => {
       )
     }
 
-    // Check if user already has a Stripe customer ID
+    // Check if user already has a Stripe customer ID - use maybeSingle() to handle missing profiles gracefully
     let customerId;
-    const { data: profile } = await supabaseAdmin
+    log("Looking up user profile", { userId: payload.userId });
+    
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('stripe_customer_id')
       .eq('id', payload.userId)
-      .single()
+      .maybeSingle() // Use maybeSingle() instead of single() to handle missing profiles
+
+    if (profileError) {
+      log("Error fetching profile", { error: profileError.message });
+      // Continue without existing customer ID - we'll create a new one
+    }
 
     if (profile?.stripe_customer_id) {
       customerId = profile.stripe_customer_id;
       log("Found existing Stripe customer", { customerId });
     } else {
+      log("No existing Stripe customer found, will create new one");
       // Create a new customer in Stripe
       const customer = await stripe.customers.create({
         email: payload.customerEmail,
@@ -139,6 +147,18 @@ serve(async (req) => {
       })
       customerId = customer.id;
       log("Created new Stripe customer", { customerId });
+
+      // Update the profile with the new customer ID if profile exists, or handle gracefully if it doesn't
+      try {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', payload.userId);
+        log("Updated profile with new Stripe customer ID");
+      } catch (updateError) {
+        log("Could not update profile with Stripe customer ID", { error: updateError });
+        // This is not critical - payment can still proceed
+      }
     }
 
     // Create LineItems based on plan
@@ -173,14 +193,20 @@ serve(async (req) => {
 
     log("Checkout session created", { sessionId: session.id });
 
-    // Update user profile with subscription tier
-    await supabaseAdmin
-      .from('profiles')
-      .update({
-        subscription_tier: payload.planId,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', payload.userId);
+    // Update user profile with subscription tier - handle gracefully if profile doesn't exist
+    try {
+      await supabaseAdmin
+        .from('profiles')
+        .update({
+          subscription_tier: payload.planId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payload.userId);
+      log("Updated profile with subscription tier");
+    } catch (updateError) {
+      log("Could not update profile with subscription tier", { error: updateError });
+      // This is not critical - payment can still proceed
+    }
 
     return new Response(
       JSON.stringify({

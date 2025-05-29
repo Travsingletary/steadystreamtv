@@ -95,10 +95,13 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          email: string | null
           genres: string[] | null
           id: string
           name: string | null
           preferred_device: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           subscription_status: string | null
           subscription_tier: string | null
           trial_end_date: string | null
@@ -108,10 +111,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email?: string | null
           genres?: string[] | null
           id: string
           name?: string | null
           preferred_device?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           trial_end_date?: string | null
@@ -121,10 +127,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email?: string | null
           genres?: string[] | null
           id?: string
           name?: string | null
           preferred_device?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           trial_end_date?: string | null
