@@ -89,11 +89,18 @@ export const useOnboarding = () => {
   const completeOnboarding = async () => {
     try {
       setIsProcessingXtream(true);
+      console.log("Starting onboarding completion process...");
+      console.log("User data:", userData);
+      
+      // Generate a secure random password
+      const password = `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`.substring(0, 12);
+      console.log("Generated password for user");
       
       // Sign up user with Supabase
+      console.log("Creating Supabase user...");
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
-        password: `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`.substring(0, 12),
+        password: password,
         options: {
           data: {
             name: userData.name,
@@ -102,13 +109,19 @@ export const useOnboarding = () => {
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error("Supabase auth error:", authError);
+        throw new Error(`Authentication failed: ${authError.message}`);
+      }
+      
+      console.log("Supabase user created successfully:", authData?.user?.id);
       
       // Create user profile
       if (authData?.user?.id) {
         const trialEndDate = new Date();
         trialEndDate.setDate(trialEndDate.getDate() + (userData.subscription?.trialDays || 7));
         
+        console.log("Creating user profile...");
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -121,36 +134,58 @@ export const useOnboarding = () => {
             trial_end_date: trialEndDate.toISOString()
           });
         
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+          throw new Error(`Profile creation failed: ${profileError.message}`);
+        }
+        
+        console.log("User profile created successfully");
         
         // Create Xtream account via Supabase Edge Function
+        console.log("Creating IPTV account...");
         const { data: xtreamData, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
           body: { 
             userId: authData.user.id,
-            planType: (userData.subscription?.plan || 'solo').toLowerCase(), 
+            planType: (userData.subscription?.plan || 'standard').toLowerCase(), 
             email: userData.email,
             name: userData.name
           }
         });
 
-        if (xtreamError) throw xtreamError;
+        if (xtreamError) {
+          console.error("IPTV account creation error:", xtreamError);
+          throw new Error(`IPTV account creation failed: ${xtreamError.message}`);
+        }
+        
+        console.log("IPTV account created successfully:", xtreamData);
         
         // Store Xtream credentials in user data for completion screen
-        updateUserData({ 
-          xtreamCredentials: { 
-            username: xtreamData?.data?.username, 
-            password: xtreamData?.data?.password,
-            playlistUrl: xtreamData?.data?.playlistUrl
-          }
-        });
+        if (xtreamData?.data) {
+          updateUserData({ 
+            xtreamCredentials: { 
+              username: xtreamData.data.username, 
+              password: xtreamData.data.password,
+              playlistUrl: xtreamData.data.playlistUrls?.m3u
+            }
+          });
+          console.log("IPTV credentials stored in user data");
+        }
       }
 
+      console.log("Onboarding completion successful, moving to step 5");
       // Move to completion step
       setStep(5);
+      
+      toast({
+        title: "Account Created Successfully!",
+        description: "Your SteadyStream TV account is ready to use.",
+      });
+      
     } catch (error: any) {
+      console.error("Complete onboarding error:", error);
       toast({
         title: "Error Setting Up Account",
-        description: error.message || "An error occurred. Please try again.",
+        description: error.message || "An error occurred during account setup. Please try again.",
         variant: "destructive",
       });
     } finally {
