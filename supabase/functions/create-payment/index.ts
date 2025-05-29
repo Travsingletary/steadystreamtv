@@ -89,82 +89,131 @@ serve(async (req) => {
 
     log("Stripe key validation passed");
     
-    const payload = await req.json() as RequestPayload
-    log("Received payload", payload);
+    // Parse and validate request payload
+    let payload: RequestPayload;
+    try {
+      payload = await req.json() as RequestPayload;
+      log("Received payload", payload);
+    } catch (parseError) {
+      log("ERROR: Failed to parse request payload", { error: parseError });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request payload',
+          detail: 'Could not parse JSON request body'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Create Supabase admin client with service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+    log("Supabase admin client created");
 
     // Validate request
     if (!payload.userId || !payload.planId) {
-      log("Missing required fields", { userId: payload.userId, planId: payload.planId });
+      log("ERROR: Missing required fields", { userId: payload.userId, planId: payload.planId });
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ 
+          error: 'Missing required fields',
+          detail: 'userId and planId are required'
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Initialize Stripe
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: '2023-10-16',
-    })
-
-    log("Stripe initialized successfully");
+    let stripe;
+    try {
+      stripe = new Stripe(stripeKey, {
+        apiVersion: '2023-10-16',
+      });
+      log("Stripe initialized successfully");
+    } catch (stripeError) {
+      log("ERROR: Failed to initialize Stripe", { error: stripeError });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Stripe initialization failed',
+          detail: stripeError instanceof Error ? stripeError.message : 'Unknown error'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Get plan details
     const planDetails = PLAN_MAPPING[payload.planId as keyof typeof PLAN_MAPPING]
     if (!planDetails) {
-      log("Invalid plan type", { planId: payload.planId });
+      log("ERROR: Invalid plan type", { planId: payload.planId });
       return new Response(
-        JSON.stringify({ error: 'Invalid plan type' }),
+        JSON.stringify({ 
+          error: 'Invalid plan type',
+          detail: `Plan '${payload.planId}' not found. Available plans: ${Object.keys(PLAN_MAPPING).join(', ')}`
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    log("Plan details retrieved", { planId: payload.planId, planDetails });
 
     // Check if user already has a Stripe customer ID - use maybeSingle() to handle missing profiles gracefully
     let customerId;
     log("Looking up user profile", { userId: payload.userId });
     
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('stripe_customer_id')
-      .eq('id', payload.userId)
-      .maybeSingle() // Use maybeSingle() instead of single() to handle missing profiles
+    try {
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('stripe_customer_id')
+        .eq('id', payload.userId)
+        .maybeSingle() // Use maybeSingle() instead of single() to handle missing profiles
 
-    if (profileError) {
-      log("Error fetching profile", { error: profileError.message });
-      // Continue without existing customer ID - we'll create a new one
+      if (profileError) {
+        log("Warning: Error fetching profile (continuing anyway)", { error: profileError.message });
+        // Continue without existing customer ID - we'll create a new one
+      } else if (profile?.stripe_customer_id) {
+        customerId = profile.stripe_customer_id;
+        log("Found existing Stripe customer", { customerId });
+      } else {
+        log("No existing Stripe customer found, will create new one");
+      }
+    } catch (profileLookupError) {
+      log("Warning: Profile lookup failed (continuing anyway)", { error: profileLookupError });
     }
 
-    if (profile?.stripe_customer_id) {
-      customerId = profile.stripe_customer_id;
-      log("Found existing Stripe customer", { customerId });
-    } else {
-      log("No existing Stripe customer found, will create new one");
-      // Create a new customer in Stripe
-      const customer = await stripe.customers.create({
-        email: payload.customerEmail,
-        name: payload.customerName,
-        metadata: {
-          userId: payload.userId
-        }
-      })
-      customerId = customer.id;
-      log("Created new Stripe customer", { customerId });
-
-      // Update the profile with the new customer ID if profile exists, or handle gracefully if it doesn't
+    // Create or use existing Stripe customer
+    if (!customerId) {
       try {
-        await supabaseAdmin
-          .from('profiles')
-          .update({ stripe_customer_id: customerId })
-          .eq('id', payload.userId);
-        log("Updated profile with new Stripe customer ID");
-      } catch (updateError) {
-        log("Could not update profile with Stripe customer ID", { error: updateError });
-        // This is not critical - payment can still proceed
+        log("Creating new Stripe customer", { email: payload.customerEmail, name: payload.customerName });
+        const customer = await stripe.customers.create({
+          email: payload.customerEmail,
+          name: payload.customerName,
+          metadata: {
+            userId: payload.userId
+          }
+        });
+        customerId = customer.id;
+        log("Created new Stripe customer", { customerId });
+
+        // Update the profile with the new customer ID if profile exists, or handle gracefully if it doesn't
+        try {
+          await supabaseAdmin
+            .from('profiles')
+            .update({ stripe_customer_id: customerId })
+            .eq('id', payload.userId);
+          log("Updated profile with new Stripe customer ID");
+        } catch (updateError) {
+          log("Could not update profile with Stripe customer ID (non-critical)", { error: updateError });
+          // This is not critical - payment can still proceed
+        }
+      } catch (customerError) {
+        log("ERROR: Failed to create Stripe customer", { error: customerError });
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to create customer',
+            detail: customerError instanceof Error ? customerError.message : 'Unknown error'
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
     }
 
@@ -180,25 +229,43 @@ serve(async (req) => {
         ...(payload.isRecurring ? { recurring: { interval: 'month' } } : {})
       },
       quantity: 1,
-    }]
+    }];
+    log("Line items created", { lineItems });
 
     // Create checkout session
-    const origin = req.headers.get('origin') || 'http://localhost:5173'
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      payment_method_types: ['card'],
-      line_items: lineItems,
-      mode: payload.isRecurring ? 'subscription' : 'payment',
-      success_url: `${origin}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/dashboard?canceled=true`,
-      client_reference_id: payload.userId, // Important: Pass user ID to webhook
-      metadata: {
-        userId: payload.userId,
-        planId: payload.planId
-      }
-    })
+    const origin = req.headers.get('origin') || 'http://localhost:5173';
+    log("Creating checkout session", { 
+      customerId, 
+      origin, 
+      mode: payload.isRecurring ? 'subscription' : 'payment' 
+    });
 
-    log("Checkout session created", { sessionId: session.id });
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: lineItems,
+        mode: payload.isRecurring ? 'subscription' : 'payment',
+        success_url: `${origin}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/dashboard?canceled=true`,
+        client_reference_id: payload.userId, // Important: Pass user ID to webhook
+        metadata: {
+          userId: payload.userId,
+          planId: payload.planId
+        }
+      });
+      log("Checkout session created successfully", { sessionId: session.id, url: session.url });
+    } catch (sessionError) {
+      log("ERROR: Failed to create checkout session", { error: sessionError });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to create checkout session',
+          detail: sessionError instanceof Error ? sessionError.message : 'Unknown error'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Update user profile with subscription tier - handle gracefully if profile doesn't exist
     try {
@@ -211,9 +278,15 @@ serve(async (req) => {
         .eq('id', payload.userId);
       log("Updated profile with subscription tier");
     } catch (updateError) {
-      log("Could not update profile with subscription tier", { error: updateError });
+      log("Could not update profile with subscription tier (non-critical)", { error: updateError });
       // This is not critical - payment can still proceed
     }
+
+    log("Payment function completed successfully", { 
+      sessionId: session.id,
+      customerId,
+      planId: payload.planId
+    });
 
     return new Response(
       JSON.stringify({
@@ -224,11 +297,20 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    log("Payment error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    log("CRITICAL ERROR in payment function", { 
+      message: errorMessage, 
+      stack: errorStack,
+      type: error?.constructor?.name
+    });
+    
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Failed to create payment session',
-        detail: error.toString()
+        error: 'Payment function failed',
+        detail: errorMessage,
+        timestamp: new Date().toISOString()
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
