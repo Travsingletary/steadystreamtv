@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,13 +11,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
-import { CreditCard, Calendar, CheckCircle, Clock, Lock, User, Key } from "lucide-react";
+import { CreditCard, Calendar, CheckCircle, Clock, Lock, User, Key, AlertTriangle } from "lucide-react";
 
 const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -26,6 +28,12 @@ const Dashboard = () => {
   const paymentSuccess = searchParams.get("success") === "true";
   const paymentCanceled = searchParams.get("canceled") === "true";
   const sessionId = searchParams.get("session_id");
+
+  // Debug logging function
+  const addDebugInfo = (message: string) => {
+    console.log(`[DASHBOARD DEBUG] ${message}`);
+    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
 
   // Plans data
   const plans = [
@@ -82,16 +90,19 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
+      addDebugInfo("Starting user data fetch");
       
       try {
         // Get authenticated user
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
+          addDebugInfo("No authenticated user found, redirecting to onboarding");
           navigate("/onboarding");
           return;
         }
         
+        addDebugInfo(`User authenticated: ${user.email} (ID: ${user.id})`);
         setUser(user);
         
         // Get user profile
@@ -102,12 +113,15 @@ const Dashboard = () => {
           .single();
           
         if (error) {
+          addDebugInfo(`Profile fetch error: ${error.message}`);
           throw error;
         }
         
+        addDebugInfo(`Profile loaded: subscription_tier=${profile?.subscription_tier}, status=${profile?.subscription_status}`);
         setProfile(profile);
       } catch (error) {
         console.error("Error fetching user data:", error);
+        addDebugInfo(`Error fetching user data: ${error}`);
         toast({
           title: "Error",
           description: "Failed to load your subscription information",
@@ -122,6 +136,7 @@ const Dashboard = () => {
     
     // Show toast for payment status
     if (paymentSuccess && sessionId) {
+      addDebugInfo(`Payment successful with session ID: ${sessionId}`);
       toast({
         title: "Payment Successful",
         description: "Thank you for subscribing to SteadyStream TV!",
@@ -130,6 +145,7 @@ const Dashboard = () => {
       // Clear URL params after showing toast
       navigate('/dashboard', { replace: true });
     } else if (paymentCanceled) {
+      addDebugInfo("Payment was canceled by user");
       toast({
         title: "Payment Canceled",
         description: "Your payment was canceled. You can try again anytime.",
@@ -141,35 +157,66 @@ const Dashboard = () => {
   }, [navigate, toast, paymentSuccess, paymentCanceled, sessionId]);
 
   const handleSubscribe = async (planId: string, isRecurring: boolean = true) => {
-    if (processingPayment || !user) return;
+    if (processingPayment || !user) {
+      addDebugInfo(`Subscribe blocked: processingPayment=${processingPayment}, user=${!!user}`);
+      return;
+    }
     
     setProcessingPayment(true);
+    addDebugInfo(`Starting subscription process for plan: ${planId}, isRecurring: ${isRecurring}`);
     
     try {
+      // Verify user authentication
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("User not authenticated");
+      }
+      addDebugInfo(`User verified for payment: ${currentUser.email}`);
+
+      // Prepare function payload
+      const payload = {
+        userId: user.id,
+        planId: planId,
+        customerEmail: user.email,
+        customerName: profile?.name || user.email,
+        isRecurring: isRecurring
+      };
+      
+      addDebugInfo(`Calling create-payment function with payload: ${JSON.stringify(payload)}`);
+      
+      // Call the edge function
       const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          userId: user.id,
-          planId: planId,
-          customerEmail: user.email,
-          customerName: profile?.name || user.email,
-          isRecurring: isRecurring
-        }
+        body: payload
       });
       
-      if (error) throw error;
+      if (error) {
+        addDebugInfo(`Edge function error: ${JSON.stringify(error)}`);
+        throw new Error(`Function error: ${error.message || JSON.stringify(error)}`);
+      }
+      
+      addDebugInfo(`Edge function response: ${JSON.stringify(data)}`);
       
       if (data?.url) {
+        addDebugInfo(`Redirecting to Stripe checkout: ${data.url}`);
         // Redirect to Stripe checkout
         window.location.href = data.url;
       } else {
-        throw new Error("No checkout URL returned");
+        addDebugInfo("No checkout URL returned from function");
+        throw new Error("No checkout URL returned from payment function");
       }
       
     } catch (error) {
       console.error("Payment error:", error);
+      addDebugInfo(`Payment error: ${error}`);
+      
+      let errorMessage = "Could not process your payment. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Payment Error",
-        description: "Could not process your payment. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
       setProcessingPayment(false);
@@ -242,6 +289,33 @@ const Dashboard = () => {
               </Button>
             </div>
           </div>
+          
+          {/* Debug Panel */}
+          {debugInfo.length > 0 && (
+            <Card className="mb-8 bg-dark-200 border-yellow-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-yellow-500">
+                  <AlertTriangle className="h-4 w-4" />
+                  Debug Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-40 overflow-y-auto text-xs text-gray-300 space-y-1">
+                  {debugInfo.map((info, index) => (
+                    <div key={index} className="font-mono">{info}</div>
+                  ))}
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="mt-2"
+                  onClick={() => setDebugInfo([])}
+                >
+                  Clear Debug Info
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           
           {isTrialActive() && (
             <Alert className="mb-8 bg-gold/20 border-gold text-gold">
