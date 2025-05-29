@@ -10,11 +10,15 @@ type RequestPayload = {
   name: string
 }
 
-// Plan mapping for MegaOTT packages
+// Plan mapping for MegaOTT packages - updated to match frontend plans
 const PLAN_MAPPING = {
   'standard': { packageId: 1, duration: 30, maxConnections: 2 },
   'premium': { packageId: 2, duration: 30, maxConnections: 4 },
-  'ultimate': { packageId: 3, duration: 30, maxConnections: 6 }
+  'ultimate': { packageId: 3, duration: 30, maxConnections: 6 },
+  // Legacy mappings for compatibility
+  'solo': { packageId: 1, duration: 30, maxConnections: 2 },
+  'duo': { packageId: 2, duration: 30, maxConnections: 4 },
+  'family': { packageId: 3, duration: 30, maxConnections: 6 }
 }
 
 // Configure CORS headers
@@ -89,9 +93,9 @@ serve(async (req) => {
     // Get plan details
     const planDetails = PLAN_MAPPING[payload.planType as keyof typeof PLAN_MAPPING]
     if (!planDetails) {
-      log("Invalid plan type", { planType: payload.planType });
+      log("Invalid plan type", { planType: payload.planType, availablePlans: Object.keys(PLAN_MAPPING) });
       return new Response(
-        JSON.stringify({ error: 'Invalid plan type' }),
+        JSON.stringify({ error: `Invalid plan type: ${payload.planType}. Available plans: ${Object.keys(PLAN_MAPPING).join(', ')}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
