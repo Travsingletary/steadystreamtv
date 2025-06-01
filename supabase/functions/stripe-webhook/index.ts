@@ -48,6 +48,13 @@ serve(async (req: Request) => {
   }
 
   try {
+    // DEBUG: Log environment variables
+    console.log("DEBUG: Environment check:");
+    console.log("- STRIPE_WEBHOOK_SECRET exists:", !!endpointSecret);
+    console.log("- STRIPE_SECRET_KEY exists:", !!stripeSecretKey);
+    console.log("- Webhook secret length:", endpointSecret?.length || 0);
+    console.log("- Webhook secret starts with whsec_:", endpointSecret?.startsWith('whsec_') || false);
+
     // Initialize Stripe and Supabase
     const stripe = new Stripe(stripeSecretKey || '', { apiVersion: '2023-10-16' });
     
@@ -65,7 +72,13 @@ serve(async (req: Request) => {
 
     // Get the signature from the headers
     const sig = req.headers.get("stripe-signature");
+    console.log("DEBUG: Stripe signature exists:", !!sig);
+    
     if (!sig || !endpointSecret) {
+      console.log("FAILING: Missing signature or endpoint secret");
+      console.log("- sig exists:", !!sig);
+      console.log("- endpointSecret exists:", !!endpointSecret);
+      
       return new Response(JSON.stringify({ error: "Missing signature or endpoint secret" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -74,6 +87,7 @@ serve(async (req: Request) => {
 
     // Get the request body
     const body = await req.text();
+    console.log("DEBUG: Request body length:", body.length);
     let event;
 
     // Verify the event with the signature
