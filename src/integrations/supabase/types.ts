@@ -173,6 +173,30 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          end_date: string
+          id: number
+          plan: string
+          start_date: string
+          user_id: string | null
+        }
+        Insert: {
+          end_date: string
+          id?: never
+          plan: string
+          start_date: string
+          user_id?: string | null
+        }
+        Update: {
+          end_date?: string
+          id?: never
+          plan?: string
+          start_date?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       Users: {
         Row: {
           created_at: string

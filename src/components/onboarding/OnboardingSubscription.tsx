@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Clock, CreditCard } from "lucide-react";
@@ -97,7 +96,6 @@ export const OnboardingSubscription = ({
     setIsLocalProcessing(true);
     
     try {
-      // First create user account before payment
       console.log("Creating user account before payment...");
       
       // Generate a secure password for the user
@@ -135,7 +133,7 @@ export const OnboardingSubscription = ({
 
       console.log("User created successfully:", authData.user.id);
       
-      // Store onboarding data in localStorage for after payment - with more persistent storage
+      // Store onboarding data with the real user ID
       const onboardingData = {
         ...userData,
         subscription: {
@@ -154,13 +152,10 @@ export const OnboardingSubscription = ({
       
       console.log("Stored onboarding data:", onboardingData);
       
-      // Get the selected plan details
-      const plan = pricingPlans.find(p => p.id === selectedPlan);
-      
-      // Call the create-payment function with the real user ID and onboarding data
+      // Call the create-payment function with the REAL user ID
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
-          userId: authData.user.id, // Use the actual user ID, not "onboarding"
+          userId: authData.user.id, // Use the actual UUID from Supabase auth
           planId: selectedPlan,
           customerEmail: userData.email,
           customerName: userData.name,
@@ -169,7 +164,10 @@ export const OnboardingSubscription = ({
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Payment function error:", error);
+        throw error;
+      }
       
       if (data?.url) {
         console.log("Redirecting to payment URL:", data.url);
@@ -180,7 +178,7 @@ export const OnboardingSubscription = ({
       }
     } catch (error: any) {
       console.error("Payment error:", error);
-      toast.error("Could not process your payment. Please try again.");
+      toast.error(`Could not process your payment: ${error.message}`);
       setIsLocalProcessing(false);
     }
   };

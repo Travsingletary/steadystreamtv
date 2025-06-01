@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,10 +18,8 @@ const PaymentSuccess = () => {
         console.log("Search params:", Object.fromEntries(searchParams.entries()));
         
         const sessionId = searchParams.get('session_id');
-        let userId = searchParams.get('user_id');
         
         console.log("Session ID:", sessionId);
-        console.log("User ID from URL:", userId);
         
         if (!sessionId) {
           console.error("No session ID found in URL params");
@@ -40,11 +37,10 @@ const PaymentSuccess = () => {
           return;
         }
 
-        // Use the authenticated user's ID
-        userId = userData.user.id;
+        const userId = userData.user.id;
         console.log("Using authenticated user ID:", userId);
 
-        // Try to get onboarding data from storage first
+        // Try to get onboarding data from storage
         let onboardingDataStr = localStorage.getItem('onboarding-data');
         if (!onboardingDataStr) {
           onboardingDataStr = sessionStorage.getItem('onboarding-data');
@@ -54,11 +50,9 @@ const PaymentSuccess = () => {
         if (onboardingDataStr) {
           console.log("Found onboarding data in storage");
           onboardingData = JSON.parse(onboardingDataStr);
-          // Update the user ID in onboarding data to match authenticated user
-          onboardingData.userId = userId;
+          onboardingData.userId = userId; // Ensure correct user ID
         } else {
           console.log("No onboarding data in storage, creating minimal data");
-          
           onboardingData = {
             userId: userId,
             email: userData.user.email,
@@ -66,13 +60,12 @@ const PaymentSuccess = () => {
             preferredDevice: "web",
             genres: [],
             subscription: {
-              plan: "premium", // Default, will be updated from Stripe
+              plan: "premium",
               name: "Premium",
               price: 35,
               trialDays: 30
             }
           };
-          console.log("Created minimal onboarding data from user:", onboardingData);
         }
         
         console.log("Using onboarding data:", onboardingData);
