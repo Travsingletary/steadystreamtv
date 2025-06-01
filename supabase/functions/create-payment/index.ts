@@ -230,8 +230,8 @@ serve(async (req) => {
     }];
     log("Line items created", { lineItems });
 
-    // Create checkout session with proper success URL
-    const origin = req.headers.get('origin') || 'http://localhost:5173';
+    // Get the origin from the request headers
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/') || 'http://localhost:5173';
     log("Creating checkout session", { 
       customerId, 
       origin, 
@@ -253,7 +253,7 @@ serve(async (req) => {
           planId: payload.planId
         }
       });
-      log("Checkout session created successfully", { sessionId: session.id, url: session.url });
+      log("Checkout session created successfully", { sessionId: session.id, url: session.url, successUrl: `${origin}/payment-success` });
     } catch (sessionError) {
       log("ERROR: Failed to create checkout session", { error: sessionError });
       return new Response(

@@ -15,11 +15,14 @@ const PaymentSuccess = () => {
     const completeOnboarding = async () => {
       try {
         console.log("Processing payment success...");
+        console.log("Current URL:", window.location.href);
+        console.log("Search params:", Object.fromEntries(searchParams.entries()));
         
         // Get onboarding data from localStorage
         const onboardingDataStr = localStorage.getItem('onboarding-data');
         if (!onboardingDataStr) {
-          throw new Error("No onboarding data found");
+          console.error("No onboarding data found in localStorage");
+          throw new Error("No onboarding data found. Please restart the onboarding process.");
         }
         
         const onboardingData = JSON.parse(onboardingDataStr);
@@ -27,7 +30,8 @@ const PaymentSuccess = () => {
         
         const sessionId = searchParams.get('session_id');
         if (!sessionId) {
-          throw new Error("No session ID found");
+          console.error("No session ID found in URL params");
+          throw new Error("No payment session ID found. Please contact support.");
         }
         
         console.log("Payment session ID:", sessionId);
@@ -117,6 +121,7 @@ const PaymentSuccess = () => {
         // Clear onboarding data from localStorage
         localStorage.removeItem('onboarding-data');
         
+        setIsProcessing(false);
         toast.success("Welcome to SteadyStream TV! Your account has been created successfully.");
         
         // Navigate to dashboard after a short delay
