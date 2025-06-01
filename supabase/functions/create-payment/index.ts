@@ -51,7 +51,7 @@ serve(async (req) => {
   try {
     log("Function started");
     
-    // Get and validate Stripe secret key FIRST before doing anything else
+    // Get and validate Stripe secret key
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
     log("Checking Stripe secret key", {
       hasStripeKey: !!stripeKey,
@@ -156,7 +156,7 @@ serve(async (req) => {
     }
     log("Plan details retrieved", { planId: payload.planId, planDetails });
 
-    // Check if user already has a Stripe customer ID - use maybeSingle() to handle missing profiles gracefully
+    // Check if user already has a Stripe customer ID
     let customerId;
     log("Looking up user profile", { userId: payload.userId });
     
@@ -165,11 +165,10 @@ serve(async (req) => {
         .from('profiles')
         .select('stripe_customer_id')
         .eq('id', payload.userId)
-        .maybeSingle() // Use maybeSingle() instead of single() to handle missing profiles
+        .maybeSingle();
 
       if (profileError) {
         log("Warning: Error fetching profile (continuing anyway)", { error: profileError.message });
-        // Continue without existing customer ID - we'll create a new one
       } else if (profile?.stripe_customer_id) {
         customerId = profile.stripe_customer_id;
         log("Found existing Stripe customer", { customerId });
@@ -194,7 +193,7 @@ serve(async (req) => {
         customerId = customer.id;
         log("Created new Stripe customer", { customerId });
 
-        // Update the profile with the new customer ID if profile exists, or handle gracefully if it doesn't
+        // Update the profile with the new customer ID
         try {
           await supabaseAdmin
             .from('profiles')
@@ -203,7 +202,6 @@ serve(async (req) => {
           log("Updated profile with new Stripe customer ID");
         } catch (updateError) {
           log("Could not update profile with Stripe customer ID (non-critical)", { error: updateError });
-          // This is not critical - payment can still proceed
         }
       } catch (customerError) {
         log("ERROR: Failed to create Stripe customer", { error: customerError });
@@ -232,7 +230,7 @@ serve(async (req) => {
     }];
     log("Line items created", { lineItems });
 
-    // Create checkout session
+    // Create checkout session with proper success URL
     const origin = req.headers.get('origin') || 'http://localhost:5173';
     log("Creating checkout session", { 
       customerId, 
@@ -247,9 +245,9 @@ serve(async (req) => {
         payment_method_types: ['card'],
         line_items: lineItems,
         mode: payload.isRecurring ? 'subscription' : 'payment',
-        success_url: `${origin}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/dashboard?canceled=true`,
-        client_reference_id: payload.userId, // Important: Pass user ID to webhook
+        success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/onboarding`,
+        client_reference_id: payload.userId,
         metadata: {
           userId: payload.userId,
           planId: payload.planId
@@ -265,21 +263,6 @@ serve(async (req) => {
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
-    }
-
-    // Update user profile with subscription tier - handle gracefully if profile doesn't exist
-    try {
-      await supabaseAdmin
-        .from('profiles')
-        .update({
-          subscription_tier: payload.planId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payload.userId);
-      log("Updated profile with subscription tier");
-    } catch (updateError) {
-      log("Could not update profile with subscription tier (non-critical)", { error: updateError });
-      // This is not critical - payment can still proceed
     }
 
     log("Payment function completed successfully", { 

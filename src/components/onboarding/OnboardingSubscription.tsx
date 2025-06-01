@@ -78,7 +78,7 @@ export const OnboardingSubscription = ({
   isProcessing = false
 }: OnboardingSubscriptionProps) => {
   const [selectedPlan, setSelectedPlan] = useState<string>(
-    userData.subscription?.id || ""
+    userData.subscription?.plan || ""
   );
   const [isLocalProcessing, setIsLocalProcessing] = useState(false);
 
@@ -97,13 +97,66 @@ export const OnboardingSubscription = ({
     setIsLocalProcessing(true);
     
     try {
+      // First create user account before payment
+      console.log("Creating user account before payment...");
+      
+      // Generate a secure password for the user
+      const generateSecurePassword = () => {
+        const length = 16;
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+        let password = "";
+        for (let i = 0; i < length; i++) {
+          password += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        return password;
+      };
+
+      const password = generateSecurePassword();
+      
+      // Sign up the user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: password,
+        options: {
+          data: {
+            name: userData.name,
+          }
+        }
+      });
+
+      if (authError) {
+        console.error("Auth error:", authError);
+        throw new Error(`Authentication failed: ${authError.message}`);
+      }
+
+      if (!authData.user) {
+        throw new Error("User creation failed");
+      }
+
+      console.log("User created successfully:", authData.user.id);
+      
+      // Store onboarding data in localStorage for after payment
+      const onboardingData = {
+        ...userData,
+        subscription: {
+          plan: selectedPlan,
+          name: pricingPlans.find(p => p.id === selectedPlan)?.name,
+          price: pricingPlans.find(p => p.id === selectedPlan)?.price,
+          trialDays: 1
+        },
+        userId: authData.user.id,
+        password: password
+      };
+      
+      localStorage.setItem('onboarding-data', JSON.stringify(onboardingData));
+      
       // Get the selected plan details
       const plan = pricingPlans.find(p => p.id === selectedPlan);
       
-      // Call the create-payment function to create a Stripe checkout session
+      // Call the create-payment function with the real user ID
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
-          userId: 'onboarding', // We'll use a temporary ID until user is created
+          userId: authData.user.id, // Use real user ID instead of "onboarding"
           planId: selectedPlan,
           customerEmail: userData.email,
           customerName: userData.name,
@@ -114,16 +167,6 @@ export const OnboardingSubscription = ({
       if (error) throw error;
       
       if (data?.url) {
-        // Store plan details in user data before redirecting
-        updateUserData({ 
-          subscription: {
-            id: selectedPlan,
-            name: plan?.name,
-            price: plan?.price,
-            trialDays: 1 // 24 hour trial
-          }
-        });
-        
         // Redirect to Stripe checkout
         window.location.href = data.url;
       } else {
@@ -145,11 +188,11 @@ export const OnboardingSubscription = ({
     setTimeout(() => {
       updateUserData({ 
         subscription: {
-          id: "free-trial",
+          plan: "free-trial",
           name: "Free Trial",
           price: 0,
           trialDays: 1,
-          trialEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hour trial
+          trialEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         }
       });
       

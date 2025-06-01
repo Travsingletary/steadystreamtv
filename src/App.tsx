@@ -1,36 +1,29 @@
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import './App.css';
-import Index from './pages/Index';
-import Dashboard from './pages/Dashboard';
-import Account from './pages/Account';
-import Favorites from './pages/Favorites';
-import AdminDashboard from './pages/AdminDashboard';
-import Player from './pages/Player';
-import NotFound from './pages/NotFound';
-import Onboarding from './pages/Onboarding';
-import { Toaster } from './components/ui/toaster';
-import TestXtreamAccount from './pages/TestXtreamAccount';
-import ConnectApps from './pages/ConnectApps';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { navItems } from "./nav-items";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
-function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/account" element={<Account />} />
-        <Route path="/favorites" element={<Favorites />} />
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/player" element={<Player />} />
-        <Route path="/test-xtream" element={<TestXtreamAccount />} />
-        <Route path="/connect-apps" element={<ConnectApps />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
       <Toaster />
-    </Router>
-  );
-}
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          {navItems.map(({ to, page }) => (
+            <Route key={to} path={to} element={page} />
+          ))}
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
