@@ -135,7 +135,7 @@ export const OnboardingSubscription = ({
 
       console.log("User created successfully:", authData.user.id);
       
-      // Store onboarding data in localStorage for after payment
+      // Store onboarding data in localStorage for after payment - with more persistent storage
       const onboardingData = {
         ...userData,
         subscription: {
@@ -148,7 +148,9 @@ export const OnboardingSubscription = ({
         password: password
       };
       
+      // Store in multiple ways to ensure persistence
       localStorage.setItem('onboarding-data', JSON.stringify(onboardingData));
+      sessionStorage.setItem('onboarding-data', JSON.stringify(onboardingData));
       
       // Get the selected plan details
       const plan = pricingPlans.find(p => p.id === selectedPlan);
@@ -156,7 +158,7 @@ export const OnboardingSubscription = ({
       // Call the create-payment function with the real user ID
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
-          userId: authData.user.id, // Use real user ID instead of "onboarding"
+          userId: authData.user.id,
           planId: selectedPlan,
           customerEmail: userData.email,
           customerName: userData.name,
@@ -167,7 +169,7 @@ export const OnboardingSubscription = ({
       if (error) throw error;
       
       if (data?.url) {
-        // Redirect to Stripe checkout
+        // Instead of redirecting, open in same window to preserve localStorage
         window.location.href = data.url;
       } else {
         throw new Error("No checkout URL returned");

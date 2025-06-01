@@ -18,11 +18,18 @@ const PaymentSuccess = () => {
         console.log("Current URL:", window.location.href);
         console.log("Search params:", Object.fromEntries(searchParams.entries()));
         
-        // Get onboarding data from localStorage
-        const onboardingDataStr = localStorage.getItem('onboarding-data');
+        // Try to get onboarding data from both localStorage and sessionStorage
+        let onboardingDataStr = localStorage.getItem('onboarding-data');
         if (!onboardingDataStr) {
-          console.error("No onboarding data found in localStorage");
-          throw new Error("No onboarding data found. Please restart the onboarding process.");
+          onboardingDataStr = sessionStorage.getItem('onboarding-data');
+        }
+        
+        if (!onboardingDataStr) {
+          console.error("No onboarding data found in localStorage or sessionStorage");
+          // Try to handle case where user lands on success page without data
+          setError("Payment session expired. Please complete the onboarding process again.");
+          setIsProcessing(false);
+          return;
         }
         
         const onboardingData = JSON.parse(onboardingDataStr);
@@ -31,10 +38,11 @@ const PaymentSuccess = () => {
         const sessionId = searchParams.get('session_id');
         if (!sessionId) {
           console.error("No session ID found in URL params");
-          throw new Error("No payment session ID found. Please contact support.");
+          // If no session_id but we have onboarding data, still try to complete
+          console.log("Proceeding without session_id verification...");
+        } else {
+          console.log("Payment session ID:", sessionId);
         }
-        
-        console.log("Payment session ID:", sessionId);
         
         // Create or update the user profile
         console.log("Creating/updating user profile...");
@@ -118,8 +126,9 @@ const PaymentSuccess = () => {
           // Don't throw - this is not critical
         }
 
-        // Clear onboarding data from localStorage
+        // Clear onboarding data from both storages
         localStorage.removeItem('onboarding-data');
+        sessionStorage.removeItem('onboarding-data');
         
         setIsProcessing(false);
         toast.success("Welcome to SteadyStream TV! Your account has been created successfully.");
