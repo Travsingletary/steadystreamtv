@@ -160,7 +160,7 @@ export const OnboardingSubscription = ({
       // Call the create-payment function with the real user ID and onboarding data
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
-          userId: authData.user.id,
+          userId: authData.user.id, // Use the actual user ID, not "onboarding"
           planId: selectedPlan,
           customerEmail: userData.email,
           customerName: userData.name,

@@ -19,10 +19,10 @@ const PaymentSuccess = () => {
         console.log("Search params:", Object.fromEntries(searchParams.entries()));
         
         const sessionId = searchParams.get('session_id');
-        const userId = searchParams.get('user_id');
+        let userId = searchParams.get('user_id');
         
         console.log("Session ID:", sessionId);
-        console.log("User ID:", userId);
+        console.log("User ID from URL:", userId);
         
         if (!sessionId) {
           console.error("No session ID found in URL params");
@@ -31,12 +31,18 @@ const PaymentSuccess = () => {
           return;
         }
 
-        if (!userId) {
-          console.error("No user ID found in URL params");
-          setError("User information not found. Please complete the onboarding process again.");
+        // Get current authenticated user
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) {
+          console.error("User authentication error:", userError);
+          setError("User authentication failed. Please sign in and try again.");
           setIsProcessing(false);
           return;
         }
+
+        // Use the authenticated user's ID
+        userId = userData.user.id;
+        console.log("Using authenticated user ID:", userId);
 
         // Try to get onboarding data from storage first
         let onboardingDataStr = localStorage.getItem('onboarding-data');
@@ -48,32 +54,25 @@ const PaymentSuccess = () => {
         if (onboardingDataStr) {
           console.log("Found onboarding data in storage");
           onboardingData = JSON.parse(onboardingDataStr);
+          // Update the user ID in onboarding data to match authenticated user
+          onboardingData.userId = userId;
         } else {
           console.log("No onboarding data in storage, creating minimal data");
           
-          // Get user data from Supabase
-          const { data: userData, error: userError } = await supabase.auth.getUser();
-          if (userData.user && !userError) {
-            onboardingData = {
-              userId: userId,
-              email: userData.user.email,
-              name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'User',
-              preferredDevice: "web",
-              genres: [],
-              subscription: {
-                plan: "premium", // Default, will be updated from Stripe
-                name: "Premium",
-                price: 35,
-                trialDays: 30
-              }
-            };
-            console.log("Created minimal onboarding data from user:", onboardingData);
-          } else {
-            console.error("Could not retrieve user data:", userError);
-            setError("Could not retrieve user information. Please contact support.");
-            setIsProcessing(false);
-            return;
-          }
+          onboardingData = {
+            userId: userId,
+            email: userData.user.email,
+            name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'User',
+            preferredDevice: "web",
+            genres: [],
+            subscription: {
+              plan: "premium", // Default, will be updated from Stripe
+              name: "Premium",
+              price: 35,
+              trialDays: 30
+            }
+          };
+          console.log("Created minimal onboarding data from user:", onboardingData);
         }
         
         console.log("Using onboarding data:", onboardingData);
