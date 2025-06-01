@@ -18,31 +18,63 @@ const PaymentSuccess = () => {
         console.log("Current URL:", window.location.href);
         console.log("Search params:", Object.fromEntries(searchParams.entries()));
         
-        // Try to get onboarding data from both localStorage and sessionStorage
+        const sessionId = searchParams.get('session_id');
+        const userId = searchParams.get('user_id');
+        
+        console.log("Session ID:", sessionId);
+        console.log("User ID:", userId);
+        
+        if (!sessionId) {
+          console.error("No session ID found in URL params");
+          setError("Payment session not found. Please complete the onboarding process again.");
+          setIsProcessing(false);
+          return;
+        }
+
+        // Try to get onboarding data from storage first
         let onboardingDataStr = localStorage.getItem('onboarding-data');
         if (!onboardingDataStr) {
           onboardingDataStr = sessionStorage.getItem('onboarding-data');
         }
         
-        if (!onboardingDataStr) {
-          console.error("No onboarding data found in localStorage or sessionStorage");
-          // Try to handle case where user lands on success page without data
-          setError("Payment session expired. Please complete the onboarding process again.");
-          setIsProcessing(false);
-          return;
-        }
-        
-        const onboardingData = JSON.parse(onboardingDataStr);
-        console.log("Retrieved onboarding data:", onboardingData);
-        
-        const sessionId = searchParams.get('session_id');
-        if (!sessionId) {
-          console.error("No session ID found in URL params");
-          // If no session_id but we have onboarding data, still try to complete
-          console.log("Proceeding without session_id verification...");
+        let onboardingData = null;
+        if (onboardingDataStr) {
+          console.log("Found onboarding data in storage");
+          onboardingData = JSON.parse(onboardingDataStr);
         } else {
-          console.log("Payment session ID:", sessionId);
+          console.log("No onboarding data in storage, will retrieve from Stripe session");
+          
+          // If no local data, try to get user info from the URL or create minimal data
+          if (userId) {
+            // Get user data from Supabase
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (userData.user && !userError) {
+              onboardingData = {
+                userId: userId,
+                email: userData.user.email,
+                name: userData.user.user_metadata?.name || userData.user.email,
+                preferredDevice: "web",
+                genres: [],
+                subscription: {
+                  plan: "premium", // Default, will be updated
+                  name: "Premium",
+                  price: 35,
+                  trialDays: 1
+                }
+              };
+              console.log("Created minimal onboarding data from user:", onboardingData);
+            }
+          }
+          
+          if (!onboardingData) {
+            console.error("Could not retrieve or create onboarding data");
+            setError("Payment completed but account setup failed. Please contact support.");
+            setIsProcessing(false);
+            return;
+          }
         }
+        
+        console.log("Using onboarding data:", onboardingData);
         
         // Create or update the user profile
         console.log("Creating/updating user profile...");
@@ -52,8 +84,8 @@ const PaymentSuccess = () => {
             id: onboardingData.userId,
             email: onboardingData.email,
             name: onboardingData.name,
-            preferred_device: onboardingData.preferredDevice,
-            genres: onboardingData.genres,
+            preferred_device: onboardingData.preferredDevice || "web",
+            genres: onboardingData.genres || [],
             subscription_tier: onboardingData.subscription?.plan || null,
             subscription_status: 'active',
             created_at: new Date().toISOString(),

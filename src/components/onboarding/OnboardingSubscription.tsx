@@ -152,24 +152,28 @@ export const OnboardingSubscription = ({
       localStorage.setItem('onboarding-data', JSON.stringify(onboardingData));
       sessionStorage.setItem('onboarding-data', JSON.stringify(onboardingData));
       
+      console.log("Stored onboarding data:", onboardingData);
+      
       // Get the selected plan details
       const plan = pricingPlans.find(p => p.id === selectedPlan);
       
-      // Call the create-payment function with the real user ID
+      // Call the create-payment function with the real user ID and onboarding data
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
           userId: authData.user.id,
           planId: selectedPlan,
           customerEmail: userData.email,
           customerName: userData.name,
-          isRecurring: true
+          isRecurring: true,
+          onboardingData: onboardingData
         }
       });
       
       if (error) throw error;
       
       if (data?.url) {
-        // Instead of redirecting, open in same window to preserve localStorage
+        console.log("Redirecting to payment URL:", data.url);
+        // Redirect to Stripe checkout
         window.location.href = data.url;
       } else {
         throw new Error("No checkout URL returned");

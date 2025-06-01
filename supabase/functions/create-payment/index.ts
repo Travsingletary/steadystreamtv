@@ -10,6 +10,7 @@ type RequestPayload = {
   customerEmail: string
   customerName: string
   isRecurring: boolean
+  onboardingData?: any
 }
 
 // Helper function for consistent logging
@@ -245,12 +246,19 @@ serve(async (req) => {
         payment_method_types: ['card'],
         line_items: lineItems,
         mode: payload.isRecurring ? 'subscription' : 'payment',
-        success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&user_id=${payload.userId}`,
         cancel_url: `${origin}/onboarding`,
         client_reference_id: payload.userId,
         metadata: {
           userId: payload.userId,
-          planId: payload.planId
+          planId: payload.planId,
+          // Store onboarding data in metadata for recovery
+          onboardingData: JSON.stringify({
+            name: payload.customerName,
+            email: payload.customerEmail,
+            userId: payload.userId,
+            planId: payload.planId
+          })
         }
       });
       log("Checkout session created successfully", { sessionId: session.id, url: session.url, successUrl: `${origin}/payment-success` });
