@@ -88,7 +88,7 @@ export const useOnboarding = () => {
           name: userData.name,
           preferred_device: userData.preferredDevice,
           genres: userData.genres,
-          subscription_tier: userData.subscription?.id || null,
+          subscription_tier: userData.subscription?.plan || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }, {
@@ -103,7 +103,7 @@ export const useOnboarding = () => {
       console.log("Profile created/updated successfully");
 
       // Create Xtream account if subscription is selected
-      if (userData.subscription && userData.subscription.id !== "free-trial") {
+      if (userData.subscription && userData.subscription.plan !== "free-trial") {
         console.log("Creating Xtream account...");
         
         try {
@@ -111,7 +111,7 @@ export const useOnboarding = () => {
             body: {
               email: userData.email,
               name: userData.name,
-              planId: userData.subscription.id
+              planId: userData.subscription.plan
             }
           });
 
