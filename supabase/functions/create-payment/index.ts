@@ -247,21 +247,19 @@ serve(async (req) => {
         line_items: lineItems,
         mode: payload.isRecurring ? 'subscription' : 'payment',
         success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&user_id=${payload.userId}`,
-        cancel_url: `${origin}/onboarding`,
+        cancel_url: `${origin}/onboarding?cancelled=true`,
         client_reference_id: payload.userId,
         metadata: {
           userId: payload.userId,
           planId: payload.planId,
-          // Store onboarding data in metadata for recovery
-          onboardingData: JSON.stringify({
-            name: payload.customerName,
-            email: payload.customerEmail,
-            userId: payload.userId,
-            planId: payload.planId
-          })
+          onboardingData: payload.onboardingData ? JSON.stringify(payload.onboardingData) : null
         }
       });
-      log("Checkout session created successfully", { sessionId: session.id, url: session.url, successUrl: `${origin}/payment-success` });
+      log("Checkout session created successfully", { 
+        sessionId: session.id, 
+        url: session.url, 
+        successUrl: session.success_url 
+      });
     } catch (sessionError) {
       log("ERROR: Failed to create checkout session", { error: sessionError });
       return new Response(

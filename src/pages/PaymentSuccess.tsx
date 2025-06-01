@@ -31,6 +31,13 @@ const PaymentSuccess = () => {
           return;
         }
 
+        if (!userId) {
+          console.error("No user ID found in URL params");
+          setError("User information not found. Please complete the onboarding process again.");
+          setIsProcessing(false);
+          return;
+        }
+
         // Try to get onboarding data from storage first
         let onboardingDataStr = localStorage.getItem('onboarding-data');
         if (!onboardingDataStr) {
@@ -42,33 +49,28 @@ const PaymentSuccess = () => {
           console.log("Found onboarding data in storage");
           onboardingData = JSON.parse(onboardingDataStr);
         } else {
-          console.log("No onboarding data in storage, will retrieve from Stripe session");
+          console.log("No onboarding data in storage, creating minimal data");
           
-          // If no local data, try to get user info from the URL or create minimal data
-          if (userId) {
-            // Get user data from Supabase
-            const { data: userData, error: userError } = await supabase.auth.getUser();
-            if (userData.user && !userError) {
-              onboardingData = {
-                userId: userId,
-                email: userData.user.email,
-                name: userData.user.user_metadata?.name || userData.user.email,
-                preferredDevice: "web",
-                genres: [],
-                subscription: {
-                  plan: "premium", // Default, will be updated
-                  name: "Premium",
-                  price: 35,
-                  trialDays: 1
-                }
-              };
-              console.log("Created minimal onboarding data from user:", onboardingData);
-            }
-          }
-          
-          if (!onboardingData) {
-            console.error("Could not retrieve or create onboarding data");
-            setError("Payment completed but account setup failed. Please contact support.");
+          // Get user data from Supabase
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userData.user && !userError) {
+            onboardingData = {
+              userId: userId,
+              email: userData.user.email,
+              name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'User',
+              preferredDevice: "web",
+              genres: [],
+              subscription: {
+                plan: "premium", // Default, will be updated from Stripe
+                name: "Premium",
+                price: 35,
+                trialDays: 30
+              }
+            };
+            console.log("Created minimal onboarding data from user:", onboardingData);
+          } else {
+            console.error("Could not retrieve user data:", userError);
+            setError("Could not retrieve user information. Please contact support.");
             setIsProcessing(false);
             return;
           }
@@ -81,7 +83,7 @@ const PaymentSuccess = () => {
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
-            id: onboardingData.userId,
+            id: userId,
             email: onboardingData.email,
             name: onboardingData.name,
             preferred_device: onboardingData.preferredDevice || "web",
@@ -116,20 +118,19 @@ const PaymentSuccess = () => {
 
             if (xtreamError) {
               console.error("Xtream account creation error:", xtreamError);
-              // Don't throw here - allow onboarding to continue even if Xtream fails
               toast.error("Account created but streaming setup failed. You can set this up later in your dashboard.");
-            } else if (xtreamData?.username && xtreamData?.password) {
+            } else if (xtreamData?.data?.username && xtreamData?.data?.password) {
               console.log("Xtream account created successfully");
               
               // Update profile with Xtream credentials
               const { error: updateError } = await supabase
                 .from('profiles')
                 .update({
-                  xtream_username: xtreamData.username,
-                  xtream_password: xtreamData.password,
+                  xtream_username: xtreamData.data.username,
+                  xtream_password: xtreamData.data.password,
                   updated_at: new Date().toISOString()
                 })
-                .eq('id', onboardingData.userId);
+                .eq('id', userId);
 
               if (updateError) {
                 console.error("Failed to update profile with Xtream credentials:", updateError);
@@ -139,7 +140,6 @@ const PaymentSuccess = () => {
             }
           } catch (xtreamError) {
             console.error("Xtream account creation failed:", xtreamError);
-            // Don't throw - allow onboarding to continue even if Xtream fails
             toast.error("Account created but streaming setup failed. You can set this up later in your dashboard.");
           }
         }
