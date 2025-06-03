@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 // Supabase Configuration using existing credentials
@@ -113,6 +112,13 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
   });
   const [error, setError] = useState('');
 
+  // Stripe checkout URLs for paid plans
+  const stripeCheckoutUrls = {
+    'basic': 'https://buy.stripe.com/dRmfZj1OzbPk7UU9H1dby01',
+    'duo': 'https://buy.stripe.com/5kQ5kFdxh7z4fnm1avdby02', 
+    'family': 'https://buy.stripe.com/3cI9AVctd8D8eji4mHdby00'
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setError('');
@@ -129,6 +135,25 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
       return;
     }
 
+    // Route based on plan selection
+    if (formData.plan !== 'trial') {
+      // PAID PLANS: Redirect to Stripe checkout
+      
+      // Store user data for after payment
+      const userDataForLater = {
+        name: formData.name,
+        email: formData.email,
+        plan: formData.plan,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('pendingUserData', JSON.stringify(userDataForLater));
+      
+      // Redirect to Stripe checkout
+      window.location.href = stripeCheckoutUrls[formData.plan as keyof typeof stripeCheckoutUrls];
+      return;
+    }
+
+    // TRIAL PLAN: Continue with existing automation
     setLoading(true);
     setError('');
 
@@ -226,14 +251,25 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
             disabled={loading}
             className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 mt-6"
           >
-            {loading ? '🔄 Creating Your Account...' : '🚀 Start Streaming Now'}
+            {loading ? '🔄 Creating Your Account...' : 
+             formData.plan === 'trial' ? '🚀 Start Free Trial' : '💳 Pay Now & Start Streaming'}
           </button>
         </div>
 
         <div className="mt-6 text-center text-sm text-gray-400">
-          <p>✅ No credit card required for trial</p>
-          <p>✅ Instant activation</p>
-          <p>✅ Cancel anytime</p>
+          {formData.plan === 'trial' ? (
+            <>
+              <p>✅ No credit card required for trial</p>
+              <p>✅ Instant activation</p>
+              <p>✅ Cancel anytime</p>
+            </>
+          ) : (
+            <>
+              <p>✅ Secure payment via Stripe</p>
+              <p>✅ Instant access after payment</p>
+              <p>✅ Cancel anytime</p>
+            </>
+          )}
         </div>
       </div>
     </div>
