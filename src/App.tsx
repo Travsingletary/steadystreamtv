@@ -20,6 +20,8 @@ interface User {
   email: string;
   plan: string;
   status: string;
+  username: string;
+  password: string;
   activationCode?: string;
   playlistUrl?: string;
 }
