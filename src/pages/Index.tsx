@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 // Using existing Supabase configuration
