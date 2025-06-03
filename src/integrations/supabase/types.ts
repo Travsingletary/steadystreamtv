@@ -197,6 +197,63 @@ export type Database = {
         }
         Relationships: []
       }
+      user_playlists: {
+        Row: {
+          activation_code: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          playlist_token: string
+          user_id: string
+        }
+        Insert: {
+          activation_code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          playlist_token: string
+          user_id: string
+        }
+        Update: {
+          activation_code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          playlist_token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          activation_code: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          subscription_plan: string | null
+          user_id: string
+        }
+        Insert: {
+          activation_code?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          subscription_plan?: string | null
+          user_id: string
+        }
+        Update: {
+          activation_code?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          subscription_plan?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       Users: {
         Row: {
           created_at: string

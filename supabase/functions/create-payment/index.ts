@@ -106,13 +106,6 @@ serve(async (req) => {
       )
     }
 
-    // Create Supabase admin client with service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-    log("Supabase admin client created");
-
     // Validate request
     if (!payload.userId || !payload.planId) {
       log("ERROR: Missing required fields", { userId: payload.userId, planId: payload.planId });
@@ -157,30 +150,27 @@ serve(async (req) => {
     }
     log("Plan details retrieved", { planId: payload.planId, planDetails });
 
-    // Check if user already has a Stripe customer ID
+    // Check if customer already exists in Stripe
     let customerId;
-    log("Looking up user profile", { userId: payload.userId });
+    log("Looking up existing Stripe customer", { email: payload.customerEmail });
     
     try {
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('stripe_customer_id')
-        .eq('id', payload.userId)
-        .maybeSingle();
+      const existingCustomers = await stripe.customers.list({
+        email: payload.customerEmail,
+        limit: 1
+      });
 
-      if (profileError) {
-        log("Warning: Error fetching profile (continuing anyway)", { error: profileError.message });
-      } else if (profile?.stripe_customer_id) {
-        customerId = profile.stripe_customer_id;
+      if (existingCustomers.data.length > 0) {
+        customerId = existingCustomers.data[0].id;
         log("Found existing Stripe customer", { customerId });
       } else {
         log("No existing Stripe customer found, will create new one");
       }
-    } catch (profileLookupError) {
-      log("Warning: Profile lookup failed (continuing anyway)", { error: profileLookupError });
+    } catch (customerLookupError) {
+      log("Warning: Customer lookup failed (continuing anyway)", { error: customerLookupError });
     }
 
-    // Create or use existing Stripe customer
+    // Create new Stripe customer if needed
     if (!customerId) {
       try {
         log("Creating new Stripe customer", { email: payload.customerEmail, name: payload.customerName });
@@ -193,17 +183,6 @@ serve(async (req) => {
         });
         customerId = customer.id;
         log("Created new Stripe customer", { customerId });
-
-        // Update the profile with the new customer ID
-        try {
-          await supabaseAdmin
-            .from('profiles')
-            .update({ stripe_customer_id: customerId })
-            .eq('id', payload.userId);
-          log("Updated profile with new Stripe customer ID");
-        } catch (updateError) {
-          log("Could not update profile with Stripe customer ID (non-critical)", { error: updateError });
-        }
       } catch (customerError) {
         log("ERROR: Failed to create Stripe customer", { error: customerError });
         return new Response(
