@@ -1,21 +1,21 @@
 
 import { useState } from 'react';
-import { AutomationService, UserData, AutomationResult } from '@/services/automationService';
+import { SimpleAutomationService, UserData, RegistrationResult } from '@/services/automationService';
 
 export const useAutomation = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<AutomationResult | null>(null);
+  const [result, setResult] = useState<RegistrationResult | null>(null);
 
-  const executeAutomation = async (userData: UserData): Promise<AutomationResult> => {
+  const executeAutomation = async (userData: UserData): Promise<RegistrationResult> => {
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      console.log('🎯 Executing automation for:', userData.email);
+      console.log('🎯 Executing simplified automation for:', userData.email);
       
-      const automationResult = await AutomationService.registerUser(userData);
+      const automationResult = await SimpleAutomationService.executeCompleteAutomation(userData);
       
       setResult(automationResult);
       
