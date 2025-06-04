@@ -8,8 +8,13 @@ import ChannelsSection from "@/components/ChannelsSection";
 import PricingSection from "@/components/PricingSection";
 import FooterSection from "@/components/FooterSection";
 import { IntegratedAutomation } from "@/components/AutomationComponents";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
+import { useAnalytics } from "@/components/LaunchAnalytics";
 
 const Index = () => {
+  useAnalytics('homepage');
+
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
@@ -28,6 +33,10 @@ const Index = () => {
       <ChannelsSection />
       <PricingSection />
       <FooterSection />
+      
+      {/* Launch Components */}
+      <FeedbackWidget />
+      <PerformanceMonitor />
     </div>
   );
 };

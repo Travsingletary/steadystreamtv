@@ -1,173 +1,380 @@
 
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ExternalLink, Smartphone, Tv, Monitor } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import Navbar from "@/components/Navbar";
+import FooterSection from "@/components/FooterSection";
+import { 
+  Smartphone, 
+  Tv, 
+  Download, 
+  QrCode, 
+  CheckCircle, 
+  Clock, 
+  Copy,
+  ExternalLink,
+  RefreshCw,
+  AlertCircle,
+  Play
+} from "lucide-react";
 
 const ConnectApps = () => {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [copySuccess, setCopySuccess] = useState<string>('');
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate("/onboarding");
+        return;
+      }
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(profile);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load your profile information",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(label);
+      toast({
+        title: "Copied!",
+        description: `${label} copied to clipboard`,
+      });
+      setTimeout(() => setCopySuccess(''), 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  };
+
+  const deviceSetups = [
+    {
+      id: 'android-tv',
+      name: 'Android TV / Fire TV',
+      icon: <Tv className="h-8 w-8 text-blue-500" />,
+      description: 'Install IPTV Smarters Pro or TiviMate',
+      appStore: 'Google Play Store',
+      setupInstructions: [
+        'Download IPTV Smarters Pro from Google Play Store',
+        'Open the app and select "Add User"',
+        'Enter your IPTV credentials',
+        'Start watching your channels'
+      ]
+    },
+    {
+      id: 'ios',
+      name: 'iPhone / iPad',
+      icon: <Smartphone className="h-8 w-8 text-gray-600" />,
+      description: 'Install GSE Smart IPTV or IPTV Smarters Pro',
+      appStore: 'App Store',
+      setupInstructions: [
+        'Download GSE Smart IPTV from App Store',
+        'Tap "Remote Playlists" then "+"',
+        'Enter your M3U playlist URL',
+        'Save and enjoy streaming'
+      ]
+    },
+    {
+      id: 'android',
+      name: 'Android Phone / Tablet',
+      icon: <Smartphone className="h-8 w-8 text-green-500" />,
+      description: 'Install IPTV Smarters Pro',
+      appStore: 'Google Play Store',
+      setupInstructions: [
+        'Download IPTV Smarters Pro',
+        'Select "Add User" option',
+        'Input your IPTV server details',
+        'Start streaming immediately'
+      ]
+    }
+  ];
+
+  const connectionMethods = [
+    {
+      id: 'xtream',
+      name: 'Xtream Codes API',
+      recommended: true,
+      description: 'Best for most IPTV apps with full EPG support',
+      fields: {
+        'Server URL': profile?.xtream_server || 'Not available',
+        'Username': profile?.xtream_username || 'Not available',
+        'Password': profile?.xtream_password || 'Not available'
+      }
+    },
+    {
+      id: 'm3u',
+      name: 'M3U Playlist URL',
+      recommended: false,
+      description: 'Direct playlist link for basic streaming',
+      fields: {
+        'Playlist URL': profile?.playlist_url || `${window.location.origin}/api/playlist/your-token.m3u8`
+      }
+    }
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-gold border-r-transparent border-b-transparent border-l-transparent"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-black text-white pt-20 pb-12">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl md:text-4xl font-bold mb-6 text-center">Connect to External Applications</h1>
-        <p className="text-gray-300 text-center mb-12 max-w-2xl mx-auto">
-          Access SteadyStream on different platforms and connect with our partner applications
-          for an enhanced streaming experience.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {/* TiviMate Card */}
-          <Card className="bg-dark-200 border border-gray-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Tv className="text-gold" />
-                TiviMate for Fire Stick
-              </CardTitle>
-              <CardDescription>
-                Premium IPTV Player specifically for Amazon Fire Stick devices
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <img 
-                src="/lovable-uploads/0951aea1-2e5f-4aa0-9de1-ec13d0eb3489.png" 
-                alt="TiviMate" 
-                className="h-32 object-contain mb-4" 
-              />
-              <p className="text-gray-300 mb-4">
-                TiviMate is one of the best IPTV players specifically designed for Amazon Fire Stick devices. 
-                Download and install using the link below, then use our setup URL to configure your SteadyStream account.
+    <div className="min-h-screen bg-black text-white">
+      <Navbar />
+      
+      <div className="pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h1 className="text-4xl font-bold text-gold mb-4">Connect Your Apps</h1>
+              <p className="text-xl text-gray-300 mb-6">
+                Set up SteadyStream TV on all your devices in minutes
               </p>
-              <div className="bg-dark-300 p-3 rounded-md mb-4">
-                <p className="text-sm font-medium mb-2">Download Link:</p>
-                <code className="text-xs bg-gray-800 p-2 rounded block overflow-auto mb-2">
-                  aftv.news/1592817
-                </code>
-                <p className="text-xs text-gray-400 mb-3">
-                  Use downloader code: <span className="text-gold font-medium">1592817</span>
-                </p>
-              </div>
-              <div className="bg-dark-300 p-3 rounded-md">
-                <p className="text-sm font-medium mb-2">Setup URL after installation:</p>
-                <code className="text-xs bg-gray-800 p-2 rounded block overflow-auto mb-2">
-                  https://gangstageeks.com/tivimate/rs6/steady/
-                </code>
-                <p className="text-xs text-gray-400">
-                  Use this URL in TiviMate app to automatically configure your SteadyStream account
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                className="w-full flex items-center gap-2"
-                onClick={() => window.open("https://aftv.news/1592817", "_blank")}
-              >
-                <ExternalLink className="h-4 w-4" />
-                Download TiviMate
-              </Button>
-            </CardFooter>
-          </Card>
+              
+              {profile?.subscription_status !== 'active' && (
+                <Alert className="mb-6 bg-yellow-900/30 border-yellow-500 text-yellow-100 max-w-2xl mx-auto">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    You need an active subscription to access streaming credentials. 
+                    <Button 
+                      variant="link" 
+                      className="text-yellow-300 p-0 ml-1 h-auto"
+                      onClick={() => navigate('/dashboard')}
+                    >
+                      Subscribe now
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
 
-          {/* Lovable App Card */}
-          <Card className="bg-dark-200 border border-gray-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="text-gold" />
-                Mobile Companion App
-              </CardTitle>
-              <CardDescription>
-                Access SteadyStream on all other devices
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <img 
-                src="/lovable-uploads/595f3348-0a60-4bbf-ad62-144c2ab406c1.png" 
-                alt="SteadyStream Mobile" 
-                className="h-32 object-contain mb-4" 
-              />
-              <p className="text-gray-300 mb-4">
-                Our companion application works on smartphones, tablets, computers, and all other devices.
-                Perfect for streaming when you're not using a Fire Stick.
-              </p>
-              <div className="bg-dark-300 p-3 rounded-md">
-                <p className="text-sm font-medium mb-2">App URL for all other devices:</p>
-                <code className="text-xs bg-gray-800 p-2 rounded block overflow-auto mb-2">
-                  https://lovable.dev/projects/05293635-2b01-4b2d-a7ff-eb9cb8dbed19
-                </code>
-                <p className="text-xs text-gray-400">
-                  Open this URL on any device to access the companion app
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                className="w-full flex items-center gap-2"
-                onClick={() => window.open("https://lovable.dev/projects/05293635-2b01-4b2d-a7ff-eb9cb8dbed19", "_blank")}
-              >
-                <ExternalLink className="h-4 w-4" />
-                Open Companion App
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+            {/* Connection Methods */}
+            <div className="grid md:grid-cols-2 gap-6 mb-12">
+              {connectionMethods.map((method) => (
+                <Card key={method.id} className="bg-dark-200 border-gray-800">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        {method.name}
+                        {method.recommended && (
+                          <Badge className="bg-gold text-black">Recommended</Badge>
+                        )}
+                      </CardTitle>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={fetchUserProfile}
+                        className="border-gray-700"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <CardDescription>{method.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {Object.entries(method.fields).map(([label, value]) => (
+                        <div key={label}>
+                          <label className="text-sm text-gray-400 block mb-1">{label}</label>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-dark-300 border border-gray-700 px-3 py-2 rounded text-sm font-mono">
+                              {value}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(value, label)}
+                              className="border-gray-700"
+                              disabled={value === 'Not available'}
+                            >
+                              {copySuccess === label ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-        <div className="mt-16 max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6 text-center">Need Help Connecting?</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <Card className="bg-dark-300 border border-gray-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Tv className="h-4 w-4 text-gold" />
-                  Fire Stick
-                </CardTitle>
+            {/* Device Setup Instructions */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6 text-center">Device Setup</h2>
+              <div className="grid md:grid-cols-3 gap-6">
+                {deviceSetups.map((device) => (
+                  <Card key={device.id} className="bg-dark-200 border-gray-800">
+                    <CardHeader className="text-center">
+                      <div className="mx-auto mb-4">{device.icon}</div>
+                      <CardTitle>{device.name}</CardTitle>
+                      <CardDescription>{device.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <Badge variant="outline" className="w-full justify-center">
+                          {device.appStore}
+                        </Badge>
+                        <div className="space-y-2">
+                          {device.setupInstructions.map((step, index) => (
+                            <div key={index} className="flex items-start gap-2 text-sm">
+                              <span className="flex-shrink-0 w-5 h-5 bg-gold text-black rounded-full flex items-center justify-center text-xs font-bold">
+                                {index + 1}
+                              </span>
+                              <span className="text-gray-300">{step}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid md:grid-cols-3 gap-6 mb-12">
+              <Card className="bg-dark-200 border-gray-800 text-center">
+                <CardContent className="pt-6">
+                  <QrCode className="h-12 w-12 text-gold mx-auto mb-4" />
+                  <h3 className="font-semibold mb-2">QR Code Setup</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Scan with your IPTV app for instant setup
+                  </p>
+                  <Button 
+                    className="w-full"
+                    onClick={() => {
+                      toast({
+                        title: "Coming Soon",
+                        description: "QR code generation will be available soon",
+                      });
+                    }}
+                  >
+                    Generate QR Code
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-dark-200 border-gray-800 text-center">
+                <CardContent className="pt-6">
+                  <Download className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+                  <h3 className="font-semibold mb-2">Download Config</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Download ready-to-use configuration files
+                  </p>
+                  <Button 
+                    variant="outline"
+                    className="w-full border-gray-700"
+                    onClick={() => {
+                      toast({
+                        title: "Coming Soon",
+                        description: "Config file download will be available soon",
+                      });
+                    }}
+                  >
+                    Download Files
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-dark-200 border-gray-800 text-center">
+                <CardContent className="pt-6">
+                  <Play className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                  <h3 className="font-semibold mb-2">Test Stream</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Test your connection in the browser
+                  </p>
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    onClick={() => navigate('/player')}
+                  >
+                    Launch Player
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Support Section */}
+            <Card className="bg-dark-200 border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-center">Need Help?</CardTitle>
+                <CardDescription className="text-center">
+                  Our support team is here to help you get connected
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-300">
-                  Download TiviMate using the downloader code 1592817, then use our setup URL for the best Fire Stick experience.
-                </p>
+              <CardContent className="text-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button 
+                    variant="outline"
+                    className="border-gray-700"
+                    onClick={() => {
+                      toast({
+                        title: "Support",
+                        description: "Live chat support will be available soon",
+                      });
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Live Chat Support
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="border-gray-700"
+                    onClick={() => {
+                      window.open('mailto:support@steadystream.tv', '_blank');
+                    }}
+                  >
+                    Email Support
+                  </Button>
+                  <Button 
+                    className="bg-gold hover:bg-gold-dark text-black"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    Back to Dashboard
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-            
-            <Card className="bg-dark-300 border border-gray-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Smartphone className="h-4 w-4 text-gold" />
-                  Mobile Devices
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-300">
-                  Use our companion app on iOS and Android for on-the-go streaming from your smartphone or tablet.
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-dark-300 border border-gray-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Monitor className="h-4 w-4 text-gold" />
-                  Computers
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-300">
-                  Access our companion app or use VLC Media Player on desktop and laptop computers to watch all channels.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="text-center">
-            <Link to="/player">
-              <Button 
-                variant="outline" 
-                className="border-gold text-gold hover:bg-gold/10"
-              >
-                Return to Web Player
-              </Button>
-            </Link>
           </div>
         </div>
       </div>
+      
+      <FooterSection />
     </div>
   );
 };
