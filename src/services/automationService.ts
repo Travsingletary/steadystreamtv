@@ -94,16 +94,15 @@ export class AutomationService {
       // Generate playlist URL
       const playlistUrl = `${window.location.origin}/api/playlist/${playlistToken}.m3u8`;
 
-      // Create user profile record
+      // Create user profile record (fix: remove preferences and id fields)
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
-          id: userId,
+          user_id: userId,
           full_name: userData.name,
           email: userData.email,
           subscription_plan: userData.plan,
-          activation_code: activationCode,
-          preferences: userData.preferences || {}
+          activation_code: activationCode
         });
 
       if (profileError) {
