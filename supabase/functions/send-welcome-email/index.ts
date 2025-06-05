@@ -266,7 +266,7 @@ serve(async (req: Request) => {
 </html>
 `;
 
-    // Send the email using Resend
+    // Send the email using Resend API
     log("📤 Sending welcome email via Resend API");
     const emailResponse = await resend.emails.send({
       from: 'SteadyStream TV <welcome@steadystream.tv>',
@@ -275,7 +275,12 @@ serve(async (req: Request) => {
       html: htmlContent,
     });
 
-    log("✅ Email sent successfully", { emailId: emailResponse.id, to: payload.email });
+    if (emailResponse.error) {
+      log("❌ Resend API error", emailResponse.error);
+      throw new Error(`Email sending failed: ${emailResponse.error.message}`);
+    }
+
+    log("✅ Email sent successfully", { emailId: emailResponse.data?.id, to: payload.email });
 
     // Update the user profile to record that welcome email was sent
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -297,7 +302,7 @@ serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      emailId: emailResponse.id,
+      emailId: emailResponse.data?.id,
       message: "Welcome email sent successfully to " + payload.email
     }), {
       status: 200,

@@ -18,7 +18,10 @@ const PLAN_MAPPING = {
   // Legacy mappings for compatibility
   'solo': { packageId: 1, duration: 30, maxConnections: 2 },
   'duo': { packageId: 2, duration: 30, maxConnections: 4 },
-  'family': { packageId: 3, duration: 30, maxConnections: 6 }
+  'family': { packageId: 3, duration: 30, maxConnections: 6 },
+  // Trial mapping
+  'trial': { packageId: 1, duration: 1, maxConnections: 1 },
+  'free-trial': { packageId: 1, duration: 1, maxConnections: 1 }
 }
 
 // Configure CORS headers
@@ -119,7 +122,7 @@ serve(async (req) => {
       });
       
       // Generate playlist URLs with existing credentials
-      const baseUrl = `http://megaott.net/get.php?username=${userProfile.xtream_username}&password=${userProfile.xtream_password}`;
+      const baseUrl = `https://megaott.net/get.php?username=${userProfile.xtream_username}&password=${userProfile.xtream_password}`;
       const m3uUrl = `${baseUrl}&type=m3u_plus&output=ts`;
       const m3uPlusUrl = `${baseUrl}&type=m3u_plus&output=ts`;
       const xspfUrl = `${baseUrl}&type=xspf&output=ts`;
@@ -164,12 +167,13 @@ serve(async (req) => {
       expDate: endDate.toISOString().split('T')[0]
     });
 
-    // Make request to MegaOTT API to create user
+    // Make REAL request to MegaOTT API to create user (for ALL plans including trials)
     const response = await fetchWithRetry(megaottApiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${megaottApiKey}`
+        'Authorization': `Bearer ${megaottApiKey}`,
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
         username: username,
@@ -177,7 +181,7 @@ serve(async (req) => {
         package_id: planDetails.packageId,
         max_connections: planDetails.maxConnections,
         exp_date: endDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-        admin_notes: `SteadyStream customer: ${payload.name} (${payload.email})`
+        admin_notes: `SteadyStream customer: ${payload.name} (${payload.email}) - Plan: ${payload.planType}`
       })
     });
 
@@ -185,10 +189,14 @@ serve(async (req) => {
 
     if (!response.ok) {
       log("MegaOTT API Error:", megaottResponse);
-      throw new Error(megaottResponse.message || 'Failed to create IPTV account');
+      throw new Error(megaottResponse.message || `Failed to create IPTV account: ${response.status} ${response.statusText}`);
     }
 
-    log("MegaOTT account created successfully", { responseId: megaottResponse.id });
+    log("MegaOTT account created successfully", { 
+      responseId: megaottResponse.id,
+      username: username,
+      plan: payload.planType 
+    });
 
     // Update the user profile with IPTV credentials
     const { error: updateError } = await supabaseAdmin
@@ -208,8 +216,8 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Generate playlist URLs
-    const baseUrl = `http://megaott.net/get.php?username=${username}&password=${password}`;
+    // Generate playlist URLs with the real MegaOTT endpoint
+    const baseUrl = `https://megaott.net/get.php?username=${username}&password=${password}`;
     const m3uUrl = `${baseUrl}&type=m3u_plus&output=ts`;
     const m3uPlusUrl = `${baseUrl}&type=m3u_plus&output=ts`;
     const xspfUrl = `${baseUrl}&type=xspf&output=ts`;
@@ -219,7 +227,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'IPTV account created successfully',
+        message: 'IPTV account created successfully in MegaOTT panel',
         data: {
           username,
           password,
@@ -229,7 +237,9 @@ serve(async (req) => {
             m3u: m3uUrl,
             m3u_plus: m3uPlusUrl,
             xspf: xspfUrl
-          }
+          },
+          megaottId: megaottResponse.id,
+          planType: payload.planType
         }
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

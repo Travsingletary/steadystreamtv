@@ -10,7 +10,7 @@ const MEGAOTT_CONFIG = {
   apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
 };
 
-// Production Automation Service
+// Production Automation Service with REAL API calls
 const ProductionAutomationService = {
   async signUp(email: string, password: string, userData: any) {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
@@ -63,36 +63,39 @@ const ProductionAutomationService = {
       const playlistUrl = `${window.location.origin}/api/playlist/${playlistToken}.m3u8`;
       console.log('✅ Assets generated');
 
-      // Create MegaOTT subscription (production API call)
+      // Create REAL MegaOTT subscription (no simulations)
       let megaottResult = null;
       try {
-        const megaottResponse = await fetch(MEGAOTT_CONFIG.baseUrl, {
+        console.log('🔥 Creating REAL MegaOTT subscription for all plans...');
+        const megaottResponse = await fetch(`${SUPABASE_URL}/functions/v1/create-xtream-account`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${MEGAOTT_CONFIG.apiKey}`,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             'Accept': 'application/json'
           },
           body: JSON.stringify({
-            user_id: userId,
-            subscription_plan: userData.plan,
-            auto_renew: true,
-            trial_period: userData.plan === 'trial' ? 24 : 0,
-            status: 'active'
+            userId: userId,
+            planType: userData.plan,
+            email: userData.email,
+            name: userData.name
           })
         });
 
         if (megaottResponse.ok) {
           megaottResult = await megaottResponse.json();
-          console.log('✅ MegaOTT subscription created:', megaottResult.subscription_id);
+          console.log('✅ REAL MegaOTT subscription created:', megaottResult.data?.username);
         } else {
-          console.warn('⚠️ MegaOTT API error, proceeding with fallback');
+          const errorData = await megaottResponse.json();
+          console.error('❌ MegaOTT API error:', errorData);
+          throw new Error(errorData.error || 'Failed to create IPTV account');
         }
       } catch (megaError) {
-        console.warn('⚠️ MegaOTT integration failed, using fallback:', megaError.message);
+        console.error('❌ MegaOTT integration failed:', megaError.message);
+        throw megaError; // Don't use fallback, require real subscription
       }
 
-      // Send welcome email
+      // Send welcome email with REAL credentials
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-welcome-email`, {
           method: 'POST',
@@ -105,9 +108,9 @@ const ProductionAutomationService = {
             email: userData.email,
             name: userData.name,
             iptv: {
-              username: megaottResult?.credentials?.username || activationCode,
-              password: megaottResult?.credentials?.password || 'temp123',
-              playlistUrls: {
+              username: megaottResult?.data?.username || activationCode,
+              password: megaottResult?.data?.password || 'temp123',
+              playlistUrls: megaottResult?.data?.playlistUrls || {
                 m3u: playlistUrl,
                 m3u_plus: playlistUrl.replace('.m3u8', '_plus.m3u8'),
                 xspf: playlistUrl.replace('.m3u8', '.xspf')
@@ -115,7 +118,7 @@ const ProductionAutomationService = {
             }
           })
         });
-        console.log('✅ Welcome email sent');
+        console.log('✅ Welcome email sent with REAL credentials');
       } catch (emailError) {
         console.warn('⚠️ Email sending failed:', emailError.message);
       }
@@ -123,10 +126,10 @@ const ProductionAutomationService = {
       return {
         success: true,
         user: authData.user,
-        activationCode,
-        playlistUrl,
+        activationCode: megaottResult?.data?.username || activationCode,
+        playlistUrl: megaottResult?.data?.playlistUrls?.m3u || playlistUrl,
         megaottSubscription: megaottResult,
-        message: 'Account created successfully!'
+        message: 'Account created successfully with REAL IPTV subscription!'
       };
 
     } catch (error: any) {

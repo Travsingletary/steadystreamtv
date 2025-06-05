@@ -1,4 +1,3 @@
-
 // src/services/automationService.ts
 // Production-ready automation service with real streaming URLs and live integrations
 
@@ -6,7 +5,7 @@ export interface UserData {
   name: string;
   email: string;
   password: string;
-  plan: 'trial' | 'basic' | 'duo' | 'family';
+  plan: 'trial' | 'basic' | 'duo' | 'family' | 'standard' | 'premium' | 'ultimate';
   deviceType: string;
   preferences: {
     favoriteGenres: string[];
@@ -34,6 +33,10 @@ export interface RegistrationResult {
     success: boolean;
     plan: string;
     megaottId?: string;
+    credentials?: {
+      username: string;
+      password: string;
+    };
   };
   userData?: UserData;
   error?: string;
@@ -44,11 +47,6 @@ const CONFIG = {
   supabase: {
     url: 'https://ojueihcytxwcioqtvwez.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qdWVpaGN5dHh3Y2lvcXR2d2V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0Mzc1NDQsImV4cCI6MjA2MjAxMzU0NH0.VsWI3EcSVaeY-NfsW1zJUw6DpMsrHHDP9GYTpaxMbPM'
-  },
-  megaOTT: {
-    baseUrl: 'https://megaott.net/api/v1/user',
-    apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d',
-    streamBaseUrl: 'https://megaott.net/live'
   },
   app: {
     downloadCode: '1592817',
@@ -210,42 +208,32 @@ export class SimpleAutomationService {
   }
 
   /**
-   * Live MegaOTT subscription creation
+   * Live MegaOTT subscription creation - REAL API CALLS FOR ALL PLANS
    */
-  static async createMegaOTTSubscription(userId: string, plan: string) {
+  static async createMegaOTTSubscription(userId: string, plan: string, userData: UserData) {
     try {
-      console.log('Creating MegaOTT subscription for user:', userId, 'plan:', plan);
+      console.log('Creating REAL MegaOTT subscription for user:', userId, 'plan:', plan);
       
-      // Real MegaOTT API call for subscription creation
-      const response = await fetch(CONFIG.megaOTT.baseUrl, {
+      // Call the create-xtream-account Supabase function for REAL account creation
+      const response = await fetch(`${CONFIG.supabase.url}/functions/v1/create-xtream-account`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${CONFIG.megaOTT.apiKey}`,
+          'Authorization': `Bearer ${CONFIG.supabase.anonKey}`,
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          user_id: userId,
-          subscription_plan: plan,
-          auto_renew: true,
-          trial_period: plan === 'trial' ? 24 : 0,
-          status: 'active',
-          created_at: new Date().toISOString()
+          userId: userId,
+          planType: plan,
+          email: userData.email,
+          name: userData.name
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.warn('MegaOTT API error:', response.status, errorData);
-        
-        // Fallback for API issues - still allow user to proceed
-        return {
-          success: true,
-          plan,
-          message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated (pending sync)`,
-          subscriptionId: `pending_${Math.random().toString(36).substr(2, 9)}`,
-          fallback: true
-        };
+        console.error('Create Xtream Account API error:', response.status, errorData);
+        throw new Error(`Failed to create IPTV account: ${errorData.error || response.statusText}`);
       }
 
       const result = await response.json();
@@ -254,24 +242,18 @@ export class SimpleAutomationService {
       return {
         success: true,
         plan,
-        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated`,
-        subscriptionId: result.subscription_id || result.id,
-        megaottId: result.megaott_user_id,
-        credentials: result.credentials
+        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated in MegaOTT`,
+        subscriptionId: result.data?.megaottId,
+        credentials: {
+          username: result.data?.username,
+          password: result.data?.password
+        },
+        playlistUrls: result.data?.playlistUrls
       };
       
     } catch (error) {
       console.error('MegaOTT integration error:', error);
-      
-      // Graceful fallback - don't block user registration
-      return {
-        success: true,
-        plan,
-        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated (syncing...)`,
-        subscriptionId: `fallback_${Math.random().toString(36).substr(2, 9)}`,
-        fallback: true,
-        error: error.message
-      };
+      throw new Error(`Failed to create IPTV subscription: ${error.message}`);
     }
   }
 
@@ -300,11 +282,11 @@ export class SimpleAutomationService {
       const playlistOptimization = await this.optimizePlaylist(userData.preferences);
       console.log('✅ Playlist optimized with', playlistOptimization.totalOptimized, 'channels');
 
-      // Step 4: Create MegaOTT subscription
-      const subscription = await this.createMegaOTTSubscription(userId, userData.plan);
-      console.log('✅ MegaOTT subscription:', subscription.success ? 'created' : 'pending');
+      // Step 4: Create REAL MegaOTT subscription (no more simulations)
+      const subscription = await this.createMegaOTTSubscription(userId, userData.plan, userData);
+      console.log('✅ MegaOTT subscription created:', subscription.subscriptionId);
 
-      // Step 5: Send welcome email (handled by Supabase function)
+      // Step 5: Send welcome email with REAL credentials
       try {
         await fetch(`${CONFIG.supabase.url}/functions/v1/send-welcome-email`, {
           method: 'POST',
@@ -319,7 +301,7 @@ export class SimpleAutomationService {
             iptv: {
               username: subscription.credentials?.username || assets.activationCode,
               password: subscription.credentials?.password || 'temp123',
-              playlistUrls: {
+              playlistUrls: subscription.playlistUrls || {
                 m3u: assets.playlistUrl,
                 m3u_plus: assets.playlistUrl.replace('.m3u8', '_plus.m3u8'),
                 xspf: assets.playlistUrl.replace('.m3u8', '.xspf')
@@ -327,13 +309,13 @@ export class SimpleAutomationService {
             }
           })
         });
-        console.log('✅ Welcome email triggered');
+        console.log('✅ Welcome email sent with real credentials');
       } catch (emailError) {
         console.warn('⚠️ Email sending failed:', emailError.message);
         // Don't fail the entire process for email issues
       }
 
-      // Success! User is fully set up
+      // Success! User is fully set up with REAL IPTV account
       return {
         success: true,
         user: authResult.user,
