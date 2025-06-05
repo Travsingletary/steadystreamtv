@@ -1,3 +1,4 @@
+
 // src/services/automationService.ts
 // Production-ready automation service with real streaming URLs and live integrations
 
@@ -51,6 +52,11 @@ const CONFIG = {
   app: {
     downloadCode: '1592817',
     downloadUrl: 'aftv.news/1592817'
+  },
+  megaOTT: {
+    streamBaseUrl: 'https://megaott.net/live',
+    apiUrl: 'https://megaott.net/api/v1/user',
+    apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
   }
 };
 
