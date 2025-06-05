@@ -40,24 +40,26 @@ serve(async (req: Request) => {
     // Get Resend API key from environment
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
-      log("Missing Resend API key - emails disabled");
+      log("❌ Missing Resend API key in Supabase secrets");
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Email service not configured",
         message: "Resend API key not found. Please configure RESEND_API_KEY in Supabase secrets." 
       }), {
-        status: 200, // Don't fail the automation flow
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
+    log("✅ Resend API key found - initializing email service");
     const resend = new Resend(resendApiKey);
     
     // Parse request body
     const payload: WelcomeEmailPayload = await req.json();
-    log("Processing email request:", { userId: payload.userId, email: payload.email });
+    log("📧 Processing email request", { userId: payload.userId, email: payload.email });
 
     if (!payload.email || !payload.iptv) {
+      log("❌ Missing required fields in payload");
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -265,6 +267,7 @@ serve(async (req: Request) => {
 `;
 
     // Send the email using Resend
+    log("📤 Sending welcome email via Resend API");
     const emailResponse = await resend.emails.send({
       from: 'SteadyStream TV <welcome@steadystream.tv>',
       to: [payload.email],
@@ -272,7 +275,7 @@ serve(async (req: Request) => {
       html: htmlContent,
     });
 
-    log("Email sent successfully:", { emailId: emailResponse.id });
+    log("✅ Email sent successfully", { emailId: emailResponse.id, to: payload.email });
 
     // Update the user profile to record that welcome email was sent
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -288,28 +291,29 @@ serve(async (req: Request) => {
           welcome_email_sent_at: new Date().toISOString()
         })
         .eq('id', payload.userId);
+      
+      log("✅ User profile updated with email delivery status");
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
       emailId: emailResponse.id,
-      message: "Welcome email sent successfully" 
+      message: "Welcome email sent successfully to " + payload.email
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
   } catch (err: any) {
-    log("Error sending welcome email:", err);
+    log("❌ Error sending welcome email", { error: err.message, stack: err.stack });
     
-    // Return success with warning - don't fail the automation flow
+    // Return error response for debugging
     return new Response(JSON.stringify({ 
       success: false,
       error: err.message,
-      fallback: true,
-      message: "Email sending failed but account creation successful"
+      message: "Email sending failed - check function logs for details"
     }), {
-      status: 200, // Don't fail the entire automation
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
