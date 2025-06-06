@@ -1,19 +1,20 @@
 
 // src/services/megaOTTService.ts
-// Handles MegaOTT subscription creation and management
+// SECURITY UPDATED: MegaOTT integration now uses secure edge functions
 
 import { CONFIG } from './config';
 import type { UserData } from './types';
 
 export class MegaOTTService {
   /**
-   * Live MegaOTT subscription creation - REAL API CALLS FOR ALL PLANS
+   * SECURITY FIX: Create MegaOTT subscription via secure edge function
+   * API keys are now stored securely in Supabase secrets
    */
   static async createSubscription(userId: string, plan: string, userData: UserData) {
     try {
-      console.log('Creating REAL MegaOTT subscription for user:', userId, 'plan:', plan);
+      console.log('Creating SECURE MegaOTT subscription for user:', userId, 'plan:', plan);
       
-      // Call the create-xtream-account Supabase function for REAL account creation
+      // Call the secure create-xtream-account Supabase edge function
       const response = await fetch(`${CONFIG.supabase.url}/functions/v1/create-xtream-account`, {
         method: 'POST',
         headers: {
@@ -31,17 +32,17 @@ export class MegaOTTService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Create Xtream Account API error:', response.status, errorData);
+        console.error('Secure Xtream Account API error:', response.status, errorData);
         throw new Error(`Failed to create IPTV account: ${errorData.error || response.statusText}`);
       }
 
       const result = await response.json();
-      console.log('MegaOTT subscription created successfully:', result);
+      console.log('Secure MegaOTT subscription created successfully:', result);
       
       return {
         success: true,
         plan,
-        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated in MegaOTT`,
+        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated securely`,
         subscriptionId: result.data?.megaottId,
         credentials: {
           username: result.data?.username,
@@ -51,7 +52,7 @@ export class MegaOTTService {
       };
       
     } catch (error) {
-      console.error('MegaOTT integration error:', error);
+      console.error('Secure MegaOTT integration error:', error);
       throw new Error(`Failed to create IPTV subscription: ${error.message}`);
     }
   }

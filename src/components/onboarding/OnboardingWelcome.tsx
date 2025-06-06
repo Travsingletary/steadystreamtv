@@ -6,10 +6,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Mail, User, Lock } from "lucide-react";
+import { Mail, User, Lock, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SignInForm } from "./SignInForm";
+import { validatePasswordSecurity } from "@/utils/passwordSecurity";
 
+// SECURITY: Enhanced password validation schema
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
@@ -17,10 +19,11 @@ const formSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  password: z.string().min(8, {
-    message: "Password must be at least 8 characters.",
-  }).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~])/, {
-    message: "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.",
+  password: z.string().refine((password) => {
+    const validation = validatePasswordSecurity(password);
+    return validation.isValid;
+  }, {
+    message: "Password must meet security requirements",
   }),
 });
 
@@ -42,6 +45,7 @@ interface OnboardingWelcomeProps {
 export const OnboardingWelcome = ({ userData, updateUserData, onNext }: OnboardingWelcomeProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignIn, setIsSignIn] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong'>('weak');
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -53,19 +57,30 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
     },
   });
 
+  // SECURITY: Real-time password validation
+  const handlePasswordChange = (password: string) => {
+    const validation = validatePasswordSecurity(password);
+    setPasswordStrength(validation.strength);
+    
+    if (!validation.isValid && password.length > 0) {
+      form.setError('password', {
+        message: validation.errors[0]
+      });
+    } else {
+      form.clearErrors('password');
+    }
+  };
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     
-    // Validate password complexity
-    const hasLowercase = /[a-z]/.test(values.password);
-    const hasUppercase = /[A-Z]/.test(values.password);
-    const hasNumber = /\d/.test(values.password);
-    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(values.password);
+    // SECURITY: Final password validation
+    const passwordValidation = validatePasswordSecurity(values.password);
     
-    if (!hasLowercase || !hasUppercase || !hasNumber || !hasSpecial) {
+    if (!passwordValidation.isValid) {
       toast({
-        title: "Password Error",
-        description: "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.",
+        title: "Password Security Error",
+        description: passwordValidation.errors.join('. '),
         variant: "destructive",
       });
       setIsLoading(false);
@@ -80,6 +95,12 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
           email: values.email,
           password: values.password,
         });
+        
+        toast({
+          title: "Account Created",
+          description: `Welcome ${values.name}! Your secure account has been created.`,
+        });
+        
         onNext();
       } catch (error: any) {
         toast({
@@ -99,7 +120,10 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
 
   return (
     <div className="bg-dark-200 rounded-xl border border-gray-800 p-8 animate-fade-in">
-      <h1 className="text-3xl font-bold mb-2">Welcome to SteadyStream TV</h1>
+      <div className="flex items-center gap-2 mb-4">
+        <Shield className="h-6 w-6 text-gold" />
+        <h1 className="text-3xl font-bold">Welcome to SteadyStream TV</h1>
+      </div>
       <p className="text-gray-400 mb-8">
         Let's get you set up with your personalized streaming experience. 
         We'll guide you through a few quick steps to customize your SteadyStream TV.
@@ -155,22 +179,45 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  Password
+                  <Shield className="h-4 w-4 text-gold" />
+                </FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                     <Input 
-                      placeholder="Create a password" 
+                      placeholder="Create a secure password" 
                       type="password" 
                       className="pl-10 bg-dark-300 border-gray-700" 
-                      {...field} 
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handlePasswordChange(e.target.value);
+                      }}
                     />
                   </div>
                 </FormControl>
                 <FormMessage />
-                <p className="text-xs text-gray-500 mt-1">
-                  Password must contain at least 8 characters including uppercase, lowercase, number, and special character.
-                </p>
+                
+                {/* SECURITY: Password strength indicator */}
+                {field.value && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-gray-500">Strength:</span>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${
+                      passwordStrength === 'strong' ? 'bg-green-900/30 text-green-400' :
+                      passwordStrength === 'medium' ? 'bg-yellow-900/30 text-yellow-400' :
+                      'bg-red-900/30 text-red-400'
+                    }`}>
+                      {passwordStrength.toUpperCase()}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="text-xs text-gray-500 mt-2 space-y-1">
+                  <p>• At least 8 characters with uppercase, lowercase, number, and special character</p>
+                  <p>• Avoid common passwords and repeated characters</p>
+                </div>
               </FormItem>
             )}
           />
@@ -179,9 +226,9 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
             <Button 
               type="submit" 
               className="w-full bg-gold hover:bg-gold-dark text-black font-semibold"
-              disabled={isLoading}
+              disabled={isLoading || passwordStrength === 'weak'}
             >
-              {isLoading ? "Processing..." : "Continue"}
+              {isLoading ? "Creating Secure Account..." : "Continue"}
             </Button>
             
             <div className="mt-4 text-center">

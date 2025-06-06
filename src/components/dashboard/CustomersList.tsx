@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, RotateCw, Eye, Edit, Copy } from "lucide-react";
+import { Trash2, RotateCw, Eye, Edit, Copy, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
+import { generateSecurePassword } from "@/utils/passwordSecurity";
 
 type Customer = Database['public']['Tables']['customers']['Row'];
 
@@ -52,6 +52,45 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
       title: "Credentials copied",
       description: "Customer login details copied to clipboard",
     });
+  };
+
+  // SECURITY: Generate new secure password for customer
+  const handleResetPassword = async (customerId: string, customerName: string) => {
+    try {
+      setLoading(true);
+      const newSecurePassword = generateSecurePassword(12);
+      
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          password: newSecurePassword
+        })
+        .eq('id', customerId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Password Reset",
+        description: `New secure password generated for ${customerName}`,
+      });
+      
+      // Copy new password to clipboard
+      navigator.clipboard.writeText(newSecurePassword);
+      toast({
+        title: "New Password Copied",
+        description: "The new secure password has been copied to your clipboard",
+      });
+      
+      fetchCustomers();
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        title: "Error resetting password",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRenewSubscription = async (customerId: string) => {
@@ -183,6 +222,7 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
                     size="icon" 
                     onClick={() => handleCopyCredentials(customer.username, customer.password)}
                     className="ml-1 h-6 w-6 text-gray-400 hover:text-white"
+                    title="Copy credentials"
                   >
                     <Copy size={14} />
                   </Button>
@@ -202,17 +242,27 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
               </td>
               <td className="py-4 px-4 text-right">
                 <div className="flex justify-end space-x-1">
-                  <Button variant="outline" size="icon" className="w-8 h-8">
+                  <Button variant="outline" size="icon" className="w-8 h-8" title="View details">
                     <Eye size={14} />
                   </Button>
-                  <Button variant="outline" size="icon" className="w-8 h-8">
+                  <Button variant="outline" size="icon" className="w-8 h-8" title="Edit customer">
                     <Edit size={14} />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="w-8 h-8 text-blue-400 hover:text-blue-300"
+                    onClick={() => handleResetPassword(customer.id, customer.name)}
+                    title="Generate new secure password"
+                  >
+                    <Shield size={14} />
                   </Button>
                   <Button 
                     variant="outline" 
                     size="icon" 
                     className="w-8 h-8"
                     onClick={() => handleRenewSubscription(customer.id)}
+                    title="Renew subscription"
                   >
                     <RotateCw size={14} />
                   </Button>
@@ -221,6 +271,7 @@ export const CustomersList: React.FC<CustomersListProps> = ({ resellerId, onUpda
                     size="icon" 
                     className="w-8 h-8 text-red-500 hover:text-red-300"
                     onClick={() => handleDeleteCustomer(customer.id)}
+                    title="Delete customer"
                   >
                     <Trash2 size={14} />
                   </Button>

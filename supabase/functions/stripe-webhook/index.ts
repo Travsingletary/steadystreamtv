@@ -1,155 +1,200 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@14.21.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
+}
 
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   console.log("=== WEBHOOK DEBUG START ===");
   console.log("Method:", req.method);
   console.log("URL:", req.url);
   console.log("Timestamp:", new Date().toISOString());
-  
-  // Log ALL headers to see what Stripe is actually sending
-  console.log("=== ALL HEADERS ===");
-  for (const [key, value] of req.headers.entries()) {
-    console.log(`  ${key}: ${value}`);
-  }
-  
-  // Check environment variables
-  const endpointSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-  const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-  
-  console.log("=== ENVIRONMENT CHECK ===");
-  console.log("- STRIPE_WEBHOOK_SECRET exists:", !!endpointSecret);
-  console.log("- STRIPE_SECRET_KEY exists:", !!stripeSecretKey);
-  console.log("- Webhook secret length:", endpointSecret?.length || 0);
-  console.log("- Webhook secret starts with whsec_:", endpointSecret?.startsWith('whsec_') || false);
-  
-  // Check signature headers specifically
-  const stripeSignature = req.headers.get("stripe-signature");
-  const altSignature = req.headers.get("x-stripe-signature");
-  console.log("=== SIGNATURE CHECK ===");
-  console.log("- Stripe signature header:", stripeSignature);
-  console.log("- Alt signature header:", altSignature);
-  console.log("- User-Agent:", req.headers.get("user-agent"));
-  
-  // Handle CORS
-  if (req.method === "OPTIONS") {
-    console.log("Handling CORS preflight request");
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature"
-      }
-    });
-  }
 
-  // Basic validation - but let's see what we're getting first
-  if (!stripeSignature && !altSignature) {
-    console.log("❌ NO SIGNATURE FOUND");
-    
-    // Still return debug info even without signature
-    return new Response(JSON.stringify({
-      error: "Missing stripe signature",
-      debug: {
-        method: req.method,
-        hasEndpointSecret: !!endpointSecret,
-        hasStripeSignature: !!stripeSignature,
-        hasAltSignature: !!altSignature,
-        userAgent: req.headers.get("user-agent"),
-        allHeaders: Object.fromEntries(req.headers.entries()),
-        timestamp: new Date().toISOString()
-      }
-    }), {
-      status: 400,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      }
-    });
-  }
-
-  if (!endpointSecret) {
-    console.log("❌ NO ENDPOINT SECRET CONFIGURED");
-    return new Response(JSON.stringify({
-      error: "Webhook endpoint secret not configured",
-      debug: {
-        hasSignature: !!stripeSignature,
-        hasSecret: !!endpointSecret
-      }
-    }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      }
-    });
-  }
-
-  // Try to parse the webhook
   try {
-    const stripe = new Stripe(stripeSecretKey || '', {
-      apiVersion: '2023-10-16'
-    });
-    
+    // Environment check
+    console.log("=== ENVIRONMENT CHECK ===");
+    console.log("- STRIPE_WEBHOOK_SECRET exists:", !!Deno.env.get('STRIPE_WEBHOOK_SECRET'));
+    console.log("- STRIPE_SECRET_KEY exists:", !!Deno.env.get('STRIPE_SECRET_KEY'));
+
+    const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+
+    if (!stripeWebhookSecret || !stripeSecretKey) {
+      console.error("❌ Missing Stripe environment variables");
+      throw new Error('Missing Stripe configuration');
+    }
+
+    console.log("- Webhook secret length:", stripeWebhookSecret.length);
+    console.log("- Webhook secret starts with whsec_:", stripeWebhookSecret.startsWith('whsec_'));
+
+    // Import Stripe
+    const stripe = (await import('https://esm.sh/stripe@13.11.0?target=deno')).default(stripeSecretKey);
+
+    // Get request details
     const body = await req.text();
+    const signature = req.headers.get('stripe-signature');
+
+    console.log("=== SIGNATURE CHECK ===");
+    console.log("- Stripe signature header:", signature);
+    console.log("- Alt signature header:", req.headers.get('stripe-signature') || req.headers.get('Stripe-Signature'));
+    console.log("- User-Agent:", req.headers.get('user-agent'));
+
     console.log("=== REQUEST BODY ===");
     console.log("- Body length:", body.length);
     console.log("- Body preview:", body.substring(0, 200) + "...");
-    
-    const sig = stripeSignature || altSignature;
-    console.log("=== WEBHOOK VERIFICATION ===");
-    console.log("- Using signature:", sig?.substring(0, 20) + "...");
-    
-    const event = stripe.webhooks.constructEvent(body, sig!, endpointSecret);
-    console.log("✅ WEBHOOK VERIFIED SUCCESSFULLY!");
-    console.log("- Event type:", event.type);
-    console.log("- Event ID:", event.id);
-    
-    // Log the event data for debugging
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session;
-      console.log("=== CHECKOUT SESSION ===");
-      console.log("- Session ID:", session.id);
-      console.log("- Customer email:", session.customer_email);
-      console.log("- Payment status:", session.payment_status);
-      console.log("- Success URL:", session.success_url);
+
+    if (!signature) {
+      console.error("❌ No Stripe signature found");
+      throw new Error('No Stripe signature found');
     }
+
+    // SECURITY FIX: Use constructEventAsync instead of constructEvent
+    console.log("=== WEBHOOK VERIFICATION ===");
+    console.log("- Using signature:", signature.substring(0, 20) + "...");
     
-    return new Response(JSON.stringify({
-      success: true,
-      eventType: event.type,
-      eventId: event.id,
-      message: "Webhook verified and processed successfully!"
-    }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
+    let event;
+    try {
+      // Use the async version to avoid SubtleCryptoProvider sync context errors
+      event = await stripe.webhooks.constructEventAsync(body, signature, stripeWebhookSecret);
+      console.log("✅ WEBHOOK VERIFICATION SUCCESSFUL");
+      console.log("- Event type:", event.type);
+      console.log("- Event ID:", event.id);
+    } catch (err) {
+      console.log("❌ WEBHOOK VERIFICATION FAILED");
+      console.log("- Error type:", err.constructor.name);
+      console.log("- Error message:", err.message);
+      throw new Error(`Webhook signature verification failed: ${err.message}`);
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log("=== PROCESSING EVENT ===");
+    console.log("- Event type:", event.type);
+
+    // Handle different event types
+    switch (event.type) {
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object;
+        console.log("💳 Payment succeeded:", paymentIntent.id);
+        
+        // Update user subscription status
+        if (paymentIntent.metadata?.userId) {
+          const { error } = await supabase
+            .from('profiles')
+            .update({
+              subscription_status: 'active',
+              stripe_customer_id: paymentIntent.customer,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', paymentIntent.metadata.userId);
+
+          if (error) {
+            console.error("❌ Failed to update user profile:", error);
+          } else {
+            console.log("✅ User profile updated successfully");
+          }
+        }
+        break;
       }
-    });
+
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        console.log("📋 Subscription event:", subscription.id);
+        
+        // Update subscription details
+        if (subscription.metadata?.userId) {
+          const { error } = await supabase
+            .from('profiles')
+            .update({
+              subscription_status: subscription.status,
+              subscription_tier: subscription.metadata.tier || 'basic',
+              stripe_subscription_id: subscription.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', subscription.metadata.userId);
+
+          if (error) {
+            console.error("❌ Failed to update subscription:", error);
+          } else {
+            console.log("✅ Subscription updated successfully");
+          }
+        }
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        console.log("🗑️ Subscription cancelled:", subscription.id);
+        
+        // Update subscription status to cancelled
+        if (subscription.metadata?.userId) {
+          const { error } = await supabase
+            .from('profiles')
+            .update({
+              subscription_status: 'cancelled',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', subscription.metadata.userId);
+
+          if (error) {
+            console.error("❌ Failed to cancel subscription:", error);
+          } else {
+            console.log("✅ Subscription cancelled successfully");
+          }
+        }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        console.log("💸 Payment failed:", invoice.id);
+        
+        // Handle failed payment - could update user status or send notification
+        break;
+      }
+
+      default:
+        console.log("ℹ️ Unhandled event type:", event.type);
+    }
+
+    console.log("✅ WEBHOOK PROCESSING COMPLETE");
     
+    return new Response(
+      JSON.stringify({ received: true, eventType: event.type }), 
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
+    );
+
   } catch (error) {
-    console.log("❌ WEBHOOK VERIFICATION FAILED");
-    console.log("- Error message:", error.message);
-    console.log("- Error type:", error.constructor.name);
+    console.error("💥 WEBHOOK ERROR:", error);
     
-    return new Response(JSON.stringify({
-      error: "Webhook verification failed",
-      message: error.message,
-      debug: {
-        hasSignature: !!stripeSignature,
-        hasAltSignature: !!altSignature,
-        signatureLength: (stripeSignature || altSignature)?.length || 0,
-        secretLength: endpointSecret?.length || 0,
-        timestamp: new Date().toISOString()
+    return new Response(
+      JSON.stringify({ 
+        error: 'Webhook processing failed', 
+        message: error.message 
+      }), 
+      { 
+        status: 400, 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
       }
-    }), {
-      status: 400,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      }
-    });
+    );
   }
 });

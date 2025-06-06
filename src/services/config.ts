@@ -1,6 +1,6 @@
 
 // src/services/config.ts
-// Centralized configuration for all services
+// Centralized configuration for all services - SECURITY UPDATED
 
 export const CONFIG = {
   supabase: {
@@ -10,10 +10,7 @@ export const CONFIG = {
   app: {
     downloadCode: '1592817',
     downloadUrl: 'aftv.news/1592817'
-  },
-  megaOTT: {
-    streamBaseUrl: 'https://megaott.net/live',
-    apiUrl: 'https://megaott.net/api/v1/user',
-    apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
   }
+  // SECURITY FIX: Removed hardcoded MegaOTT API credentials
+  // These are now stored securely in Supabase Edge Function secrets
 };
