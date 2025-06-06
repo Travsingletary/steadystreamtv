@@ -51,7 +51,7 @@ const Index = () => {
               <img
                 src="/lovable-uploads/310d5e27-e7eb-4960-8cec-cb6ef89a79cd.png"
                 alt="SteadyStream TV Logo"
-                className="h-12 w-auto"
+                className="h-20 w-auto"
               />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
