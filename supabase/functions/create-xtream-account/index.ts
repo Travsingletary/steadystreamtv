@@ -103,12 +103,12 @@ serve(async (req) => {
       )
     }
 
-    // Check if user already has IPTV credentials
-    const { data: userProfile, error: profileError } = await supabaseAdmin
+    // FIX: Check if user already has IPTV credentials, but don't use .single()
+    // Instead, use regular select and handle all possible cases
+    const { data: userProfiles, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('xtream_username, xtream_password')
-      .eq('id', payload.userId)
-      .single();
+      .eq('id', payload.userId);
       
     if (profileError) {
       log("Error fetching user profile", profileError);
@@ -116,34 +116,42 @@ serve(async (req) => {
     }
     
     // If user already has credentials, return those instead of creating new ones
-    if (userProfile?.xtream_username && userProfile?.xtream_password) {
-      log("User already has IPTV credentials, returning existing ones", {
-        username: userProfile.xtream_username
-      });
+    // Handle case where we found one or more profiles with credentials
+    if (userProfiles && userProfiles.length > 0) {
+      // Get the first profile with valid credentials (if there are multiple, use the first one)
+      const userProfile = userProfiles.find(profile => profile.xtream_username && profile.xtream_password);
       
-      // Generate playlist URLs with existing credentials
-      const baseUrl = `https://megaott.net/get.php?username=${userProfile.xtream_username}&password=${userProfile.xtream_password}`;
-      const m3uUrl = `${baseUrl}&type=m3u_plus&output=ts`;
-      const m3uPlusUrl = `${baseUrl}&type=m3u_plus&output=ts`;
-      const xspfUrl = `${baseUrl}&type=xspf&output=ts`;
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Existing IPTV account retrieved',
-          data: {
-            username: userProfile.xtream_username,
-            password: userProfile.xtream_password,
-            playlistUrls: {
-              m3u: m3uUrl,
-              m3u_plus: m3uPlusUrl,
-              xspf: xspfUrl
+      if (userProfile) {
+        log("User already has IPTV credentials, returning existing ones", {
+          username: userProfile.xtream_username
+        });
+        
+        // Generate playlist URLs with existing credentials
+        const baseUrl = `https://megaott.net/get.php?username=${userProfile.xtream_username}&password=${userProfile.xtream_password}`;
+        const m3uUrl = `${baseUrl}&type=m3u_plus&output=ts`;
+        const m3uPlusUrl = `${baseUrl}&type=m3u_plus&output=ts`;
+        const xspfUrl = `${baseUrl}&type=xspf&output=ts`;
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Existing IPTV account retrieved',
+            data: {
+              username: userProfile.xtream_username,
+              password: userProfile.xtream_password,
+              playlistUrls: {
+                m3u: m3uUrl,
+                m3u_plus: m3uPlusUrl,
+                xspf: xspfUrl
+              }
             }
-          }
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
+    
+    // If no credentials were found or they were invalid, proceed with creating new ones
 
     // Generate username and password
     // Format: steady_[first letter of name][random string]
