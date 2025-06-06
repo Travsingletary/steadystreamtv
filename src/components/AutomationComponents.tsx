@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 // Production Configuration
 const SUPABASE_URL = 'https://ojueihcytxwcioqtvwez.supabase.co';
@@ -52,6 +55,7 @@ const ProductionAutomationService = {
 
       // Generate activation code and assets
       const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      // Using JSON.stringify instead of any potential dynamic code execution
       const playlistToken = btoa(JSON.stringify({
         userId,
         activationCode,
@@ -224,6 +228,10 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
     setLoading(false);
   };
 
+  const handlePlanChange = (value: string) => {
+    handleInputChange('plan', value);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -249,8 +257,8 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
         
         <div className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-2 text-white">Full Name</label>
-            <input
+            <Label htmlFor="name">Full Name</Label>
+            <Input
               id="name"
               name="name"
               type="text"
@@ -262,8 +270,8 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-2 text-white">Email Address</label>
-            <input
+            <Label htmlFor="email">Email Address</Label>
+            <Input
               id="email"
               name="email"
               type="email"
@@ -275,8 +283,8 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-2 text-white">Password</label>
-            <input
+            <Label htmlFor="password">Password</Label>
+            <Input
               id="password"
               name="password"
               type="password"
@@ -288,19 +296,18 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
           </div>
 
           <div>
-            <label htmlFor="plan" className="block text-sm font-medium mb-2 text-white">Choose Plan</label>
-            <select
-              id="plan"
-              name="plan"
-              value={formData.plan}
-              onChange={(e) => handleInputChange('plan', e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
-            >
-              <option value="trial">🎉 24-Hour FREE Trial</option>
-              <option value="basic">💰 $20/month - Solo Stream (1 Device)</option>
-              <option value="duo">💎 $35/month - Duo Stream (2 Devices)</option>
-              <option value="family">👨‍👩‍👧‍👦 $45/month - Family Max (3 Devices)</option>
-            </select>
+            <Label htmlFor="plan">Choose Plan</Label>
+            <Select name="plan" value={formData.plan} onValueChange={handlePlanChange}>
+              <SelectTrigger id="plan" className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white">
+                <SelectValue placeholder="Select a plan" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-700 border-gray-600 text-white">
+                <SelectItem value="trial">🎉 24-Hour FREE Trial</SelectItem>
+                <SelectItem value="basic">💰 $20/month - Solo Stream (1 Device)</SelectItem>
+                <SelectItem value="duo">💎 $35/month - Duo Stream (2 Devices)</SelectItem>
+                <SelectItem value="family">👨‍👩‍👧‍👦 $45/month - Family Max (3 Devices)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <button
