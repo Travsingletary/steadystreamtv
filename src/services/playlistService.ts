@@ -3,12 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export class PlaylistService {
   /**
-   * Generate M3U playlist content using the database function
+   * Generate M3U playlist content using the NEW database function with improved logos
    */
   static async generateM3UFromDatabase(playlistToken: string): Promise<string> {
     try {
-      const { data, error } = await supabase.rpc('get_user_playlist', {
-        playlist_token: playlistToken
+      const { data, error } = await supabase.rpc('generate_m3u_playlist', {
+        input_token: playlistToken
       });
 
       if (error) {

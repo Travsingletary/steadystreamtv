@@ -346,8 +346,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_m3u_playlist: {
+        Args: { input_token: string }
+        Returns: string
+      }
       get_user_playlist: {
-        Args: { playlist_token: string }
+        Args: Record<PropertyKey, never> | { playlist_token: string }
         Returns: string
       }
     }

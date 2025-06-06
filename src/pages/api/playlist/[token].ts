@@ -8,9 +8,9 @@ export default async function handler(req: any, res: any) {
     // Remove .m3u8 extension if present
     const cleanToken = token.replace('.m3u8', '');
     
-    // Use the database function to generate the playlist
-    const { data: playlistContent, error } = await supabase.rpc('get_user_playlist', {
-      playlist_token: cleanToken
+    // Use the NEW database function with improved logo handling
+    const { data: playlistContent, error } = await supabase.rpc('generate_m3u_playlist', {
+      input_token: cleanToken
     });
 
     if (error) {
