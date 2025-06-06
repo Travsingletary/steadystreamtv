@@ -47,8 +47,12 @@ const Index = () => {
       <header className="container mx-auto px-6 py-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center mr-4">
-              <Tv className="w-8 h-8 text-black" />
+            <div className="mr-4">
+              <img
+                src="/lovable-uploads/310d5e27-e7eb-4960-8cec-cb6ef89a79cd.png"
+                alt="SteadyStream TV Logo"
+                className="h-12 w-auto"
+              />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
               STEADYSTREAM TV
