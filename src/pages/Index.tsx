@@ -1,18 +1,16 @@
+
 import React, { useState } from "react";
-import Navbar from "@/components/Navbar";
-import FeaturesSection from "@/components/FeaturesSection";
-import DevicesSection from "@/components/DevicesSection";
-import ChannelsSection from "@/components/ChannelsSection";
-import PricingSection from "@/components/PricingSection";
-import FooterSection from "@/components/FooterSection";
-import MobileAutomation from "@/components/MobileAutomation";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 import { useAnalytics } from "@/components/LaunchAnalytics";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Smartphone, Globe, Plane, Car, Home, MapPin, Tv } from "lucide-react";
+import { 
+  Tv, Monitor, Smartphone, Tablet, Wifi, Home, Car, Plane, 
+  CheckCircle, Clock, Globe, Download, Shield, Star 
+} from 'lucide-react';
+import MobileAutomation from "@/components/MobileAutomation";
 
 const Index = () => {
   useAnalytics('homepage');
@@ -43,307 +41,456 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
       
-      {/* Updated Mobile-Focused Hero Section */}
-      <section id="home" className="pt-24 pb-16 md:pt-32 md:pb-24 relative">
-        {/* Background with gradient overlay */}
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1605810230434-7631ac76ec81')] bg-cover bg-center opacity-20"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-black via-black/95 to-black"></div>
+      {/* Balanced Header */}
+      <header className="container mx-auto px-6 py-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center mr-4">
+              <Tv className="w-8 h-8 text-black" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+              STEADYSTREAM TV
+            </h1>
+          </div>
+
+          <nav className="hidden md:flex space-x-8">
+            <a href="#features" className="hover:text-yellow-400 transition-colors">Features</a>
+            <a href="#devices" className="hover:text-yellow-400 transition-colors">Devices</a>
+            <a href="#pricing" className="hover:text-yellow-400 transition-colors">Pricing</a>
+          </nav>
+
+          <Button 
+            onClick={() => setShowMobileSignup(true)}
+            className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold"
+          >
+            🎉 Start Free Trial
+          </Button>
+        </div>
+      </header>
+
+      {/* Balanced Hero Section */}
+      <section className="container mx-auto px-6 py-16 text-center">
+        <div className="flex justify-center mb-8">
+          <div className="grid grid-cols-4 gap-4 text-4xl">
+            <Tv className="w-16 h-16 text-yellow-400" />
+            <Monitor className="w-16 h-16 text-yellow-400" />
+            <Tablet className="w-16 h-16 text-yellow-400" />
+            <Smartphone className="w-16 h-16 text-yellow-400" />
+          </div>
+        </div>
         
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="flex flex-col md:flex-row gap-8 items-center">
-            <div className="md:w-1/2 space-y-6 animate-fade-in">
-              {/* Mobile-focused messaging */}
-              <div className="flex justify-center md:justify-start mb-4">
-                <div className="flex gap-4 text-4xl">
-                  <Smartphone className="w-12 h-12 text-gold" />
-                  <Globe className="w-12 h-12 text-gold" />
-                  <Tv className="w-12 h-12 text-gold" />
-                </div>
-              </div>
-              
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-center md:text-left">
-                Stream <span className="text-gradient-gold">Anywhere</span><br/>
-                Your TV Goes <span className="text-gradient-gold">Mobile</span>
-              </h1>
-              
-              <p className="text-gray-300 text-lg md:text-xl max-w-xl text-center md:text-left">
-                Premium IPTV that travels with you. 10,000+ channels on your phone, tablet, laptop, or TV. 
-                Perfect for commutes, travel, or relaxing anywhere.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 pt-2 justify-center md:justify-start">
-                <Button 
-                  size="lg" 
-                  className="bg-gradient-to-r from-gold to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold" 
-                  onClick={() => setShowMobileSignup(true)}
-                >
-                  📱 Start Mobile Streaming
-                </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="border-gold text-gold hover:bg-gold/10"
-                  onClick={() => document.getElementById('anywhere')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  🌍 See Where It Works
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-gray-200">📱 Mobile Ready</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-gray-200">✈️ Travel Friendly</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-gray-200">⚡ Instant Setup</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-gray-200">🚫 No Credit Card</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Keep existing TV image */}
-            <div style={{ animationDelay: "0.3s" }} className="md:w-1/2 flex justify-center animate-fade-in px-0 py-[20px]">
-              <div className="relative">
-                <div className="tv-flatscreen">
-                  <div className="border border-gray-700 shadow-lg overflow-hidden w-full max-w-md rounded bg-black">
-                    <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-1/3 h-2 bg-gray-700 rounded-b-lg"></div>
-                    <div className="aspect-video overflow-hidden rounded-none bg-slate-950">
-                      <img src="/lovable-uploads/60de453f-8cb1-417a-ad2f-209df6c72378.png" alt="Family watching TV" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                  <div className="relative flex justify-center mt-6">
-                    <img alt="SteadyStream TV" src="/lovable-uploads/02b1a674-0365-4ccb-b387-38a69c2c5b7c.png" className="w-3/4 h-auto object-cover" />
-                  </div>
-                </div>
-              </div>
-            </div>
+        <h1 className="text-5xl md:text-6xl font-bold mb-6">
+          The Smarter Way to <span className="text-yellow-400">Stream</span>
+        </h1>
+        <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto">
+          Premium IPTV streaming with 1000+ channels. Watch on your Smart TV at home, 
+          laptop at the office, or phone while traveling. One service, every device, anywhere.
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+          <Button 
+            onClick={() => setShowMobileSignup(true)}
+            size="lg"
+            className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 px-8 text-lg"
+          >
+            🎉 Start 24-Hour Free Trial
+          </Button>
+          <Button 
+            variant="outline"
+            size="lg"
+            className="border-yellow-500 text-yellow-400 hover:bg-yellow-500 hover:text-black py-4 px-8 text-lg"
+            onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            📺 See All Features
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-400 max-w-2xl mx-auto">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-400" />
+            <span>📺 Smart TV Ready</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-400" />
+            <span>💻 Computer Compatible</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-400" />
+            <span>📱 Mobile Friendly</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-400" />
+            <span>🚫 No Credit Card</span>
           </div>
         </div>
       </section>
 
-      {/* Mobile Trial CTA Section */}
-      <section className="container mx-auto px-6 py-8 text-center">
-        <Card className="max-w-4xl mx-auto bg-gradient-to-r from-green-900 to-blue-900 border-green-500">
-          <CardHeader>
-            <Globe className="w-12 h-12 text-green-400 mx-auto mb-4" />
-            <CardTitle className="text-2xl text-green-200">Try Mobile Streaming FREE for 24 Hours</CardTitle>
-            <CardDescription className="text-green-100">
-              Full access to premium channels on any device, anywhere in the world
+      {/* Device Compatibility Section */}
+      <section id="devices" className="container mx-auto px-6 py-16">
+        <h2 className="text-4xl font-bold text-center mb-4">Works on Every Device You Own</h2>
+        <p className="text-center text-gray-300 mb-16 max-w-2xl mx-auto">
+          SteadyStream TV isn't limited to one device. Get the complete TV experience everywhere - 
+          your living room, office, bedroom, or anywhere you travel.
+        </p>
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <Card className="bg-gray-800 border-gray-700 text-center">
+            <CardHeader>
+              <Tv className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+              <CardTitle>📺 Living Room</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-300 text-sm mb-4">
+                Smart TVs, Fire TV, Android TV, Apple TV, Roku
+              </p>
+              <Badge variant="secondary">Primary Experience</Badge>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-gray-700 text-center">
+            <CardHeader>
+              <Monitor className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+              <CardTitle>💻 Office & Study</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-300 text-sm mb-4">
+                Windows, Mac, Chromebook, Linux computers
+              </p>
+              <Badge variant="secondary">Full Features</Badge>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-gray-700 text-center">
+            <CardHeader>
+              <Tablet className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+              <CardTitle>📱 Personal Devices</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-300 text-sm mb-4">
+                Phones, tablets, iPads - iOS and Android
+              </p>
+              <Badge variant="secondary">On-the-Go</Badge>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-gray-700 text-center">
+            <CardHeader>
+              <Globe className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+              <CardTitle>🌍 Anywhere</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-300 text-sm mb-4">
+                Hotels, vacation rentals, friend's house
+              </p>
+              <Badge variant="secondary">Travel Ready</Badge>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="text-center mt-12">
+          <Card className="inline-block bg-gradient-to-r from-green-800 to-blue-800 border-green-500">
+            <CardContent className="p-6">
+              <Wifi className="w-12 h-12 text-green-400 mx-auto mb-4" />
+              <h3 className="text-xl font-bold mb-2">Just Need Internet</h3>
+              <p className="text-gray-300">
+                Any device + Any internet connection = Complete TV experience
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="container mx-auto px-6 py-16">
+        <h2 className="text-4xl font-bold text-center mb-16">Why Choose SteadyStream TV?</h2>
+        
+        <div className="grid md:grid-cols-3 gap-12">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Tv className="w-8 h-8 text-black" />
+            </div>
+            <h3 className="text-2xl font-bold mb-4">1000+ Premium Channels</h3>
+            <p className="text-gray-300">
+              Complete channel lineup including news, sports, movies, entertainment, 
+              kids content, and international channels.
+            </p>
+          </div>
+
+          <div className="text-center">
+            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Globe className="w-8 h-8 text-black" />
+            </div>
+            <h3 className="text-2xl font-bold mb-4">Stream Everywhere</h3>
+            <p className="text-gray-300">
+              One account works on all your devices. Watch on your Smart TV at home, 
+              laptop at work, or phone while traveling.
+            </p>
+          </div>
+
+          <div className="text-center">
+            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Shield className="w-8 h-8 text-black" />
+            </div>
+            <h3 className="text-2xl font-bold mb-4">Reliable & Secure</h3>
+            <p className="text-gray-300">
+              99.9% uptime, secure streaming, and 24/7 customer support. 
+              Your entertainment is always available when you need it.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="container mx-auto px-6 py-16">
+        <h2 className="text-4xl font-bold text-center mb-4">Choose Your Streaming Plan</h2>
+        <p className="text-center text-gray-300 mb-16">
+          Same premium content on all devices - just choose how many streams you need
+        </p>
+        
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader className="text-center">
+              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-black font-bold">1</span>
+              </div>
+              <CardTitle>Solo Streaming</CardTitle>
+              <div className="text-3xl font-bold">
+                <span className="text-yellow-400">$20</span>
+                <span className="text-lg text-gray-400">/month</span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>1 Stream Anywhere</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>All 1000+ Channels</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>Works on Every Device</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>Perfect for Individuals</span>
+              </div>
+              <Button 
+                onClick={() => setShowMobileSignup(true)}
+                className="w-full mt-6 bg-gray-700 hover:bg-gray-600"
+              >
+                Choose Solo
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-2 border-yellow-500 relative">
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+              <Badge className="bg-yellow-500 text-black">MOST POPULAR</Badge>
+            </div>
+            <CardHeader className="text-center">
+              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-black font-bold">2</span>
+              </div>
+              <CardTitle>Duo Streaming</CardTitle>
+              <div className="text-3xl font-bold">
+                <span className="text-yellow-400">$35</span>
+                <span className="text-lg text-gray-400">/month</span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>2 Streams Anywhere</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>All 1000+ Channels</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>Works on Every Device</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>Perfect for Couples</span>
+              </div>
+              <Button 
+                onClick={() => setShowMobileSignup(true)}
+                className="w-full mt-6 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold"
+              >
+                Choose Duo
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader className="text-center">
+              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-black font-bold">3</span>
+              </div>
+              <CardTitle>Family Streaming</CardTitle>
+              <div className="text-3xl font-bold">
+                <span className="text-yellow-400">$45</span>
+                <span className="text-lg text-gray-400">/month</span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>3 Streams Anywhere</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>All 1000+ Channels</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>Works on Every Device</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span>Perfect for Families</span>
+              </div>
+              <Button 
+                onClick={() => setShowMobileSignup(true)}
+                className="w-full mt-6 bg-gray-700 hover:bg-gray-600"
+              >
+                Choose Family
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Trial CTA */}
+        <Card className="max-w-2xl mx-auto bg-gradient-to-r from-blue-900 to-purple-900 border-blue-500">
+          <CardHeader className="text-center">
+            <Clock className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+            <CardTitle className="text-2xl">Try SteadyStream TV FREE</CardTitle>
+            <CardDescription className="text-blue-200">
+              24 hours of unlimited streaming on all your devices - no credit card required
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="text-center">
             <Button 
               onClick={() => setShowMobileSignup(true)}
               size="lg"
               className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold mb-4"
             >
-              📱 Start Mobile Trial Now
+              🎉 Start Free Trial Now
             </Button>
-            <div className="grid grid-cols-3 gap-4 text-sm text-green-200">
+            <div className="grid grid-cols-3 gap-4 text-sm text-blue-200">
               <div>⚡ Instant Setup</div>
-              <div>🌍 Stream Anywhere</div>
-              <div>📱 Any Device</div>
+              <div>📺 All Devices</div>
+              <div>🌍 Works Everywhere</div>
             </div>
           </CardContent>
         </Card>
       </section>
 
-      {/* Where You Can Stream Section */}
-      <section id="anywhere" className="container mx-auto px-6 py-16">
-        <h2 className="text-4xl font-bold text-center mb-4">Stream Everywhere Life Takes You</h2>
-        <p className="text-center text-gray-300 mb-16 max-w-2xl mx-auto">
-          SteadyStream TV isn't tied to your living room. Take your entertainment anywhere with internet.
-        </p>
-        
-        <div className="grid md:grid-cols-4 gap-8">
-          <Card className="bg-dark-200 border-gray-800 text-center hover:border-gold/30 transition-colors">
-            <CardHeader>
-              <Home className="w-12 h-12 text-gold mx-auto mb-4" />
-              <CardTitle>🏠 At Home</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-300 text-sm">
-                Couch, bedroom, kitchen - stream on any device in your house
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-dark-200 border-gray-800 text-center hover:border-gold/30 transition-colors">
-            <CardHeader>
-              <Car className="w-12 h-12 text-gold mx-auto mb-4" />
-              <CardTitle>🚗 On Commutes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-300 text-sm">
-                Bus, train, or passenger seat - never miss your shows
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-dark-200 border-gray-800 text-center hover:border-gold/30 transition-colors">
-            <CardHeader>
-              <Plane className="w-12 h-12 text-gold mx-auto mb-4" />
-              <CardTitle>✈️ While Traveling</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-300 text-sm">
-                Hotels, airports, vacation rentals - your TV travels with you
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-dark-200 border-gray-800 text-center hover:border-gold/30 transition-colors">
-            <CardHeader>
-              <MapPin className="w-12 h-12 text-gold mx-auto mb-4" />
-              <CardTitle>📍 Anywhere</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-300 text-sm">
-                Coffee shops, gym, friend's house - stream wherever you are
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Mobile-Focused Pricing Section */}
-      <section id="pricing" className="py-16 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Mobile <span className="text-gradient-gold">Streaming</span> Plans
-            </h2>
-            <p className="text-gray-300 max-w-2xl mx-auto">
-              Same great content everywhere - just choose how many streams you want simultaneously.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            {/* Solo Stream */}
-            <Card className="bg-dark-200 border-gray-800 hover:border-gold/30 transition-colors">
-              <CardHeader className="text-center">
-                <Smartphone className="w-12 h-12 text-gold mx-auto mb-4" />
-                <CardTitle>Solo Stream</CardTitle>
-                <div className="text-3xl font-bold">
-                  <span className="text-gold">$20</span>
-                  <span className="text-lg text-gray-400">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-sm">1 Stream Anywhere</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-sm">Perfect for Solo Travel</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-sm">All Device Types</span>
-                </div>
-                <Button 
-                  onClick={() => setShowMobileSignup(true)}
-                  className="w-full mt-6 bg-gray-700 hover:bg-gray-600"
-                >
-                  Choose Solo
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Duo Stream - Most Popular */}
-            <Card className="bg-dark-200 border-gold relative tv-glow">
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <Badge className="bg-gold text-black">MOST POPULAR</Badge>
+      {/* How It Works */}
+      <section className="bg-gray-900 py-16">
+        <div className="container mx-auto px-6">
+          <h2 className="text-3xl font-bold text-center mb-12">How SteadyStream TV Works</h2>
+          
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-black font-bold text-xl">1</span>
               </div>
-              <CardHeader className="text-center">
-                <div className="flex justify-center gap-2 mb-4">
-                  <Smartphone className="w-6 h-6 text-gold" />
-                  <Smartphone className="w-6 h-6 text-gold" />
-                </div>
-                <CardTitle>Duo Stream</CardTitle>
-                <div className="text-3xl font-bold">
-                  <span className="text-gold">$35</span>
-                  <span className="text-lg text-gray-400">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-sm">2 Streams Anywhere</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-sm">Perfect for Couples</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-sm">Watch Different Shows</span>
-                </div>
-                <Button 
-                  onClick={() => setShowMobileSignup(true)}
-                  className="w-full mt-6 bg-gold hover:bg-gold-dark text-black font-bold"
-                >
-                  Choose Duo
-                </Button>
-              </CardContent>
-            </Card>
+              <h3 className="text-xl font-bold mb-4">Sign Up & Get Setup Code</h3>
+              <p className="text-gray-300">
+                Create your account and receive an instant activation code. 
+                Works on all your devices immediately.
+              </p>
+            </div>
 
-            {/* Family Stream */}
-            <Card className="bg-dark-200 border-gray-800 hover:border-gold/30 transition-colors">
-              <CardHeader className="text-center">
-                <div className="flex justify-center gap-1 mb-4">
-                  <Smartphone className="w-5 h-5 text-gold" />
-                  <Smartphone className="w-5 h-5 text-gold" />
-                  <Smartphone className="w-5 h-5 text-gold" />
-                </div>
-                <CardTitle>Family Stream</CardTitle>
-                <div className="text-3xl font-bold">
-                  <span className="text-gold">$45</span>
-                  <span className="text-lg text-gray-400">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-sm">3 Streams Anywhere</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-sm">Perfect for Families</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-gold h-4 w-4" />
-                  <span className="text-sm">Everyone Streams Anywhere</span>
-                </div>
-                <Button 
-                  onClick={() => setShowMobileSignup(true)}
-                  className="w-full mt-6 bg-gray-700 hover:bg-gray-600"
-                >
-                  Choose Family
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-black font-bold text-xl">2</span>
+              </div>
+              <h3 className="text-xl font-bold mb-4">Download App & Add Playlist</h3>
+              <p className="text-gray-300">
+                Install TiviMate (or any IPTV app) on your devices and add 
+                your SteadyStream playlist using the activation code.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-black font-bold text-xl">3</span>
+              </div>
+              <h3 className="text-xl font-bold mb-4">Stream Everywhere</h3>
+              <p className="text-gray-300">
+                Enjoy 1000+ channels on any device, anywhere. 
+                Your TV experience travels with you.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <h3 className="text-2xl font-bold mb-8">Ready for the Complete TV Experience?</h3>
+            <Button 
+              size="lg"
+              onClick={() => setShowMobileSignup(true)}
+              className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 px-8 text-lg"
+            >
+              🚀 Start Your Free Trial
+            </Button>
           </div>
         </div>
       </section>
-      
-      {/* Keep existing sections but with updated messaging */}
-      <FeaturesSection />
-      <DevicesSection />
-      <ChannelsSection />
-      <FooterSection />
+
+      {/* Footer */}
+      <footer className="bg-black py-12">
+        <div className="container mx-auto px-6">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <h4 className="text-lg font-bold mb-4 text-yellow-400">SteadyStream TV</h4>
+              <p className="text-gray-400">
+                Complete streaming solution that works on every device, everywhere.
+              </p>
+            </div>
+            
+            <div>
+              <h4 className="text-lg font-bold mb-4">Devices</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li>📺 Smart TVs</li>
+                <li>💻 Computers</li>
+                <li>📱 Mobile Devices</li>
+                <li>🎮 Gaming Consoles</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="text-lg font-bold mb-4">Support</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li>Setup Guide</li>
+                <li>Device Help</li>
+                <li>Troubleshooting</li>
+                <li>24/7 Support</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="text-lg font-bold mb-4">Content</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li>1000+ Channels</li>
+                <li>Live Sports</li>
+                <li>Premium Movies</li>
+                <li>International</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 SteadyStream TV. Complete streaming experience, everywhere. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
       
       {/* Launch Components */}
       <FeedbackWidget />
