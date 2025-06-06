@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { PerformanceMonitor } from "@/components/PerformanceMonitor";
@@ -33,18 +32,17 @@ const Index = () => {
       {/* Balanced Header */}
       <header className="container mx-auto px-6 py-8">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="mr-4">
-              <img src="/lovable-uploads/310d5e27-e7eb-4960-8cec-cb6ef89a79cd.png" alt="SteadyStream TV Logo" className="h-32 w-auto object-cover" />
-            </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent"></h1>
-          </div>
-
+          {/* Navigation moved to left */}
           <nav className="hidden md:flex space-x-8">
             <a href="#features" className="hover:text-yellow-400 transition-colors">Features</a>
             <a href="#devices" className="hover:text-yellow-400 transition-colors">Devices</a>
             <a href="#pricing" className="hover:text-yellow-400 transition-colors">Pricing</a>
           </nav>
+
+          {/* Centered Logo - made much bigger */}
+          <div className="flex items-center justify-center flex-1">
+            <img src="/lovable-uploads/310d5e27-e7eb-4960-8cec-cb6ef89a79cd.png" alt="SteadyStream TV Logo" className="h-40 w-auto object-cover" />
+          </div>
 
           <Button onClick={() => setShowMobileSignup(true)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold">
             🎉 Start Free Trial
