@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { AutomationForm } from './AutomationForm';
 
 // Production Configuration
 const SUPABASE_URL = 'https://ojueihcytxwcioqtvwez.supabase.co';
@@ -154,12 +152,6 @@ interface AutomationModalProps {
 
 export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    plan: 'trial'
-  });
   const [error, setError] = useState('');
 
   // Production Stripe checkout URLs
@@ -169,12 +161,12 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
     'family': 'https://buy.stripe.com/3cI9AVctd8D8eji4mHdby00'
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setError('');
-  };
-
-  const handleSubmit = async () => {
+  const handleSubmit = async (formData: {
+    name: string;
+    email: string;
+    password: string;
+    plan: string;
+  }) => {
     if (!formData.name || !formData.email || !formData.password) {
       setError('Please fill in all required fields');
       return;
@@ -228,19 +220,15 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
     setLoading(false);
   };
 
-  const handlePlanChange = (value: string) => {
-    handleInputChange('plan', value);
-  };
-
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
       <div className="relative max-w-md w-full bg-gray-800 rounded-xl p-8 shadow-2xl">
-        
         <button 
           onClick={onClose}
           className="absolute -top-4 -right-4 bg-gray-700 hover:bg-gray-600 text-white rounded-full w-8 h-8 flex items-center justify-center"
+          aria-label="Close dialog"
         >
           ✕
         </button>
@@ -249,91 +237,16 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
           🚀 Start Your Streaming Journey
         </h2>
         
-        {error && (
-          <div className="mb-4 bg-red-600 text-white p-3 rounded-lg text-sm">
-            ❌ {error}
-          </div>
-        )}
-        
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
-              placeholder="Enter your full name"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="email">Email Address</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
-              placeholder="Enter your email"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
-              placeholder="Create a password (6+ characters)"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="plan">Choose Plan</Label>
-            <Select name="plan" value={formData.plan} onValueChange={handlePlanChange}>
-              <SelectTrigger id="plan" className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white">
-                <SelectValue placeholder="Select a plan" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-700 border-gray-600 text-white">
-                <SelectItem value="trial">🎉 24-Hour FREE Trial</SelectItem>
-                <SelectItem value="basic">💰 $20/month - Solo Stream (1 Device)</SelectItem>
-                <SelectItem value="duo">💎 $35/month - Duo Stream (2 Devices)</SelectItem>
-                <SelectItem value="family">👨‍👩‍👧‍👦 $45/month - Family Max (3 Devices)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 mt-6"
-          >
-            {loading ? '🔄 Creating Your Account...' : 
-             formData.plan === 'trial' ? '🚀 Start Free Trial' : '💳 Pay Now & Start Streaming'}
-          </button>
-        </div>
+        <AutomationForm 
+          onSubmit={handleSubmit}
+          loading={loading}
+          error={error}
+        />
 
         <div className="mt-6 text-center text-sm text-gray-400">
-          {formData.plan === 'trial' ? (
-            <>
-              <p>✅ No credit card required for trial</p>
-              <p>✅ Instant activation in 60 seconds</p>
-              <p>✅ Full access to premium features</p>
-            </>
-          ) : (
-            <>
-              <p>✅ Secure payment via Stripe</p>
-              <p>✅ Instant access after payment</p>
-              <p>✅ Cancel anytime, no contracts</p>
-            </>
-          )}
+          <p>✅ No credit card required for trial</p>
+          <p>✅ Instant activation in 60 seconds</p>
+          <p>✅ Full access to premium features</p>
         </div>
       </div>
     </div>
