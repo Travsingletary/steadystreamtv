@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { PerformanceMonitor } from "@/components/PerformanceMonitor";
@@ -7,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tv, Monitor, Smartphone, Tablet, Wifi, Home, Car, Plane, CheckCircle, Clock, Globe, Download, Shield, Star } from 'lucide-react';
 import MobileAutomation from "@/components/MobileAutomation";
+
 const Index = () => {
   useAnalytics('homepage');
   const [showMobileSignup, setShowMobileSignup] = useState(false);
@@ -41,7 +43,7 @@ const Index = () => {
 
           {/* Centered Logo - made much bigger */}
           <div className="flex items-center justify-center flex-1">
-            <img src="/lovable-uploads/310d5e27-e7eb-4960-8cec-cb6ef89a79cd.png" alt="SteadyStream TV Logo" className="h-40 w-auto object-cover" />
+            <img src="/lovable-uploads/310d5e27-e7eb-4960-8cec-cb6ef89a79cd.png" alt="SteadyStream TV Logo" className="h-80 w-auto object-cover" />
           </div>
 
           <Button onClick={() => setShowMobileSignup(true)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold">
@@ -453,4 +455,5 @@ const Index = () => {
       <PerformanceMonitor />
     </div>;
 };
+
 export default Index;
