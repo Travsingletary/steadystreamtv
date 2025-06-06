@@ -5,7 +5,7 @@ import { Channel } from "@/services/channelService";
 import { useToast } from "@/hooks/use-toast";
 
 export const useFavorites = () => {
-  const [favorites, setFavorites] = useState<number[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -44,13 +44,13 @@ export const useFavorites = () => {
   }, []);
 
   // Save favorites to localStorage
-  const saveFavorites = (updatedFavorites: number[]) => {
+  const saveFavorites = (updatedFavorites: string[]) => {
     localStorage.setItem('channelFavorites', JSON.stringify(updatedFavorites));
     setFavorites(updatedFavorites);
   };
 
   // Add a channel to favorites
-  const addFavorite = (channelId: number) => {
+  const addFavorite = (channelId: string) => {
     if (!favorites.includes(channelId)) {
       const updatedFavorites = [...favorites, channelId];
       saveFavorites(updatedFavorites);
@@ -63,7 +63,7 @@ export const useFavorites = () => {
   };
 
   // Remove a channel from favorites
-  const removeFavorite = (channelId: number) => {
+  const removeFavorite = (channelId: string) => {
     if (favorites.includes(channelId)) {
       const updatedFavorites = favorites.filter(id => id !== channelId);
       saveFavorites(updatedFavorites);
@@ -76,12 +76,12 @@ export const useFavorites = () => {
   };
 
   // Check if a channel is in favorites
-  const isFavorite = (channelId: number): boolean => {
+  const isFavorite = (channelId: string): boolean => {
     return favorites.includes(channelId);
   };
 
   // Toggle favorite status
-  const toggleFavorite = (channelId: number) => {
+  const toggleFavorite = (channelId: string) => {
     if (isFavorite(channelId)) {
       removeFavorite(channelId);
     } else {

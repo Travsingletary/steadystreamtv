@@ -34,15 +34,11 @@ export class SimpleAutomationService {
       const assets = await UserRegistrationService.generateUserAssets(userId, userData.plan);
       console.log('✅ Assets generated:', assets.activationCode);
 
-      // Step 3: Optimize playlist
-      const playlistOptimization = await PlaylistService.optimizePlaylist(userData.preferences);
-      console.log('✅ Playlist optimized with', playlistOptimization.totalOptimized, 'channels');
-
-      // Step 4: Create REAL MegaOTT subscription
+      // Step 3: Create REAL MegaOTT subscription
       const subscription = await MegaOTTService.createSubscription(userId, userData.plan, userData);
       console.log('✅ MegaOTT subscription created:', subscription.subscriptionId);
 
-      // Step 5: Send welcome email with REAL credentials
+      // Step 4: Send welcome email with REAL credentials
       const emailCredentials = {
         username: subscription.credentials?.username || assets.activationCode,
         password: subscription.credentials?.password || 'temp123',
@@ -60,7 +56,6 @@ export class SimpleAutomationService {
         success: true,
         user: authResult.user,
         assets,
-        playlistOptimization,
         subscription,
         userData
       };
@@ -77,7 +72,6 @@ export class SimpleAutomationService {
   // Legacy methods for backward compatibility
   static registerUser = UserRegistrationService.registerUser;
   static generateUserAssets = UserRegistrationService.generateUserAssets;
-  static optimizePlaylist = PlaylistService.optimizePlaylist;
   static createMegaOTTSubscription = MegaOTTService.createSubscription;
   static generateM3UContent = PlaylistService.generateM3UContent;
 }

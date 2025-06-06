@@ -58,7 +58,7 @@ const ChannelGrid = ({
     >
       <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-dark-400 mr-3">
         <img 
-          src={channel.logo || "/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"} 
+          src={channel.logo_url || "/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"} 
           alt={channel.name} 
           className="w-full h-full object-contain"
         />

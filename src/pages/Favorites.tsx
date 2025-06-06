@@ -40,11 +40,11 @@ const Favorites = () => {
     }
   };
 
-  const handleRemoveFavorite = (channelId: number) => {
+  const handleRemoveFavorite = (channelId: string) => {
     removeFavorite(channelId);
   };
 
-  const handleWatchChannel = (channelId: number) => {
+  const handleWatchChannel = (channelId: string) => {
     navigate(`/player?channel=${channelId}`);
   };
 
@@ -99,7 +99,7 @@ const Favorites = () => {
                 >
                   <div className="aspect-video bg-dark-300 relative flex items-center justify-center">
                     <img
-                      src={channel.logo || "/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"}
+                      src={channel.logo_url || "/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"}
                       alt={channel.name}
                       className="h-16 object-contain"
                     />
