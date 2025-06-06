@@ -1,37 +1,40 @@
 
-import { SimpleAutomationService } from '@/services/automationService';
+import { supabase } from '@/integrations/supabase/client';
 
-export default function handler(req: any, res: any) {
+export default async function handler(req: any, res: any) {
   const { token } = req.query;
   
   try {
     // Remove .m3u8 extension if present
     const cleanToken = token.replace('.m3u8', '');
     
-    // Decode the playlist token
-    const playlistData = JSON.parse(atob(cleanToken));
-    
-    // Check if token is expired
-    if (Date.now() > playlistData.expires) {
-      const expiredPlaylist = '#EXTM3U\n#EXTINF:-1,Token Expired\nhttp://expired\n';
+    // Use the database function to generate the playlist
+    const { data: playlistContent, error } = await supabase.rpc('get_user_playlist', {
+      playlist_token: cleanToken
+    });
+
+    if (error) {
+      console.error('Playlist generation error:', error);
+      const errorPlaylist = '#EXTM3U\n#EXTINF:-1,Error Loading Playlist\nhttp://error\n';
       res.setHeader('Content-Type', 'application/x-mpegURL');
-      return res.status(200).send(expiredPlaylist);
+      res.setHeader('Cache-Control', 'no-cache');
+      return res.status(500).send(errorPlaylist);
     }
 
-    // Generate M3U content based on plan
-    const m3uContent = SimpleAutomationService.generateM3UContent(
-      playlistData.plan, 
-      playlistData.activationCode
-    );
-
+    // Set proper headers for M3U playlist
     res.setHeader('Content-Type', 'application/x-mpegURL');
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.status(200).send(m3uContent);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    res.status(200).send(playlistContent || '#EXTM3U\n#EXTINF:-1,Empty Playlist\nhttp://empty\n');
     
   } catch (error) {
     console.error('Playlist generation error:', error);
     const errorPlaylist = '#EXTM3U\n#EXTINF:-1,Error Loading Playlist\nhttp://error\n';
     res.setHeader('Content-Type', 'application/x-mpegURL');
+    res.setHeader('Cache-Control', 'no-cache');
     res.status(500).send(errorPlaylist);
   }
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Heart, MonitorPlay, LayoutDashboard } from "lucide-react";
@@ -8,6 +7,7 @@ import FooterSection from "@/components/FooterSection";
 import StreamPlayer from "@/components/StreamPlayer";
 import ChannelGrid from "@/components/ChannelGrid";
 import ProgramInfo from "@/components/ProgramInfo";
+import ChannelLogo from "@/components/ChannelLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useFavorites } from "@/hooks/useFavorites";
 import { fetchChannels, Channel } from "@/services/channelService";
@@ -119,7 +119,7 @@ const Player = () => {
             <div className={isFullscreen ? "fixed inset-0 z-50 bg-black" : "md:col-span-2"}>
               <div className="bg-dark-300 rounded-xl overflow-hidden border border-gray-800 tv-glow h-full">
                 <StreamPlayer
-                  url={currentChannel?.url}
+                  url={currentChannel?.stream_url}
                   title={currentChannel?.name}
                   isFullscreen={isFullscreen}
                   onToggleFullscreen={toggleFullscreen}
@@ -128,9 +128,12 @@ const Player = () => {
               
               {!isFullscreen && currentChannel && (
                 <div className="mt-4 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-semibold">{currentChannel.name}</h3>
-                    <p className="text-gray-400 text-sm">{currentChannel.category}</p>
+                  <div className="flex items-center gap-3">
+                    <ChannelLogo channel={currentChannel} size="md" />
+                    <div>
+                      <h3 className="text-xl font-semibold">{currentChannel.name}</h3>
+                      <p className="text-gray-400 text-sm">{currentChannel.category}</p>
+                    </div>
                   </div>
                   <Button
                     variant="outline"

@@ -2,72 +2,157 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Channel {
-  id: number;
+  id: string;
   name: string;
   category: string;
-  logo: string;
-  url: string;
+  logo_url?: string;
+  stream_url: string;
   description?: string;
   epg_id?: string;
+  is_active: boolean;
+  sort_order: number;
 }
 
 // Categories of channels
 export const channelCategories = [
-  "Sports",
-  "Movies",
   "News",
+  "Sports", 
   "Entertainment",
+  "Movies",
   "Kids",
   "Documentary",
   "Music"
 ];
 
-// Fetch channels from database or API
+// Fetch channels from Supabase database
 export const fetchChannels = async (): Promise<Channel[]> => {
   try {
-    // In production, this would fetch from Supabase or an IPTV API
-    // For now, we'll use mock data
-    return Promise.resolve(mockChannels);
+    const { data, error } = await supabase
+      .from('channels_catalog')
+      .select('*')
+      .eq('is_active', true)
+      .order('category')
+      .order('sort_order')
+      .order('name');
+
+    if (error) {
+      console.error("Error fetching channels:", error);
+      return [];
+    }
+
+    return data || [];
   } catch (error) {
     console.error("Error fetching channels:", error);
     return [];
   }
 };
 
-// Fetch a single channel by ID
-export const fetchChannelById = async (id: number): Promise<Channel | null> => {
+// Fetch channels by category
+export const fetchChannelsByCategory = async (category: string): Promise<Channel[]> => {
   try {
-    const channel = mockChannels.find(c => c.id === id);
-    return Promise.resolve(channel || null);
+    const { data, error } = await supabase
+      .from('channels_catalog')
+      .select('*')
+      .eq('is_active', true)
+      .eq('category', category)
+      .order('sort_order')
+      .order('name');
+
+    if (error) {
+      console.error("Error fetching channels by category:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching channels by category:", error);
+    return [];
+  }
+};
+
+// Fetch a single channel by ID
+export const fetchChannelById = async (id: string): Promise<Channel | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('channels_catalog')
+      .select('*')
+      .eq('id', id)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      console.error("Error fetching channel:", error);
+      return null;
+    }
+
+    return data;
   } catch (error) {
     console.error("Error fetching channel:", error);
     return null;
   }
 };
 
-// Mock data for development
-export const mockChannels: Channel[] = [
-  // Sports
-  { id: 1, name: "SteadyStream Sports HD", category: "Sports", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8", description: "24/7 sports from around the world" },
-  { id: 2, name: "Football TV", category: "Sports", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8", description: "Soccer matches and highlights" },
-  { id: 3, name: "ESPN HD", category: "Sports", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8", description: "Sports news and live events" },
-  { id: 4, name: "Fox Sports", category: "Sports", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", description: "Premium sports coverage" },
+// Get logo URL with fallbacks
+export const getChannelLogoUrl = (channel: Channel): string => {
+  // Priority 1: Use provided logo URL
+  if (channel.logo_url && channel.logo_url.trim() !== '') {
+    return channel.logo_url;
+  }
+
+  // Priority 2: Generate from reliable external sources (Wikipedia)
+  const name = channel.name.toLowerCase();
   
-  // Movies
-  { id: 5, name: "SteadyStream Movies", category: "Movies", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://d2zihajmogu5jn.cloudfront.net/sintel/master.m3u8", description: "Blockbuster movies 24/7" },
-  { id: 6, name: "HBO HD", category: "Movies", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8", description: "Premium movies and series" },
-  { id: 7, name: "Cinema Channel", category: "Movies", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", description: "Classic and modern cinema" },
-  { id: 8, name: "Action Movies", category: "Movies", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8", description: "Non-stop action films" },
-  
-  // News
-  { id: 9, name: "SteadyStream News", category: "News", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8", description: "Breaking news coverage" },
-  { id: 10, name: "CNN HD", category: "News", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", description: "Global news network" },
-  { id: 11, name: "BBC World", category: "News", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8", description: "International news coverage" },
-  { id: 12, name: "Sky News", category: "News", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://d2zihajmogu5jn.cloudfront.net/sintel/master.m3u8", description: "24/7 news programming" },
-  
-  // Entertainment
-  { id: 13, name: "SteadyStream Entertainment", category: "Entertainment", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8", description: "General entertainment" },
-  { id: 14, name: "Comedy Central", category: "Entertainment", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", description: "Comedy shows and stand-up" },
-  { id: 15, name: "AMC", category: "Entertainment", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8", description: "Premium drama series" },
-  { id: 16, name: "FX", category: "Entertainment", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://d2zihajmogu5jn.cloudfront.net/sintel/master.m3u8", description: "Award-winning TV shows" }
-];
+  if (name.includes('cnn')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/200px-CNN.svg.png';
+  }
+  if (name.includes('fox news')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Fox_News_Channel_logo.svg/200px-Fox_News_Channel_logo.svg.png';
+  }
+  if (name.includes('espn') && !name.includes('espn2')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/ESPN_wordmark.svg/200px-ESPN_wordmark.svg.png';
+  }
+  if (name.includes('espn2')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/ESPN2_logo.svg/200px-ESPN2_logo.svg.png';
+  }
+  if (name.includes('hbo')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_logo.svg/200px-HBO_logo.svg.png';
+  }
+  if (name.includes('disney')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/2019_Disney_Channel_logo.svg/200px-2019_Disney_Channel_logo.svg.png';
+  }
+  if (name.includes('discovery')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Discovery_Channel_logo.svg/200px-Discovery_Channel_logo.svg.png';
+  }
+  if (name.includes('nickelodeon') || name.includes('nick')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Nickelodeon_2009_logo.svg/200px-Nickelodeon_2009_logo.svg.png';
+  }
+  if (name.includes('bbc')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/BBC_News_2022_%28Alt%29.svg/200px-BBC_News_2022_%28Alt%29.svg.png';
+  }
+  if (name.includes('fox sports')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/FS1_logo.svg/200px-FS1_logo.svg.png';
+  }
+  if (name.includes('netflix')) {
+    return 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Netflix_icon.svg/200px-Netflix_icon.svg.png';
+  }
+
+  // Priority 3: Category-based fallbacks with proper colors
+  switch (channel.category) {
+    case 'News':
+      return 'https://via.placeholder.com/200x200/1e40af/ffffff?text=NEWS';
+    case 'Sports':
+      return 'https://via.placeholder.com/200x200/059669/ffffff?text=SPORTS';
+    case 'Entertainment':
+      return 'https://via.placeholder.com/200x200/7c3aed/ffffff?text=ENT';
+    case 'Movies':
+      return 'https://via.placeholder.com/200x200/dc2626/ffffff?text=MOVIES';
+    case 'Kids':
+      return 'https://via.placeholder.com/200x200/f59e0b/ffffff?text=KIDS';
+    case 'Music':
+      return 'https://via.placeholder.com/200x200/ec4899/ffffff?text=MUSIC';
+    case 'Documentary':
+      return 'https://via.placeholder.com/200x200/16a34a/ffffff?text=DOCS';
+    default:
+      return 'https://via.placeholder.com/200x200/6b7280/ffffff?text=TV';
+  }
+};

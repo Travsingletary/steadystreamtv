@@ -9,6 +9,48 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      channels_catalog: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          epg_id: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          sort_order: number | null
+          stream_url: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          epg_id?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          sort_order?: number | null
+          stream_url: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          epg_id?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          sort_order?: number | null
+          stream_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cities: {
         Row: {
           country_id: number
@@ -304,7 +346,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_playlist: {
+        Args: { playlist_token: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

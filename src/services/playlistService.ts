@@ -1,175 +1,159 @@
 
-// src/services/playlistService.ts
-// Handles playlist optimization and M3U generation
-
-import { CONFIG } from './config';
-import type { UserData } from './types';
+import { supabase } from "@/integrations/supabase/client";
 
 export class PlaylistService {
-  // Base URL for MegaOTT streaming endpoints
-  private static readonly STREAM_BASE_URL = 'https://megaott.net/stream';
-
   /**
-   * Smart playlist optimization with real channel database
+   * Generate M3U playlist content using the database function
    */
-  static async optimizePlaylist(userPreferences: UserData['preferences']) {
-    // Real channel database with actual MegaOTT stream URLs
-    const channelDatabase = {
-      sports: [
-        { name: 'ESPN HD', category: 'Sports', quality: 'HD', popularity: 95, url: `${this.STREAM_BASE_URL}/espn/playlist.m3u8` },
-        { name: 'Fox Sports 1 HD', category: 'Sports', quality: 'HD', popularity: 90, url: `${this.STREAM_BASE_URL}/fox-sports-1/playlist.m3u8` },
-        { name: 'NBC Sports', category: 'Sports', quality: 'HD', popularity: 85, url: `${this.STREAM_BASE_URL}/nbc-sports/playlist.m3u8` },
-        { name: 'Sky Sports Premier League', category: 'Sports', quality: '4K', popularity: 92, url: `${this.STREAM_BASE_URL}/sky-sports-premier-league/playlist.m3u8` },
-        { name: 'NFL Network', category: 'Sports', quality: 'HD', popularity: 88, url: `${this.STREAM_BASE_URL}/nfl-network/playlist.m3u8` },
-        { name: 'NBA TV', category: 'Sports', quality: 'HD', popularity: 86, url: `${this.STREAM_BASE_URL}/nba-tv/playlist.m3u8` }
-      ],
-      movies: [
-        { name: 'HBO Max', category: 'Movies', quality: '4K', popularity: 98, url: `${this.STREAM_BASE_URL}/hbo-max/playlist.m3u8` },
-        { name: 'Showtime HD', category: 'Movies', quality: 'HD', popularity: 88, url: `${this.STREAM_BASE_URL}/showtime/playlist.m3u8` },
-        { name: 'Starz', category: 'Movies', quality: 'HD', popularity: 82, url: `${this.STREAM_BASE_URL}/starz/playlist.m3u8` },
-        { name: 'Netflix Originals', category: 'Movies', quality: '4K', popularity: 99, url: `${this.STREAM_BASE_URL}/netflix/playlist.m3u8` },
-        { name: 'Cinemax', category: 'Movies', quality: 'HD', popularity: 80, url: `${this.STREAM_BASE_URL}/cinemax/playlist.m3u8` },
-        { name: 'MGM HD', category: 'Movies', quality: 'HD', popularity: 75, url: `${this.STREAM_BASE_URL}/mgm/playlist.m3u8` }
-      ],
-      entertainment: [
-        { name: 'TNT HD', category: 'Entertainment', quality: 'HD', popularity: 87, url: `${this.STREAM_BASE_URL}/tnt/playlist.m3u8` },
-        { name: 'TBS HD', category: 'Entertainment', quality: 'HD', popularity: 83, url: `${this.STREAM_BASE_URL}/tbs/playlist.m3u8` },
-        { name: 'Comedy Central', category: 'Entertainment', quality: 'HD', popularity: 85, url: `${this.STREAM_BASE_URL}/comedy-central/playlist.m3u8` },
-        { name: 'AMC', category: 'Entertainment', quality: 'HD', popularity: 89, url: `${this.STREAM_BASE_URL}/amc/playlist.m3u8` },
-        { name: 'FX', category: 'Entertainment', quality: 'HD', popularity: 84, url: `${this.STREAM_BASE_URL}/fx/playlist.m3u8` }
-      ],
-      news: [
-        { name: 'CNN HD', category: 'News', quality: 'HD', popularity: 92, url: `${this.STREAM_BASE_URL}/cnn/playlist.m3u8` },
-        { name: 'Fox News HD', category: 'News', quality: 'HD', popularity: 90, url: `${this.STREAM_BASE_URL}/fox-news/playlist.m3u8` },
-        { name: 'BBC World News', category: 'News', quality: 'HD', popularity: 85, url: `${this.STREAM_BASE_URL}/bbc-world-news/playlist.m3u8` },
-        { name: 'MSNBC', category: 'News', quality: 'HD', popularity: 88, url: `${this.STREAM_BASE_URL}/msnbc/playlist.m3u8` },
-        { name: 'CNBC', category: 'News', quality: 'HD', popularity: 79, url: `${this.STREAM_BASE_URL}/cnbc/playlist.m3u8` },
-        { name: 'Bloomberg TV', category: 'News', quality: 'HD', popularity: 76, url: `${this.STREAM_BASE_URL}/bloomberg/playlist.m3u8` }
-      ],
-      kids: [
-        { name: 'Disney Channel HD', category: 'Kids', quality: 'HD', popularity: 95, url: `${this.STREAM_BASE_URL}/disney-channel/playlist.m3u8` },
-        { name: 'Cartoon Network', category: 'Kids', quality: 'HD', popularity: 90, url: `${this.STREAM_BASE_URL}/cartoon-network/playlist.m3u8` },
-        { name: 'Nickelodeon HD', category: 'Kids', quality: 'HD', popularity: 88, url: `${this.STREAM_BASE_URL}/nickelodeon/playlist.m3u8` },
-        { name: 'Disney Junior', category: 'Kids', quality: 'HD', popularity: 85, url: `${this.STREAM_BASE_URL}/disney-junior/playlist.m3u8` },
-        { name: 'Nick Jr', category: 'Kids', quality: 'HD', popularity: 82, url: `${this.STREAM_BASE_URL}/nick-jr/playlist.m3u8` }
-      ],
-      documentary: [
-        { name: 'Discovery Channel', category: 'Documentary', quality: 'HD', popularity: 87, url: `${this.STREAM_BASE_URL}/discovery/playlist.m3u8` },
-        { name: 'National Geographic', category: 'Documentary', quality: 'HD', popularity: 85, url: `${this.STREAM_BASE_URL}/national-geographic/playlist.m3u8` },
-        { name: 'History Channel', category: 'Documentary', quality: 'HD', popularity: 83, url: `${this.STREAM_BASE_URL}/history/playlist.m3u8` },
-        { name: 'Science Channel', category: 'Documentary', quality: 'HD', popularity: 78, url: `${this.STREAM_BASE_URL}/science/playlist.m3u8` },
-        { name: 'Animal Planet', category: 'Documentary', quality: 'HD', popularity: 80, url: `${this.STREAM_BASE_URL}/animal-planet/playlist.m3u8` }
-      ]
-    };
-
-    let optimizedChannels = [];
-    
-    if (userPreferences.favoriteGenres?.length > 0) {
-      userPreferences.favoriteGenres.forEach(genre => {
-        if (channelDatabase[genre]) {
-          optimizedChannels.push(...channelDatabase[genre]);
-        }
+  static async generateM3UFromDatabase(playlistToken: string): Promise<string> {
+    try {
+      const { data, error } = await supabase.rpc('get_user_playlist', {
+        playlist_token: playlistToken
       });
-    } else {
-      // Default: add top channel from each category
-      Object.values(channelDatabase).forEach(category => {
-        optimizedChannels.push(category[0]);
-      });
-    }
 
-    // Sort by quality preference and popularity
-    optimizedChannels.sort((a, b) => {
-      if (userPreferences.videoQuality === '4K') {
-        if (a.quality === '4K' && b.quality !== '4K') return -1;
-        if (a.quality !== '4K' && b.quality === '4K') return 1;
+      if (error) {
+        console.error('Error generating playlist:', error);
+        return '#EXTM3U\n#EXTINF:-1,Error Loading Playlist\nhttp://error\n';
       }
-      return b.popularity - a.popularity;
-    });
 
-    // Remove duplicates and limit
-    const uniqueChannels = optimizedChannels
-      .filter((channel, index, self) => 
-        index === self.findIndex(c => c.name === channel.name)
-      )
-      .slice(0, 50);
-
-    return {
-      channels: uniqueChannels,
-      totalOptimized: uniqueChannels.length,
-      recommendation: `Playlist optimized with ${uniqueChannels.length} channels based on your preferences`
-    };
+      return data || '#EXTM3U\n#EXTINF:-1,Empty Playlist\nhttp://empty\n';
+    } catch (error) {
+      console.error('Error generating playlist:', error);
+      return '#EXTM3U\n#EXTINF:-1,Error Loading Playlist\nhttp://error\n';
+    }
   }
 
   /**
-   * Generate M3U playlist content with real stream URLs
+   * Generate M3U playlist content with proper logo URLs
    */
-  static generateM3UContent(plan: string, activationCode: string) {
-    const getChannelsForPlan = (planType: string) => {
-      // Real streaming channels with actual MegaOTT URLs
-      const allChannels = [
-        // Premium Sports
-        { name: 'ESPN HD', category: 'Sports', url: `${this.STREAM_BASE_URL}/espn/playlist.m3u8` },
-        { name: 'Fox Sports 1', category: 'Sports', url: `${this.STREAM_BASE_URL}/fox-sports-1/playlist.m3u8` },
-        { name: 'Sky Sports Premier League', category: 'Sports', url: `${this.STREAM_BASE_URL}/sky-sports-premier-league/playlist.m3u8` },
-        { name: 'NFL Network', category: 'Sports', url: `${this.STREAM_BASE_URL}/nfl-network/playlist.m3u8` },
-        { name: 'NBA TV', category: 'Sports', url: `${this.STREAM_BASE_URL}/nba-tv/playlist.m3u8` },
-        
-        // News Networks
-        { name: 'CNN HD', category: 'News', url: `${this.STREAM_BASE_URL}/cnn/playlist.m3u8` },
-        { name: 'Fox News HD', category: 'News', url: `${this.STREAM_BASE_URL}/fox-news/playlist.m3u8` },
-        { name: 'BBC World News', category: 'News', url: `${this.STREAM_BASE_URL}/bbc-world-news/playlist.m3u8` },
-        { name: 'MSNBC', category: 'News', url: `${this.STREAM_BASE_URL}/msnbc/playlist.m3u8` },
-        { name: 'CNBC', category: 'News', url: `${this.STREAM_BASE_URL}/cnbc/playlist.m3u8` },
-        
-        // Entertainment
-        { name: 'HBO Max', category: 'Movies', url: `${this.STREAM_BASE_URL}/hbo-max/playlist.m3u8` },
-        { name: 'Netflix Originals', category: 'Entertainment', url: `${this.STREAM_BASE_URL}/netflix/playlist.m3u8` },
-        { name: 'TNT HD', category: 'Entertainment', url: `${this.STREAM_BASE_URL}/tnt/playlist.m3u8` },
-        { name: 'AMC', category: 'Entertainment', url: `${this.STREAM_BASE_URL}/amc/playlist.m3u8` },
-        { name: 'FX', category: 'Entertainment', url: `${this.STREAM_BASE_URL}/fx/playlist.m3u8` },
-        
-        // Kids Content  
-        { name: 'Disney Channel HD', category: 'Kids', url: `${this.STREAM_BASE_URL}/disney-channel/playlist.m3u8` },
-        { name: 'Cartoon Network', category: 'Kids', url: `${this.STREAM_BASE_URL}/cartoon-network/playlist.m3u8` },
-        { name: 'Nickelodeon HD', category: 'Kids', url: `${this.STREAM_BASE_URL}/nickelodeon/playlist.m3u8` },
-        { name: 'Disney Junior', category: 'Kids', url: `${this.STREAM_BASE_URL}/disney-junior/playlist.m3u8` },
-        
-        // Premium Movie Channels
-        { name: 'Showtime HD', category: 'Movies', url: `${this.STREAM_BASE_URL}/showtime/playlist.m3u8` },
-        { name: 'Starz', category: 'Movies', url: `${this.STREAM_BASE_URL}/starz/playlist.m3u8` },
-        { name: 'Cinemax', category: 'Movies', url: `${this.STREAM_BASE_URL}/cinemax/playlist.m3u8` },
-        { name: 'MGM HD', category: 'Movies', url: `${this.STREAM_BASE_URL}/mgm/playlist.m3u8` },
-        
-        // International
-        { name: 'BBC One', category: 'International', url: `${this.STREAM_BASE_URL}/bbc-one/playlist.m3u8` },
-        { name: 'Sky One', category: 'International', url: `${this.STREAM_BASE_URL}/sky-one/playlist.m3u8` },
-        { name: 'Canal+ Sport', category: 'International', url: `${this.STREAM_BASE_URL}/canal-sport/playlist.m3u8` },
-        
-        // Documentary Channels
-        { name: 'Discovery Channel', category: 'Documentary', url: `${this.STREAM_BASE_URL}/discovery/playlist.m3u8` },
-        { name: 'National Geographic', category: 'Documentary', url: `${this.STREAM_BASE_URL}/national-geographic/playlist.m3u8` },
-        { name: 'History Channel', category: 'Documentary', url: `${this.STREAM_BASE_URL}/history/playlist.m3u8` },
-        { name: 'Science Channel', category: 'Documentary', url: `${this.STREAM_BASE_URL}/science/playlist.m3u8` },
-        { name: 'Animal Planet', category: 'Documentary', url: `${this.STREAM_BASE_URL}/animal-planet/playlist.m3u8` }
-      ];
+  static async generateM3UContent(plan: string, activationCode: string): Promise<string> {
+    try {
+      // Fetch channels from database
+      const { data: channels, error } = await supabase
+        .from('channels_catalog')
+        .select('*')
+        .eq('is_active', true)
+        .order('category')
+        .order('sort_order')
+        .order('name');
 
-      switch (planType) {
-        case 'trial': return allChannels.slice(0, 8);
-        case 'basic': return allChannels.slice(0, 15);
-        case 'duo': return allChannels.slice(0, 22);
-        case 'family': return allChannels;
-        default: return allChannels.slice(0, 5);
+      if (error) {
+        console.error('Error fetching channels:', error);
+        return '#EXTM3U\n#EXTINF:-1,Error Loading Channels\nhttp://error\n';
       }
-    };
 
-    const channels = getChannelsForPlan(plan);
-    let m3uContent = `#EXTM3U\n#PLAYLIST:SteadyStream TV - ${plan.toUpperCase()} (${activationCode})\n\n`;
-    
-    channels.forEach((channel, index) => {
-      m3uContent += `#EXTINF:-1 tvg-id="${index + 1}" tvg-name="${channel.name}" group-title="${channel.category}",${channel.name}\n`;
-      m3uContent += `${channel.url}\n\n`;
+      // Filter channels based on plan
+      const filteredChannels = this.getChannelsForPlan(channels || [], plan);
+
+      // Build M3U content
+      let m3uContent = '#EXTM3U\n';
+      m3uContent += `#PLAYLIST:SteadyStream TV - ${plan.toUpperCase()} (${activationCode})\n`;
+      m3uContent += 'url-tvg="https://steadystreamtv.com/epg/guide.xml"\n\n';
+
+      filteredChannels.forEach((channel) => {
+        const logoUrl = this.getChannelLogoUrl(channel);
+        const epgId = channel.epg_id || channel.name.replace(/[^a-zA-Z0-9]/g, '');
+        
+        m3uContent += `#EXTINF:-1 tvg-id="${epgId}" tvg-name="${channel.name}" tvg-logo="${logoUrl}" group-title="${channel.category}",${channel.name}\n`;
+        m3uContent += `${channel.stream_url}\n\n`;
+      });
+
+      return m3uContent;
+    } catch (error) {
+      console.error('Error generating M3U content:', error);
+      return '#EXTM3U\n#EXTINF:-1,Error Loading Playlist\nhttp://error\n';
+    }
+  }
+
+  /**
+   * Filter channels based on subscription plan
+   */
+  private static getChannelsForPlan(allChannels: any[], plan: string): any[] {
+    // Sort channels by category priority
+    const sortedChannels = allChannels.sort((a, b) => {
+      const categoryOrder = {
+        'News': 1,
+        'Sports': 2,
+        'Entertainment': 3,
+        'Movies': 4,
+        'Kids': 5,
+        'Documentary': 6,
+        'Music': 7
+      };
+      
+      const aOrder = categoryOrder[a.category as keyof typeof categoryOrder] || 999;
+      const bOrder = categoryOrder[b.category as keyof typeof categoryOrder] || 999;
+      
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.name.localeCompare(b.name);
     });
 
-    return m3uContent;
+    // Return different channel counts based on plan
+    switch (plan.toLowerCase()) {
+      case 'trial':
+        return sortedChannels.slice(0, 10);
+      case 'solo':
+      case 'basic':
+        return sortedChannels.slice(0, 20);
+      case 'duo':
+        return sortedChannels.slice(0, 35);
+      case 'family':
+        return sortedChannels;
+      default:
+        return sortedChannels.slice(0, 5);
+    }
+  }
+
+  /**
+   * Get logo URL with fallbacks
+   */
+  private static getChannelLogoUrl(channel: any): string {
+    // Priority 1: Use provided logo URL
+    if (channel.logo_url && channel.logo_url.trim() !== '') {
+      return channel.logo_url;
+    }
+
+    // Priority 2: Generate from reliable external sources
+    const name = channel.name.toLowerCase();
+    
+    if (name.includes('cnn')) {
+      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/200px-CNN.svg.png';
+    }
+    if (name.includes('fox news')) {
+      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Fox_News_Channel_logo.svg/200px-Fox_News_Channel_logo.svg.png';
+    }
+    if (name.includes('espn') && !name.includes('espn2')) {
+      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/ESPN_wordmark.svg/200px-ESPN_wordmark.svg.png';
+    }
+    if (name.includes('espn2')) {
+      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/ESPN2_logo.svg/200px-ESPN2_logo.svg.png';
+    }
+    if (name.includes('hbo')) {
+      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_logo.svg/200px-HBO_logo.svg.png';
+    }
+    if (name.includes('disney')) {
+      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/2019_Disney_Channel_logo.svg/200px-2019_Disney_Channel_logo.svg.png';
+    }
+
+    // Priority 3: Category-based fallbacks
+    switch (channel.category) {
+      case 'News':
+        return 'https://via.placeholder.com/200x200/1e40af/ffffff?text=NEWS';
+      case 'Sports':
+        return 'https://via.placeholder.com/200x200/059669/ffffff?text=SPORTS';
+      case 'Entertainment':
+        return 'https://via.placeholder.com/200x200/7c3aed/ffffff?text=ENT';
+      case 'Movies':
+        return 'https://via.placeholder.com/200x200/dc2626/ffffff?text=MOVIES';
+      case 'Kids':
+        return 'https://via.placeholder.com/200x200/f59e0b/ffffff?text=KIDS';
+      case 'Music':
+        return 'https://via.placeholder.com/200x200/ec4899/ffffff?text=MUSIC';
+      case 'Documentary':
+        return 'https://via.placeholder.com/200x200/16a34a/ffffff?text=DOCS';
+      default:
+        return 'https://via.placeholder.com/200x200/6b7280/ffffff?text=TV';
+    }
   }
 }
