@@ -249,8 +249,10 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2 text-white">Full Name</label>
+            <label htmlFor="name" className="block text-sm font-medium mb-2 text-white">Full Name</label>
             <input
+              id="name"
+              name="name"
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
@@ -260,8 +262,10 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-white">Email Address</label>
+            <label htmlFor="email" className="block text-sm font-medium mb-2 text-white">Email Address</label>
             <input
+              id="email"
+              name="email"
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
@@ -271,8 +275,10 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-white">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium mb-2 text-white">Password</label>
             <input
+              id="password"
+              name="password"
               type="password"
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
@@ -282,8 +288,10 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-white">Choose Plan</label>
+            <label htmlFor="plan" className="block text-sm font-medium mb-2 text-white">Choose Plan</label>
             <select
+              id="plan"
+              name="plan"
               value={formData.plan}
               onChange={(e) => handleInputChange('plan', e.target.value)}
               className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
