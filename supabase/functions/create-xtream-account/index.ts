@@ -119,27 +119,46 @@ const validateRequestPayload = (payload: RequestPayload) => {
 
 // Check if user already has IPTV credentials
 const checkExistingCredentials = async (supabaseAdmin: any, userId: string) => {
-  const { data: userProfiles, error: profileError } = await supabaseAdmin
-    .from('profiles')
-    .select('xtream_username, xtream_password')
-    .eq('id', userId);
-    
-  if (profileError) {
-    log("Error fetching user profile", profileError);
-    throw profileError;
-  }
+  log("Checking for existing credentials for user", { userId });
   
-  if (userProfiles && userProfiles.length > 0) {
-    // Get the first profile with valid credentials (if there are multiple, use the first one)
-    const userProfile = userProfiles.find(profile => profile.xtream_username && profile.xtream_password);
-    
-    if (userProfile) {
-      log("User already has IPTV credentials", { username: userProfile.xtream_username });
-      return userProfile;
+  try {
+    const { data: userProfiles, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('xtream_username, xtream_password')
+      .eq('id', userId);
+      
+    if (profileError) {
+      log("Error fetching user profile", profileError);
+      throw profileError;
     }
+    
+    log("User profiles query result", { 
+      count: userProfiles?.length || 0,
+      hasProfiles: userProfiles && userProfiles.length > 0
+    });
+    
+    if (userProfiles && userProfiles.length > 0) {
+      // Get the first profile with valid credentials (if there are multiple, use the first one)
+      const userProfile = userProfiles.find(profile => profile.xtream_username && profile.xtream_password);
+      
+      if (userProfile) {
+        log("User already has IPTV credentials", { username: userProfile.xtream_username });
+        return userProfile;
+      } else {
+        log("User has profiles but no valid IPTV credentials");
+      }
+    } else {
+      log("No user profiles found with credentials");
+    }
+    
+    return null;
+  } catch (error) {
+    log("Error in checkExistingCredentials", { 
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
+    throw error;
   }
-  
-  return null;
 };
 
 // Generate playlist URLs
@@ -226,24 +245,35 @@ const updateUserProfile = async (
   startDate: Date,
   endDate: Date
 ) => {
-  const { error: updateError } = await supabaseAdmin
-    .from('profiles')
-    .update({
-      xtream_username: username,
-      xtream_password: password,
-      subscription_status: 'active',
-      subscription_start_date: startDate.toISOString(),
-      subscription_end_date: endDate.toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', userId);
+  try {
+    log("Updating user profile with IPTV credentials", { userId, username });
+    
+    const { data, error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({
+        xtream_username: username,
+        xtream_password: password,
+        subscription_status: 'active',
+        subscription_start_date: startDate.toISOString(),
+        subscription_end_date: endDate.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
 
-  if (updateError) {
-    log("Supabase update error:", updateError);
-    throw updateError;
+    if (updateError) {
+      log("Supabase update error:", updateError);
+      throw updateError;
+    }
+    
+    log("User profile updated with IPTV credentials", { success: true });
+    return { success: true, data };
+  } catch (error) {
+    log("Error updating user profile", { 
+      errorMessage: error.message, 
+      errorStack: error.stack 
+    });
+    throw error;
   }
-  
-  log("User profile updated with IPTV credentials");
 };
 
 // Main handler function
@@ -255,11 +285,31 @@ serve(async (req) => {
 
   try {
     log("Function started");
-    const payload = await req.json() as RequestPayload;
-    log("Received payload", payload);
+    
+    let payload;
+    try {
+      payload = await req.json() as RequestPayload;
+      log("Received payload", payload);
+    } catch (parseError) {
+      log("Failed to parse JSON payload", parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON payload', details: parseError.message }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Create Supabase admin client
-    const supabaseAdmin = createSupabaseClient();
+    log("Creating Supabase admin client");
+    let supabaseAdmin;
+    try {
+      supabaseAdmin = createSupabaseClient();
+    } catch (clientError) {
+      log("Failed to create Supabase client", clientError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to initialize database client', details: clientError.message }), 
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Validate request
     const validation = validateRequestPayload(payload);
@@ -271,7 +321,21 @@ serve(async (req) => {
     }
 
     // Check for existing credentials
-    const existingCredentials = await checkExistingCredentials(supabaseAdmin, payload.userId);
+    log("Checking for existing credentials");
+    let existingCredentials;
+    try {
+      existingCredentials = await checkExistingCredentials(supabaseAdmin, payload.userId);
+    } catch (credError) {
+      log("Error checking existing credentials", credError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to check existing credentials', 
+          details: credError.message 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     if (existingCredentials) {
       const playlistUrls = generatePlaylistUrls(
         existingCredentials.xtream_username, 
@@ -293,9 +357,23 @@ serve(async (req) => {
     }
 
     // Create new MegaOTT account
+    log("Creating new MegaOTT account");
     const planDetails = validation.planDetails;
-    const { username, password, response: megaottResponse } = 
-      await createMegaOTTAccount(payload.name, planDetails);
+    let megaottResult;
+    try {
+      megaottResult = await createMegaOTTAccount(payload.name, planDetails);
+    } catch (megaottError) {
+      log("Failed to create MegaOTT account", megaottError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to create IPTV account', 
+          details: megaottError.message 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { username, password, response: megaottResponse } = megaottResult;
 
     // Calculate dates for profile update
     const startDate = new Date();
@@ -303,7 +381,14 @@ serve(async (req) => {
     endDate.setDate(endDate.getDate() + planDetails.duration);
 
     // Update user profile with credentials
-    await updateUserProfile(supabaseAdmin, payload.userId, username, password, startDate, endDate);
+    log("Updating user profile");
+    try {
+      await updateUserProfile(supabaseAdmin, payload.userId, username, password, startDate, endDate);
+    } catch (updateError) {
+      log("Failed to update user profile", updateError);
+      // We still return success since the IPTV account was created
+      // Just log the profile update error
+    }
 
     // Generate playlist URLs
     const playlistUrls = generatePlaylistUrls(username, password);
@@ -327,6 +412,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    // Catch-all error handler to ensure we always return valid JSON
     log("Error creating IPTV account:", error);
     return new Response(
       JSON.stringify({ 
