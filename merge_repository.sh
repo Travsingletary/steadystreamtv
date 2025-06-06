@@ -150,7 +150,7 @@ echo -e "${YELLOW}2. Run Database Migration:${NC}"
 echo "   supabase db push"
 echo ""
 echo -e "${YELLOW}3. Set Environment Variables:${NC}"
-echo "   supabase secrets set STRIPE_SECRET_KEY=\"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\""
+echo 
 echo "   supabase secrets set DOMAIN=\"https://steadystreamtv.com\""
 echo ""
 echo -e "${YELLOW}4. Configure Stripe Webhooks:${NC}"
