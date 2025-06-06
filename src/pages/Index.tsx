@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { PerformanceMonitor } from "@/components/PerformanceMonitor";
@@ -6,29 +5,19 @@ import { useAnalytics } from "@/components/LaunchAnalytics";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Tv, Monitor, Smartphone, Tablet, Wifi, Home, Car, Plane, 
-  CheckCircle, Clock, Globe, Download, Shield, Star 
-} from 'lucide-react';
+import { Tv, Monitor, Smartphone, Tablet, Wifi, Home, Car, Plane, CheckCircle, Clock, Globe, Download, Shield, Star } from 'lucide-react';
 import MobileAutomation from "@/components/MobileAutomation";
-
 const Index = () => {
   useAnalytics('homepage');
   const [showMobileSignup, setShowMobileSignup] = useState(false);
 
   // If mobile signup modal is open, show the automation
   if (showMobileSignup) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white p-4">
+    return <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white p-4">
         <div className="max-w-6xl mx-auto">
           {/* Close button */}
           <div className="flex justify-end mb-4">
-            <Button 
-              onClick={() => setShowMobileSignup(false)}
-              variant="outline"
-              size="sm"
-              className="border-gray-600 text-gray-300"
-            >
+            <Button onClick={() => setShowMobileSignup(false)} variant="outline" size="sm" className="border-gray-600 text-gray-300">
               ← Back to Homepage
             </Button>
           </div>
@@ -36,27 +25,18 @@ const Index = () => {
           {/* Mobile Automation Component */}
           <MobileAutomation onClose={() => setShowMobileSignup(false)} />
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
+  return <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
       
       {/* Balanced Header */}
       <header className="container mx-auto px-6 py-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <div className="mr-4">
-              <img
-                src="/lovable-uploads/310d5e27-e7eb-4960-8cec-cb6ef89a79cd.png"
-                alt="SteadyStream TV Logo"
-                className="h-20 w-auto"
-              />
+              <img src="/lovable-uploads/310d5e27-e7eb-4960-8cec-cb6ef89a79cd.png" alt="SteadyStream TV Logo" className="h-20 w-auto object-cover" />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-              STEADYSTREAM TV
-            </h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent"></h1>
           </div>
 
           <nav className="hidden md:flex space-x-8">
@@ -65,10 +45,7 @@ const Index = () => {
             <a href="#pricing" className="hover:text-yellow-400 transition-colors">Pricing</a>
           </nav>
 
-          <Button 
-            onClick={() => setShowMobileSignup(true)}
-            className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold"
-          >
+          <Button onClick={() => setShowMobileSignup(true)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold">
             🎉 Start Free Trial
           </Button>
         </div>
@@ -94,19 +71,12 @@ const Index = () => {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-          <Button 
-            onClick={() => setShowMobileSignup(true)}
-            size="lg"
-            className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 px-8 text-lg"
-          >
+          <Button onClick={() => setShowMobileSignup(true)} size="lg" className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 px-8 text-lg">
             🎉 Start 24-Hour Free Trial
           </Button>
-          <Button 
-            variant="outline"
-            size="lg"
-            className="border-yellow-500 text-yellow-400 hover:bg-yellow-500 hover:text-black py-4 px-8 text-lg"
-            onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-          >
+          <Button variant="outline" size="lg" className="border-yellow-500 text-yellow-400 hover:bg-yellow-500 hover:text-black py-4 px-8 text-lg" onClick={() => document.getElementById('features')?.scrollIntoView({
+          behavior: 'smooth'
+        })}>
             📺 See All Features
           </Button>
         </div>
@@ -282,10 +252,7 @@ const Index = () => {
                 <CheckCircle className="w-4 h-4 text-green-400" />
                 <span>Perfect for Individuals</span>
               </div>
-              <Button 
-                onClick={() => setShowMobileSignup(true)}
-                className="w-full mt-6 bg-gray-700 hover:bg-gray-600"
-              >
+              <Button onClick={() => setShowMobileSignup(true)} className="w-full mt-6 bg-gray-700 hover:bg-gray-600">
                 Choose Solo
               </Button>
             </CardContent>
@@ -322,10 +289,7 @@ const Index = () => {
                 <CheckCircle className="w-4 h-4 text-green-400" />
                 <span>Perfect for Couples</span>
               </div>
-              <Button 
-                onClick={() => setShowMobileSignup(true)}
-                className="w-full mt-6 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold"
-              >
+              <Button onClick={() => setShowMobileSignup(true)} className="w-full mt-6 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold">
                 Choose Duo
               </Button>
             </CardContent>
@@ -359,10 +323,7 @@ const Index = () => {
                 <CheckCircle className="w-4 h-4 text-green-400" />
                 <span>Perfect for Families</span>
               </div>
-              <Button 
-                onClick={() => setShowMobileSignup(true)}
-                className="w-full mt-6 bg-gray-700 hover:bg-gray-600"
-              >
+              <Button onClick={() => setShowMobileSignup(true)} className="w-full mt-6 bg-gray-700 hover:bg-gray-600">
                 Choose Family
               </Button>
             </CardContent>
@@ -379,11 +340,7 @@ const Index = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button 
-              onClick={() => setShowMobileSignup(true)}
-              size="lg"
-              className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold mb-4"
-            >
+            <Button onClick={() => setShowMobileSignup(true)} size="lg" className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold mb-4">
               🎉 Start Free Trial Now
             </Button>
             <div className="grid grid-cols-3 gap-4 text-sm text-blue-200">
@@ -437,11 +394,7 @@ const Index = () => {
 
           <div className="text-center">
             <h3 className="text-2xl font-bold mb-8">Ready for the Complete TV Experience?</h3>
-            <Button 
-              size="lg"
-              onClick={() => setShowMobileSignup(true)}
-              className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 px-8 text-lg"
-            >
+            <Button size="lg" onClick={() => setShowMobileSignup(true)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 px-8 text-lg">
               🚀 Start Your Free Trial
             </Button>
           </div>
@@ -499,8 +452,6 @@ const Index = () => {
       {/* Launch Components */}
       <FeedbackWidget />
       <PerformanceMonitor />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
