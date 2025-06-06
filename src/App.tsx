@@ -1,25 +1,30 @@
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
-import Player from '@/pages/Player';
-import Index from '@/pages/Index';
-import NotFound from '@/pages/NotFound';
-import Onboarding from '@/pages/Onboarding';
-import Dashboard from '@/pages/Dashboard';
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { navItems } from "./nav-items";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
-function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/player" element={<Player />} />
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
       <Toaster />
-    </Router>
-  );
-}
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          {navItems.map(({ to, page }) => (
+            <Route key={to} path={to} element={page} />
+          ))}
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;

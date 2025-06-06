@@ -35,7 +35,7 @@ const DevicesSection = () => {
               </ul>
             </div>
             <div className="md:w-1/2 flex justify-center mt-6 md:mt-0 px-0 py-0 bg-black">
-              <div className="relative bg-black/50 p-2 rounded-xl border border-gray-800 max-w-sm py-[74px] px-[37px]">
+              <div className="relative bg-black/50 p-2 rounded-xl border border-gray-800 max-w-sm px-0 py-0 my-0 mx-0">
                 <img alt="Firestick App Interface" src="/lovable-uploads/5bf14f55-63a7-47a0-9b22-edda005dfece.png" className="rounded-lg w-full object-contain" />
                 
               </div>

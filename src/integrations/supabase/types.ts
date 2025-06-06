@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      cities: {
+        Row: {
+          country_id: number
+          id: number
+          name: string
+        }
+        Insert: {
+          country_id: number
+          id?: never
+          name: string
+        }
+        Update: {
+          country_id?: number
+          id?: never
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cities_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      countries: {
+        Row: {
+          code: string
+          id: number
+          name: string
+        }
+        Insert: {
+          code: string
+          id?: never
+          name: string
+        }
+        Update: {
+          code?: string
+          id?: never
+          name?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           created_at: string
@@ -51,10 +95,13 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          email: string | null
           genres: string[] | null
           id: string
           name: string | null
           preferred_device: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           subscription_status: string | null
           subscription_tier: string | null
           trial_end_date: string | null
@@ -64,10 +111,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email?: string | null
           genres?: string[] | null
           id: string
           name?: string | null
           preferred_device?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           trial_end_date?: string | null
@@ -77,10 +127,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email?: string | null
           genres?: string[] | null
           id?: string
           name?: string | null
           preferred_device?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           trial_end_date?: string | null
@@ -117,6 +170,132 @@ export type Database = {
           panel_url?: string | null
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          end_date: string
+          id: number
+          plan: string
+          start_date: string
+          user_id: string | null
+        }
+        Insert: {
+          end_date: string
+          id?: never
+          plan: string
+          start_date: string
+          user_id?: string | null
+        }
+        Update: {
+          end_date?: string
+          id?: never
+          plan?: string
+          start_date?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_playlists: {
+        Row: {
+          activation_code: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          playlist_token: string
+          user_id: string
+        }
+        Insert: {
+          activation_code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          playlist_token: string
+          user_id: string
+        }
+        Update: {
+          activation_code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          playlist_token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          activation_code: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          subscription_plan: string | null
+          user_id: string
+        }
+        Insert: {
+          activation_code?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          subscription_plan?: string | null
+          user_id: string
+        }
+        Update: {
+          activation_code?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          subscription_plan?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      Users: {
+        Row: {
+          created_at: string
+          Email: string | null
+          id: number
+          "Subscription Status": boolean | null
+          Username: string | null
+        }
+        Insert: {
+          created_at?: string
+          Email?: string | null
+          id?: number
+          "Subscription Status"?: boolean | null
+          Username?: string | null
+        }
+        Update: {
+          created_at?: string
+          Email?: string | null
+          id?: number
+          "Subscription Status"?: boolean | null
+          Username?: string | null
+        }
+        Relationships: []
+      }
+      users_log: {
+        Row: {
+          action: string
+          changed_at: string
+          id: number
+          user_id: number
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          id?: number
+          user_id: number
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          id?: number
+          user_id?: number
         }
         Relationships: []
       }

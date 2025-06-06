@@ -7,6 +7,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Mail, User, Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { SignInForm } from "./SignInForm";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -17,6 +19,8 @@ const formSchema = z.object({
   }),
   password: z.string().min(8, {
     message: "Password must be at least 8 characters.",
+  }).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~])/, {
+    message: "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.",
   }),
 });
 
@@ -37,6 +41,8 @@ interface OnboardingWelcomeProps {
 
 export const OnboardingWelcome = ({ userData, updateUserData, onNext }: OnboardingWelcomeProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignIn, setIsSignIn] = useState(false);
+  const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,17 +55,47 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      updateUserData({
-        name: values.name,
-        email: values.email,
-        password: values.password,
+    
+    // Validate password complexity
+    const hasLowercase = /[a-z]/.test(values.password);
+    const hasUppercase = /[A-Z]/.test(values.password);
+    const hasNumber = /\d/.test(values.password);
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(values.password);
+    
+    if (!hasLowercase || !hasUppercase || !hasNumber || !hasSpecial) {
+      toast({
+        title: "Password Error",
+        description: "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.",
+        variant: "destructive",
       });
       setIsLoading(false);
-      onNext();
+      return;
+    }
+    
+    // Simulate API call
+    setTimeout(() => {
+      try {
+        updateUserData({
+          name: values.name,
+          email: values.email,
+          password: values.password,
+        });
+        onNext();
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "There was an error processing your information.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }, 1000);
   };
+
+  if (isSignIn) {
+    return <SignInForm switchToSignUp={() => setIsSignIn(false)} />;
+  }
 
   return (
     <div className="bg-dark-200 rounded-xl border border-gray-800 p-8 animate-fade-in">
@@ -132,6 +168,9 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
                   </div>
                 </FormControl>
                 <FormMessage />
+                <p className="text-xs text-gray-500 mt-1">
+                  Password must contain at least 8 characters including uppercase, lowercase, number, and special character.
+                </p>
               </FormItem>
             )}
           />
@@ -144,6 +183,19 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
             >
               {isLoading ? "Processing..." : "Continue"}
             </Button>
+            
+            <div className="mt-4 text-center">
+              <p className="text-gray-400">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setIsSignIn(true)}
+                  className="text-gold hover:underline"
+                >
+                  Sign In
+                </button>
+              </p>
+            </div>
           </div>
         </form>
       </Form>

@@ -1,0 +1,8 @@
+
+{
+  "name": "news",
+  "logos": [
+    "cnn", "fox-news", "msnbc", "bbc-world", "al-jazeera", "bloomberg", "cnbc", 
+    "sky-news", "euronews", "rt", "france24", "cbs-news"
+  ]
+}

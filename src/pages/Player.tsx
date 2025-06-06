@@ -1,44 +1,31 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Tv, PlayCircle } from "lucide-react";
+import { Heart, MonitorPlay, LayoutDashboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
 import StreamPlayer from "@/components/StreamPlayer";
+import ChannelGrid from "@/components/ChannelGrid";
+import ProgramInfo from "@/components/ProgramInfo";
 import { supabase } from "@/integrations/supabase/client";
+import { useFavorites } from "@/hooks/useFavorites";
+import { fetchChannels, Channel } from "@/services/channelService";
 
 const Player = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [currentChannel, setCurrentChannel] = useState<any>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
-  const [channels, setChannels] = useState<any[]>([]);
-  const [filteredChannels, setFilteredChannels] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
   
   const { toast } = useToast();
 
   useEffect(() => {
     checkAuth();
-    fetchChannels();
+    loadChannels();
   }, []);
-
-  useEffect(() => {
-    if (channels.length > 0) {
-      // Extract unique categories
-      const uniqueCategories = Array.from(
-        new Set(channels.map(channel => channel.category))
-      );
-      setCategories(uniqueCategories);
-      
-      // Apply filters
-      filterChannels();
-    }
-  }, [channels, searchQuery, selectedCategory]);
 
   const checkAuth = async () => {
     try {
@@ -52,65 +39,30 @@ const Player = () => {
     }
   };
 
-  const fetchChannels = async () => {
+  const loadChannels = async () => {
     setIsLoading(true);
-    
-    // For demo purposes, we'll use mock data
-    // In a real implementation, this would fetch from Supabase or an IPTV API
-    setTimeout(() => {
-      const mockChannels = [
-        // Sports
-        { id: 1, name: "SteadyStream Sports HD", category: "Sports", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/sports" },
-        { id: 2, name: "Football TV", category: "Sports", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/football" },
-        { id: 3, name: "ESPN HD", category: "Sports", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/espn" },
-        { id: 4, name: "Fox Sports", category: "Sports", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/fox" },
-        
-        // Movies
-        { id: 5, name: "SteadyStream Movies", category: "Movies", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/movies" },
-        { id: 6, name: "HBO HD", category: "Movies", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/hbo" },
-        { id: 7, name: "Cinema Channel", category: "Movies", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/cinema" },
-        { id: 8, name: "Action Movies", category: "Movies", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/action" },
-        
-        // News
-        { id: 9, name: "SteadyStream News", category: "News", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/news" },
-        { id: 10, name: "CNN HD", category: "News", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/cnn" },
-        { id: 11, name: "BBC World", category: "News", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/bbc" },
-        { id: 12, name: "Sky News", category: "News", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/sky" },
-        
-        // Entertainment
-        { id: 13, name: "SteadyStream Entertainment", category: "Entertainment", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/ent" },
-        { id: 14, name: "Comedy Central", category: "Entertainment", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/comedy" },
-        { id: 15, name: "AMC", category: "Entertainment", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/amc" },
-        { id: 16, name: "FX", category: "Entertainment", logo: "/lovable-uploads/a4f38b34-3525-4484-9579-0ffa490a5613.png", url: "https://example.com/fx" }
-      ];
+    try {
+      const channelsData = await fetchChannels();
+      setChannels(channelsData);
       
-      setChannels(mockChannels);
-      setFilteredChannels(mockChannels);
+      // Set initial channel (first in the list or first favorite if available)
+      if (channelsData.length > 0) {
+        const favoriteChannel = channelsData.find(channel => favorites.includes(channel.id));
+        setCurrentChannel(favoriteChannel || channelsData[0]);
+      }
+    } catch (error) {
+      console.error("Error loading channels:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load channels",
+        variant: "destructive"
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const filterChannels = () => {
-    let filtered = [...channels];
-    
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(channel => 
-        channel.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    
-    // Filter by category
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(channel => 
-        channel.category === selectedCategory
-      );
-    }
-    
-    setFilteredChannels(filtered);
-  };
-
-  const handleChannelSelect = (channel) => {
+  const handleChannelSelect = (channel: Channel) => {
     setCurrentChannel(channel);
     toast({
       title: "Channel selected",
@@ -118,46 +70,15 @@ const Player = () => {
     });
   };
 
+  const handleToggleFavorite = () => {
+    if (currentChannel) {
+      toggleFavorite(currentChannel.id);
+    }
+  };
+
   const toggleFullscreen = () => {
     setIsFullscreen(prev => !prev);
   };
-
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const handleCategoryChange = (category) => {
-    setSelectedCategory(category);
-  };
-
-  const channelCard = (channel) => (
-    <div 
-      key={channel.id} 
-      className={`
-        flex items-center p-3 rounded-lg cursor-pointer transition-all
-        ${currentChannel?.id === channel.id 
-          ? "bg-gold text-black" 
-          : "bg-dark-300 hover:bg-dark-100"
-        }
-      `}
-      onClick={() => handleChannelSelect(channel)}
-    >
-      <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-dark-400 mr-3">
-        <img 
-          src={channel.logo || "/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png"} 
-          alt={channel.name} 
-          className="w-full h-full object-contain"
-        />
-      </div>
-      <div className="flex-1 overflow-hidden">
-        <p className="font-medium truncate">{channel.name}</p>
-        <p className={`text-xs ${currentChannel?.id === channel.id ? "text-black/70" : "text-gray-400"}`}>
-          {channel.category}
-        </p>
-      </div>
-      <PlayCircle size={18} className={currentChannel?.id === channel.id ? "text-black/70" : "text-gray-400"} />
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -186,59 +107,12 @@ const Player = () => {
                 />
               </div>
               
-              <div className="space-y-4">
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                  <Input 
-                    type="text" 
-                    placeholder="Search channels..." 
-                    className="bg-dark-300 border-gray-700 pl-10"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                  />
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Button
-                    size="sm"
-                    variant={selectedCategory === "all" ? "default" : "outline"}
-                    className={selectedCategory === "all" ? "bg-gold text-black hover:bg-gold/90" : ""}
-                    onClick={() => handleCategoryChange("all")}
-                  >
-                    All
-                  </Button>
-                  
-                  {categories.map(category => (
-                    <Button
-                      key={category}
-                      size="sm"
-                      variant={selectedCategory === category ? "default" : "outline"}
-                      className={selectedCategory === category ? "bg-gold text-black hover:bg-gold/90" : ""}
-                      onClick={() => handleCategoryChange(category)}
-                    >
-                      {category}
-                    </Button>
-                  ))}
-                </div>
-                
-                {isLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
-                  </div>
-                ) : (
-                  <div className="max-h-[calc(100vh-350px)] overflow-y-auto space-y-2 pr-1">
-                    {filteredChannels.length > 0 ? (
-                      filteredChannels.map(channel => channelCard(channel))
-                    ) : (
-                      <div className="text-center py-8 text-gray-400">
-                        <Tv size={48} className="mx-auto mb-3 opacity-30" />
-                        <p>No channels found</p>
-                        <p className="text-sm">Try adjusting your search</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <ChannelGrid 
+                channels={channels}
+                selectedChannel={currentChannel}
+                onSelectChannel={handleChannelSelect}
+                isLoading={isLoading}
+              />
             </div>
             
             {/* Video Player */}
@@ -251,13 +125,40 @@ const Player = () => {
                   onToggleFullscreen={toggleFullscreen}
                 />
               </div>
+              
+              {!isFullscreen && currentChannel && (
+                <div className="mt-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">{currentChannel.name}</h3>
+                    <p className="text-gray-400 text-sm">{currentChannel.category}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={isFavorite(currentChannel.id) ? "text-gold border-gold" : ""}
+                    onClick={handleToggleFavorite}
+                  >
+                    <Heart fill={isFavorite(currentChannel.id) ? "currentColor" : "none"} />
+                  </Button>
+                </div>
+              )}
+              
+              {!isFullscreen && currentChannel && (
+                <ProgramInfo 
+                  title={`${currentChannel.name} Programming`}
+                  description={currentChannel.description}
+                  startTime="Now"
+                  endTime="Next: 8:00 PM"
+                  category={currentChannel.category}
+                />
+              )}
             </div>
           </div>
           
           {/* User info section */}
           <div className={`mt-12 bg-dark-200 rounded-xl p-6 border border-gray-800 ${isFullscreen ? 'hidden' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold text-gold">IPTV Reseller Package</h2>
+              <h2 className="text-2xl font-semibold text-gold">Quick Access</h2>
               <img 
                 src="/lovable-uploads/290f9a54-2de2-4de6-b9d3-190059bb6e9f.png" 
                 alt="SteadyStream Logo" 
@@ -265,22 +166,26 @@ const Player = () => {
               />
             </div>
             
-            <p className="text-gray-300 mb-4">
-              Welcome to your IPTV reseller package. You can access and manage your subscription, add customers, and view your credits from the dashboard.
-            </p>
-            
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-6">
+            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
               <InfoCard 
-                title="Manage Customers" 
-                description="Add and manage customer subscriptions" 
+                icon={<MonitorPlay className="text-gold" />}
+                title="My Favorites" 
+                description={`${favorites.length} channels saved`} 
+                buttonText="View Favorites"
+                buttonAction={() => {}}
+              />
+              <InfoCard 
+                icon={<LayoutDashboard className="text-gold" />}
+                title="Manage Subscription" 
+                description="Subscription details and billing" 
                 buttonText="Go to Dashboard"
                 buttonLink="/dashboard"
               />
               <InfoCard 
-                title="Purchase Credits" 
-                description="Get credits to add more customers" 
-                buttonText="Buy Credits"
-                buttonLink="/dashboard?tab=credits"
+                title="Recently Watched" 
+                description="Access your viewing history" 
+                buttonText="View History"
+                buttonAction={() => {}}
               />
               <InfoCard 
                 title="Need Help?" 
@@ -298,16 +203,35 @@ const Player = () => {
   );
 };
 
-const InfoCard = ({ title, description, buttonText, buttonLink }) => (
+const InfoCard = ({ 
+  icon, 
+  title, 
+  description, 
+  buttonText, 
+  buttonLink,
+  buttonAction
+}: { 
+  icon?: React.ReactNode;
+  title: string; 
+  description: string;
+  buttonText: string;
+  buttonLink?: string;
+  buttonAction?: () => void;
+}) => (
   <div className="bg-dark-300 p-4 rounded-lg border border-gray-700">
     <div className="mb-3">
+      {icon && (
+        <div className="mb-2">
+          {icon}
+        </div>
+      )}
       <h3 className="font-semibold text-gold">{title}</h3>
       <p className="text-gray-400 text-sm">{description}</p>
     </div>
     <Button 
       size="sm"
       className="w-full bg-dark-400 hover:bg-dark-500 text-white"
-      onClick={() => window.location.href = buttonLink}
+      onClick={buttonLink ? () => window.location.href = buttonLink : buttonAction}
     >
       {buttonText}
     </Button>
