@@ -203,7 +203,22 @@ export const CustomDashboardAdmin: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRegistrations(data || []);
+      
+      // Map the profiles data to Registration format
+      const mappedData: Registration[] = (data || []).map(profile => ({
+        id: profile.id,
+        name: profile.name || 'Unknown',
+        email: profile.email || '',
+        plan: profile.subscription_tier || 'trial',
+        subscription_status: profile.subscription_status || 'pending',
+        subscription_tier: profile.subscription_tier || 'trial',
+        xtream_username: profile.xtream_username,
+        xtream_password: profile.xtream_password,
+        created_at: profile.created_at,
+        trial_end_date: profile.trial_end_date
+      }));
+      
+      setRegistrations(mappedData);
     } catch (error: any) {
       toast({
         title: "Error",
