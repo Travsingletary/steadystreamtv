@@ -3,13 +3,13 @@
 const SUPABASE_URL = 'https://ojueihcytxwcioqtvwez.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qdWVpaGN5dHh3Y2lvcXR2d2V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0Mzc1NDQsImV4cCI6MjA2MjAxMzU0NH0.VsWI3EcSVaeY-NfsW1zJUw6DpMsrHHDP9GYTpaxMbPM';
 
-// MegaOTT Production Configuration
-const MEGAOTT_CONFIG = {
-  baseUrl: 'https://megaott.net/api/v1/user',
-  apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
+// Custom Dashboard Production Configuration
+const CUSTOM_DASHBOARD_CONFIG = {
+  baseUrl: 'https://yourdashboard.com/api/v1',
+  description: 'Custom Dashboard for IPTV Management'
 };
 
-// Production Automation Service with REAL API calls
+// Production Automation Service with REAL Custom Dashboard API calls
 export const ProductionAutomationService = {
   async signUp(email: string, password: string, userData: any) {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
@@ -36,7 +36,7 @@ export const ProductionAutomationService = {
 
   async registerUser(userData: any) {
     try {
-      console.log('🚀 Starting production registration for:', userData.email);
+      console.log('🚀 Starting production registration with Custom Dashboard for:', userData.email);
 
       // Create user in Supabase Auth
       const authData = await this.signUp(userData.email, userData.password, {
@@ -51,7 +51,6 @@ export const ProductionAutomationService = {
 
       // Generate activation code and assets
       const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      // Using JSON.stringify instead of any potential dynamic code execution
       const playlistToken = btoa(JSON.stringify({
         userId,
         activationCode,
@@ -63,11 +62,11 @@ export const ProductionAutomationService = {
       const playlistUrl = `${window.location.origin}/api/playlist/${playlistToken}.m3u8`;
       console.log('✅ Assets generated');
 
-      // Create REAL MegaOTT subscription (no simulations)
-      let megaottResult = null;
+      // Create REAL Custom Dashboard subscription
+      let customDashboardResult = null;
       try {
-        console.log('🔥 Creating REAL MegaOTT subscription for all plans...');
-        const megaottResponse = await fetch(`${SUPABASE_URL}/functions/v1/create-xtream-account`, {
+        console.log('🔥 Creating REAL Custom Dashboard subscription for all plans...');
+        const dashboardResponse = await fetch(`${SUPABASE_URL}/functions/v1/create-xtream-account`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -82,17 +81,17 @@ export const ProductionAutomationService = {
           })
         });
 
-        if (megaottResponse.ok) {
-          megaottResult = await megaottResponse.json();
-          console.log('✅ REAL MegaOTT subscription created:', megaottResult.data?.username);
+        if (dashboardResponse.ok) {
+          customDashboardResult = await dashboardResponse.json();
+          console.log('✅ REAL Custom Dashboard subscription created:', customDashboardResult.data?.username);
         } else {
-          const errorData = await megaottResponse.json();
-          console.error('❌ MegaOTT API error:', errorData);
+          const errorData = await dashboardResponse.json();
+          console.error('❌ Custom Dashboard API error:', errorData);
           throw new Error(errorData.error || 'Failed to create IPTV account');
         }
-      } catch (megaError) {
-        console.error('❌ MegaOTT integration failed:', megaError.message);
-        throw megaError; // Don't use fallback, require real subscription
+      } catch (dashboardError) {
+        console.error('❌ Custom Dashboard integration failed:', dashboardError.message);
+        throw dashboardError; // Don't use fallback, require real subscription
       }
 
       // Send welcome email with REAL credentials
@@ -108,9 +107,9 @@ export const ProductionAutomationService = {
             email: userData.email,
             name: userData.name,
             iptv: {
-              username: megaottResult?.data?.username || activationCode,
-              password: megaottResult?.data?.password || 'temp123',
-              playlistUrls: megaottResult?.data?.playlistUrls || {
+              username: customDashboardResult?.data?.username || activationCode,
+              password: customDashboardResult?.data?.password || 'temp123',
+              playlistUrls: customDashboardResult?.data?.playlistUrls || {
                 m3u: playlistUrl,
                 m3u_plus: playlistUrl.replace('.m3u8', '_plus.m3u8'),
                 xspf: playlistUrl.replace('.m3u8', '.xspf')
@@ -118,7 +117,7 @@ export const ProductionAutomationService = {
             }
           })
         });
-        console.log('✅ Welcome email sent with REAL credentials');
+        console.log('✅ Welcome email sent with REAL Custom Dashboard credentials');
       } catch (emailError) {
         console.warn('⚠️ Email sending failed:', emailError.message);
       }
@@ -126,10 +125,10 @@ export const ProductionAutomationService = {
       return {
         success: true,
         user: authData.user,
-        activationCode: megaottResult?.data?.username || activationCode,
-        playlistUrl: megaottResult?.data?.playlistUrls?.m3u || playlistUrl,
-        megaottSubscription: megaottResult,
-        message: 'Account created successfully with REAL IPTV subscription!'
+        activationCode: customDashboardResult?.data?.username || activationCode,
+        playlistUrl: customDashboardResult?.data?.playlistUrls?.m3u || playlistUrl,
+        megaottSubscription: customDashboardResult,
+        message: 'Account created successfully with REAL Custom Dashboard IPTV subscription!'
       };
 
     } catch (error: any) {

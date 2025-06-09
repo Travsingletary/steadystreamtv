@@ -11,40 +11,33 @@ type RequestPayload = {
 }
 
 // Types for improved readability
-type MegaOTTPlan = {
-  packageId: number
+type CustomDashboardPlan = {
+  connections: number
   duration: number
-  maxConnections: number
+  planName: string
 }
 
-type MegaOTTResponse = {
-  id: string
+type CustomDashboardResponse = {
+  success: boolean
+  username: string
+  password: string
+  playlistUrl: string
+  expiresAt: string
   [key: string]: any
 }
 
-type MegaOTTCredentials = {
-  username: string
-  password: string
-}
-
-type PlaylistUrls = {
-  m3u: string
-  m3u_plus: string
-  xspf: string
-}
-
-// Plan mapping for MegaOTT packages - updated to match frontend plans
-const PLAN_MAPPING: Record<string, MegaOTTPlan> = {
-  'standard': { packageId: 1, duration: 30, maxConnections: 2 },
-  'premium': { packageId: 2, duration: 30, maxConnections: 4 },
-  'ultimate': { packageId: 3, duration: 30, maxConnections: 6 },
+// Plan mapping for Custom Dashboard - updated to match frontend plans
+const PLAN_MAPPING: Record<string, CustomDashboardPlan> = {
+  'standard': { connections: 2, duration: 30, planName: 'Standard' },
+  'premium': { connections: 4, duration: 30, planName: 'Premium' },
+  'ultimate': { connections: 6, duration: 30, planName: 'Ultimate' },
   // Legacy mappings for compatibility
-  'solo': { packageId: 1, duration: 30, maxConnections: 2 },
-  'duo': { packageId: 2, duration: 30, maxConnections: 4 },
-  'family': { packageId: 3, duration: 30, maxConnections: 6 },
+  'solo': { connections: 1, duration: 30, planName: 'Solo' },
+  'duo': { connections: 2, duration: 30, planName: 'Duo' },
+  'family': { connections: 3, duration: 30, planName: 'Family' },
   // Trial mapping
-  'trial': { packageId: 1, duration: 1, maxConnections: 1 },
-  'free-trial': { packageId: 1, duration: 1, maxConnections: 1 }
+  'trial': { connections: 1, duration: 1, planName: 'Trial' },
+  'free-trial': { connections: 1, duration: 1, planName: 'Free Trial' }
 }
 
 // Configure CORS headers
@@ -55,7 +48,7 @@ const corsHeaders = {
 
 // Helper function for consistent logging
 const log = (message: string, data?: any) => {
-  console.log(`[CREATE-XTREAM-ACCOUNT] ${message}`, data ? JSON.stringify(data) : '');
+  console.log(`[CUSTOM-DASHBOARD-ACCOUNT] ${message}`, data ? JSON.stringify(data) : '');
 };
 
 // Helper function to retry API calls
@@ -71,8 +64,7 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, de
       if (i === retries - 1) throw error;
       log(`Retry attempt ${i + 1} failed, retrying in ${delay}ms`, { error: error.message });
       await new Promise(r => setTimeout(r, delay));
-      // Exponential backoff
-      delay *= 2;
+      delay *= 2; // Exponential backoff
     }
   }
 };
@@ -100,7 +92,6 @@ const validateRequestPayload = (payload: RequestPayload) => {
     };
   }
   
-  // Get plan details
   const planDetails = PLAN_MAPPING[payload.planType as keyof typeof PLAN_MAPPING];
   if (!planDetails) {
     log("Invalid plan type", { planType: payload.planType, availablePlans: Object.keys(PLAN_MAPPING) });
@@ -138,7 +129,6 @@ const checkExistingCredentials = async (supabaseAdmin: any, userId: string) => {
     });
     
     if (userProfiles && userProfiles.length > 0) {
-      // Get the first profile with valid credentials (if there are multiple, use the first one)
       const userProfile = userProfiles.find(profile => profile.xtream_username && profile.xtream_password);
       
       if (userProfile) {
@@ -161,9 +151,10 @@ const checkExistingCredentials = async (supabaseAdmin: any, userId: string) => {
   }
 };
 
-// Generate playlist URLs
-const generatePlaylistUrls = (username: string, password: string): PlaylistUrls => {
-  const baseUrl = `https://megaott.net/get.php?username=${username}&password=${password}`;
+// Generate playlist URLs for custom dashboard
+const generatePlaylistUrls = (username: string, password: string) => {
+  // Use your custom dashboard playlist URL format
+  const baseUrl = `https://yourdashboard.com/get.php?username=${username}&password=${password}`;
   return {
     m3u: `${baseUrl}&type=m3u_plus&output=ts`,
     m3u_plus: `${baseUrl}&type=m3u_plus&output=ts`,
@@ -171,12 +162,13 @@ const generatePlaylistUrls = (username: string, password: string): PlaylistUrls 
   };
 };
 
-// Create MegaOTT account
-const createMegaOTTAccount = async (
+// Create account using Custom Dashboard API
+const createCustomDashboardAccount = async (
   name: string, 
-  planDetails: MegaOTTPlan
-): Promise<{ username: string, password: string, response: MegaOTTResponse }> => {
-  // Generate username and password
+  email: string,
+  planDetails: CustomDashboardPlan
+): Promise<{ username: string, password: string, response: CustomDashboardResponse }> => {
+  // Generate username and password for your system
   const nameLetter = name.charAt(0).toLowerCase();
   const randomString = Math.random().toString(36).substring(2, 8);
   const username = `steady_${nameLetter}${randomString}`;
@@ -190,50 +182,58 @@ const createMegaOTTAccount = async (
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + planDetails.duration);
 
-  const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY');
-  if (!megaottApiKey) {
-    log("Missing MegaOTT API key");
-    throw new Error('MEGAOTT_API_KEY is not set');
+  const customDashboardApiKey = Deno.env.get('CUSTOM_DASHBOARD_API_KEY');
+  const customDashboardUrl = Deno.env.get('CUSTOM_DASHBOARD_URL') || 'https://yourdashboard.com/api/v1';
+  
+  if (!customDashboardApiKey) {
+    log("Missing Custom Dashboard API key");
+    throw new Error('CUSTOM_DASHBOARD_API_KEY is not set');
   }
 
-  log("Creating user in MegaOTT", {
+  log("Creating user in Custom Dashboard", {
     username,
-    packageId: planDetails.packageId,
-    connections: planDetails.maxConnections,
+    email,
+    connections: planDetails.connections,
+    planName: planDetails.planName,
     expDate: endDate.toISOString().split('T')[0]
   });
 
-  // Make REAL request to MegaOTT API
-  const response = await fetchWithRetry('https://megaott.net/api/v1/user', {
+  // Make request to your Custom Dashboard API
+  const response = await fetchWithRetry(`${customDashboardUrl}/users`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${megaottApiKey}`,
+      'Authorization': `Bearer ${customDashboardApiKey}`,
       'Accept': 'application/json'
     },
     body: JSON.stringify({
       username: username,
       password: password,
-      package_id: planDetails.packageId,
-      max_connections: planDetails.maxConnections,
-      exp_date: endDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-      admin_notes: `SteadyStream customer: ${name} - Plan: ${planDetails.packageId}`
+      email: email,
+      name: name,
+      plan: planDetails.planName,
+      max_connections: planDetails.connections,
+      expires_at: endDate.toISOString(),
+      metadata: {
+        source: 'steadystream',
+        created_via: 'automation'
+      }
     })
   });
 
-  const megaottResponse = await response.json();
+  const dashboardResponse = await response.json();
 
   if (!response.ok) {
-    log("MegaOTT API Error:", megaottResponse);
-    throw new Error(megaottResponse.message || `Failed to create IPTV account: ${response.status} ${response.statusText}`);
+    log("Custom Dashboard API Error:", dashboardResponse);
+    throw new Error(dashboardResponse.message || `Failed to create IPTV account: ${response.status} ${response.statusText}`);
   }
 
-  log("MegaOTT account created successfully", { 
-    responseId: megaottResponse.id,
+  log("Custom Dashboard account created successfully", { 
+    responseId: dashboardResponse.id,
     username: username
   });
 
-  return { username, password, response: megaottResponse };
+  return { username, password, response: dashboardResponse };
 };
 
 // Update user profile with IPTV credentials
@@ -356,24 +356,24 @@ serve(async (req) => {
       );
     }
 
-    // Create new MegaOTT account
-    log("Creating new MegaOTT account");
+    // Create new Custom Dashboard account
+    log("Creating new Custom Dashboard account");
     const planDetails = validation.planDetails;
-    let megaottResult;
+    let dashboardResult;
     try {
-      megaottResult = await createMegaOTTAccount(payload.name, planDetails);
-    } catch (megaottError) {
-      log("Failed to create MegaOTT account", megaottError);
+      dashboardResult = await createCustomDashboardAccount(payload.name, payload.email, planDetails);
+    } catch (dashboardError) {
+      log("Failed to create Custom Dashboard account", dashboardError);
       return new Response(
         JSON.stringify({ 
           error: 'Failed to create IPTV account', 
-          details: megaottError.message 
+          details: dashboardError.message 
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    const { username, password, response: megaottResponse } = megaottResult;
+    const { username, password, response: dashboardResponse } = dashboardResult;
 
     // Calculate dates for profile update
     const startDate = new Date();
@@ -387,7 +387,6 @@ serve(async (req) => {
     } catch (updateError) {
       log("Failed to update user profile", updateError);
       // We still return success since the IPTV account was created
-      // Just log the profile update error
     }
 
     // Generate playlist URLs
@@ -398,21 +397,20 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'IPTV account created successfully in MegaOTT panel',
+        message: 'IPTV account created successfully via Custom Dashboard',
         data: {
           username,
           password,
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
           playlistUrls,
-          megaottId: megaottResponse.id,
+          dashboardId: dashboardResponse.id || dashboardResponse.user_id,
           planType: payload.planType
         }
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    // Catch-all error handler to ensure we always return valid JSON
     log("Error creating IPTV account:", error);
     return new Response(
       JSON.stringify({ 

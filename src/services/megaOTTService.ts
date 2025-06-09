@@ -1,20 +1,20 @@
 
 // src/services/megaOTTService.ts
-// SECURITY UPDATED: MegaOTT integration now uses secure edge functions
+// UPDATED: Custom Dashboard integration with secure edge functions
 
 import { CONFIG } from './config';
 import type { UserData } from './types';
 
 export class MegaOTTService {
   /**
-   * SECURITY FIX: Create MegaOTT subscription via secure edge function
+   * UPDATED: Create Custom Dashboard subscription via secure edge function
    * API keys are now stored securely in Supabase secrets
    */
   static async createSubscription(userId: string, plan: string, userData: UserData) {
     try {
-      console.log('Creating SECURE MegaOTT subscription for user:', userId, 'plan:', plan);
+      console.log('Creating SECURE Custom Dashboard subscription for user:', userId, 'plan:', plan);
       
-      // Call the secure create-xtream-account Supabase edge function
+      // Call the secure create-xtream-account Supabase edge function (now uses Custom Dashboard)
       const response = await fetch(`${CONFIG.supabase.url}/functions/v1/create-xtream-account`, {
         method: 'POST',
         headers: {
@@ -32,18 +32,18 @@ export class MegaOTTService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Secure Xtream Account API error:', response.status, errorData);
+        console.error('Secure Custom Dashboard API error:', response.status, errorData);
         throw new Error(`Failed to create IPTV account: ${errorData.error || response.statusText}`);
       }
 
       const result = await response.json();
-      console.log('Secure MegaOTT subscription created successfully:', result);
+      console.log('Secure Custom Dashboard subscription created successfully:', result);
       
       return {
         success: true,
         plan,
-        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated securely`,
-        subscriptionId: result.data?.megaottId,
+        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated securely via Custom Dashboard`,
+        subscriptionId: result.data?.dashboardId,
         credentials: {
           username: result.data?.username,
           password: result.data?.password
@@ -52,7 +52,7 @@ export class MegaOTTService {
       };
       
     } catch (error) {
-      console.error('Secure MegaOTT integration error:', error);
+      console.error('Secure Custom Dashboard integration error:', error);
       throw new Error(`Failed to create IPTV subscription: ${error.message}`);
     }
   }
