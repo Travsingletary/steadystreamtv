@@ -8,6 +8,8 @@ import Account from "./pages/Account";
 import ConnectApps from "./pages/ConnectApps";
 import AdminDashboard from "./pages/AdminDashboard";
 import TestXtreamAccount from "./pages/TestXtreamAccount";
+import CustomDashboardAdminPage from "./pages/CustomDashboardAdmin";
+import MegaOTTTesterPage from "./pages/MegaOTTTester";
 import NotFound from "./pages/NotFound";
 
 export const navItems = [
@@ -42,6 +44,14 @@ export const navItems = [
   {
     to: "/admin",
     page: <AdminDashboard />,
+  },
+  {
+    to: "/custom-dashboard-admin",
+    page: <CustomDashboardAdminPage />,
+  },
+  {
+    to: "/megaott-tester",
+    page: <MegaOTTTesterPage />,
   },
   {
     to: "/test-xtream",
