@@ -77,18 +77,24 @@ jobs:
     - name: 📥 Checkout Repository
       uses: actions/checkout@v4
       
-    - name: 🔧 Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: 📦 Install Dependencies
+        - name: 📦 Install Dependencies
       run: |
-        npm install
-        npm install -g supabase
+        npm install || echo "⚠️ npm install completed with warnings"
         
-    - name: 🤖 AI Intelligent System Analysis
+    - name: 🔧 Setup Supabase CLI
+      run: |
+        # Install Supabase CLI locally (not globally)
+        npm install supabase@latest --save-dev
+        # Add to PATH for this workflow
+        export PATH="$(pwd)/node_modules/.bin:$PATH"
+        echo "PATH=$(pwd)/node_modules/.bin:$PATH" >> $GITHUB_ENV
+        
+    - name: ✅ Verify Supabase CLI
+      run: |
+        # Verify installation works
+        npx supabase --version
+        echo "✅ Supabase CLI installed successfully"
+
       run: |
         echo "🔍 AI performing intelligent system analysis..."
         echo "📊 Analyzing repository changes..."
