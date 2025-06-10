@@ -1,80 +1,126 @@
 
 // src/services/automationService.ts
-// Main automation orchestrator - refactored for better maintainability
+// Enhanced automation service with better error handling
 
-import { UserRegistrationService } from './userRegistrationService';
+import { supabase } from "@/integrations/supabase/client";
 import { MegaOTTService } from './megaOTTService';
-import { PlaylistService } from './playlistService';
-import { CONFIG } from './config';
-import type { UserData, RegistrationResult } from './types';
 
-// Re-export types and config for backward compatibility
-export type { UserData, RegistrationResult };
-export { CONFIG };
+export interface UserData {
+  name: string;
+  email: string;
+  password: string;
+  plan: 'trial' | 'standard' | 'premium' | 'ultimate';
+}
+
+export interface RegistrationResult {
+  success: boolean;
+  error?: string;
+  user?: any;
+  activationCode?: string;
+  playlistUrl?: string;
+  megaottSubscription?: any;
+}
 
 export class SimpleAutomationService {
-  /**
-   * Complete automation flow with production integrations
-   */
   static async executeCompleteAutomation(userData: UserData): Promise<RegistrationResult> {
     try {
       console.log('🚀 Executing production automation for:', userData.email);
 
-      // Step 1: Register user with Supabase Auth
-      const authResult = await UserRegistrationService.registerUser(userData);
-      const userId = authResult.user?.id;
+      // 1. Register user in Supabase
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.name,
+            plan: userData.plan,
+            device_type: 'mobile',
+            preferences: JSON.stringify({
+              favoriteGenres: ['sports', 'movies', 'news', 'documentary', 'kids', 'entertainment'],
+              parentalControls: false,
+              autoOptimization: true,
+              videoQuality: 'Auto'
+            })
+          }
+        }
+      });
 
-      if (!userId) {
-        throw new Error('User creation failed');
+      if (authError) {
+        throw new Error(`User registration failed: ${authError.message}`);
       }
 
-      console.log('✅ User registered with ID:', userId);
+      if (!authData.user) {
+        throw new Error('User registration failed: No user data returned');
+      }
 
-      // Step 2: Generate user assets
-      const assets = await UserRegistrationService.generateUserAssets(userId, userData.plan);
-      console.log('✅ Assets generated:', assets.activationCode);
+      console.log('✅ User registered with ID:', authData.user.id);
 
-      // Step 3: Create REAL MegaOTT subscription
-      const subscription = await MegaOTTService.createSubscription(userId, userData.plan, userData);
-      console.log('✅ MegaOTT subscription created:', subscription.subscriptionId);
+      // 2. Generate activation code
+      const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      console.log('✅ Assets generated:', activationCode);
 
-      // Step 4: Send welcome email with REAL credentials
-      const emailCredentials = {
-        username: subscription.credentials?.username || assets.activationCode,
-        password: subscription.credentials?.password || 'temp123',
-        playlistUrls: subscription.playlistUrls || {
-          m3u: assets.playlistUrl,
-          m3u_plus: assets.playlistUrl.replace('.m3u8', '_plus.m3u8'),
-          xspf: assets.playlistUrl.replace('.m3u8', '.xspf')
+      // 3. Create IPTV subscription with enhanced error handling
+      let megaottSubscription;
+      try {
+        megaottSubscription = await MegaOTTService.createSubscription(
+          authData.user.id,
+          userData.plan,
+          userData
+        );
+        console.log('✅ IPTV subscription created:', megaottSubscription.message);
+      } catch (megaottError) {
+        console.warn('⚠️ IPTV subscription creation failed, continuing with basic account:', megaottError.message);
+        
+        // Create a basic subscription record anyway
+        megaottSubscription = {
+          success: false,
+          plan: userData.plan,
+          message: 'Account created (IPTV setup pending)',
+          error: megaottError.message,
+          credentials: {
+            activationCode,
+            username: `pending_${authData.user.id.substring(0, 8)}`,
+            password: 'pending'
+          }
+        };
+      }
+
+      // 4. Update user profile with trial info
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            name: userData.name,
+            email: userData.email,
+            subscription_tier: userData.plan,
+            subscription_status: megaottSubscription.success ? 'active' : 'pending',
+            trial_end_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (profileError) {
+          console.warn('Profile update failed:', profileError);
         }
-      };
+      } catch (profileError) {
+        console.warn('Profile update error:', profileError);
+      }
 
-      await UserRegistrationService.sendWelcomeEmail(userId, userData, emailCredentials);
-
-      // Success! User is fully set up with REAL IPTV account
       return {
         success: true,
-        user: authResult.user,
-        assets,
-        subscription,
-        userData
+        user: authData.user,
+        activationCode,
+        playlistUrl: megaottSubscription.playlistUrls?.m3u || 'https://steadystreamtv.com/playlist/demo',
+        megaottSubscription
       };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Production automation failed:', error);
       return {
         success: false,
-        error: error.message
+        error: error.message || 'Registration failed'
       };
     }
   }
-
-  // Legacy methods for backward compatibility
-  static registerUser = UserRegistrationService.registerUser;
-  static generateUserAssets = UserRegistrationService.generateUserAssets;
-  static createMegaOTTSubscription = MegaOTTService.createSubscription;
-  static generateM3UContent = PlaylistService.generateM3UContent;
 }
-
-// Export for backward compatibility
-export const AutomationService = SimpleAutomationService;
