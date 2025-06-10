@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 
 const passwordUpdateSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -26,7 +25,6 @@ interface PasswordUpdateFormProps {
 export const PasswordUpdateForm = ({ onComplete }: PasswordUpdateFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof passwordUpdateSchema>>({
     resolver: zodResolver(passwordUpdateSchema),
@@ -48,14 +46,12 @@ export const PasswordUpdateForm = ({ onComplete }: PasswordUpdateFormProps) => {
         throw error;
       }
 
-      toast({
-        title: "Password updated successfully",
-        description: "You can now log in with your new password",
-      });
-
+      // Sign out after password update to force re-login
+      await supabase.auth.signOut();
+      
       onComplete();
-      navigate('/admin-login');
     } catch (error: any) {
+      console.error('Password update error:', error);
       toast({
         title: "Failed to update password",
         description: error.message || "Please try again",

@@ -14,6 +14,7 @@ export const useAdminAuth = () => {
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [isResetMode, setIsResetMode] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -62,23 +63,71 @@ export const useAdminAuth = () => {
     checkAdminStatus();
   }, [navigate]);
 
+  // Listen for auth state changes to detect password reset flow
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event, session);
+        
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log('Password recovery event detected');
+          setIsPasswordReset(true);
+          setIsResetMode(false);
+          setResetEmailSent(false);
+        } else if (event === 'SIGNED_IN' && session) {
+          // Check if this is from a password reset
+          const url = new URL(window.location.href);
+          const accessToken = url.searchParams.get('access_token');
+          const refreshToken = url.searchParams.get('refresh_token');
+          const type = url.searchParams.get('type');
+          
+          if (type === 'recovery' || (accessToken && refreshToken)) {
+            console.log('Password reset session detected');
+            setIsPasswordReset(true);
+            setIsResetMode(false);
+            setResetEmailSent(false);
+            
+            // Clean up the URL
+            window.history.replaceState({}, document.title, '/admin-login');
+          } else {
+            // Regular login - check admin status
+            try {
+              const { data: adminRole } = await supabase
+                .from('admin_roles')
+                .select('role')
+                .eq('user_id', session.user.id)
+                .eq('role', 'admin')
+                .single();
+
+              if (adminRole) {
+                navigate('/admin');
+              }
+            } catch (error) {
+              console.log('User is not an admin');
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setIsPasswordReset(false);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   // Check for password reset on component mount
   useEffect(() => {
-    const checkForPasswordReset = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error && error.message.includes('Email link is invalid or has expired')) {
-        toast({
-          title: "Invalid Link",
-          description: "The password reset link has expired. Please request a new one.",
-          variant: "destructive",
-        });
-        setIsResetMode(true);
-      }
-    };
-
-    checkForPasswordReset();
-  }, [toast]);
+    const url = new URL(window.location.href);
+    const type = url.searchParams.get('type');
+    const accessToken = url.searchParams.get('access_token');
+    
+    if (type === 'recovery' || accessToken) {
+      console.log('Password reset detected from URL');
+      setIsPasswordReset(true);
+      // Clean up the URL
+      window.history.replaceState({}, document.title, '/admin-login');
+    }
+  }, []);
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
@@ -134,7 +183,7 @@ export const useAdminAuth = () => {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/admin-login?reset=true`,
+        redirectTo: `${window.location.origin}/admin-login`,
       });
 
       if (error) {
@@ -160,15 +209,25 @@ export const useAdminAuth = () => {
   const handleBackToLogin = () => {
     setIsResetMode(false);
     setResetEmailSent(false);
+    setIsPasswordReset(false);
     resetForm.reset();
   };
 
   const handleForgotPassword = () => {
     setIsResetMode(true);
+    setIsPasswordReset(false);
   };
 
   const handleReturnToMain = () => {
     navigate("/");
+  };
+
+  const handlePasswordUpdateComplete = () => {
+    setIsPasswordReset(false);
+    toast({
+      title: "Password updated successfully",
+      description: "You can now log in with your new password",
+    });
   };
 
   return {
@@ -176,6 +235,7 @@ export const useAdminAuth = () => {
     isCheckingAdmin,
     isResetMode,
     resetEmailSent,
+    isPasswordReset,
     loginForm,
     resetForm,
     onLoginSubmit,
@@ -183,5 +243,6 @@ export const useAdminAuth = () => {
     handleBackToLogin,
     handleForgotPassword,
     handleReturnToMain,
+    handlePasswordUpdateComplete,
   };
 };

@@ -8,19 +8,14 @@ import { PasswordResetForm } from "@/components/admin/PasswordResetForm";
 import { AdminLoginFooter } from "@/components/admin/AdminLoginFooter";
 import { PasswordUpdateForm } from "@/components/admin/PasswordUpdateForm";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 const AdminLogin = () => {
-  const [searchParams] = useSearchParams();
-  const [isPasswordUpdate, setIsPasswordUpdate] = useState(false);
-  const { toast } = useToast();
-  
   const {
     isLoading,
     isCheckingAdmin,
     isResetMode,
     resetEmailSent,
+    isPasswordReset,
     loginForm,
     resetForm,
     onLoginSubmit,
@@ -28,18 +23,8 @@ const AdminLogin = () => {
     handleBackToLogin,
     handleForgotPassword,
     handleReturnToMain,
+    handlePasswordUpdateComplete,
   } = useAdminAuth();
-
-  useEffect(() => {
-    const checkResetToken = async () => {
-      const isReset = searchParams.get('reset') === 'true';
-      if (isReset) {
-        setIsPasswordUpdate(true);
-      }
-    };
-
-    checkResetToken();
-  }, [searchParams]);
 
   if (isCheckingAdmin) {
     return (
@@ -54,11 +39,11 @@ const AdminLogin = () => {
       <Card className="w-full max-w-md bg-dark-200 border-gray-800">
         <AdminLoginHeader 
           isResetMode={isResetMode} 
-          isPasswordUpdate={isPasswordUpdate}
+          isPasswordUpdate={isPasswordReset}
         />
         <CardContent>
-          {isPasswordUpdate ? (
-            <PasswordUpdateForm onComplete={() => setIsPasswordUpdate(false)} />
+          {isPasswordReset ? (
+            <PasswordUpdateForm onComplete={handlePasswordUpdateComplete} />
           ) : !isResetMode ? (
             <AdminLoginForm
               form={loginForm}
@@ -74,7 +59,7 @@ const AdminLogin = () => {
             />
           )}
 
-          {!isPasswordUpdate && (
+          {!isPasswordReset && (
             <AdminLoginFooter
               isResetMode={isResetMode}
               onForgotPassword={handleForgotPassword}
