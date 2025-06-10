@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { PerformanceMonitor } from "@/components/PerformanceMonitor";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tv, Monitor, Smartphone, Tablet, Wifi, Home, Car, Plane, CheckCircle, Clock, Globe, Download, Shield, Star } from 'lucide-react';
+import { Link } from "react-router-dom";
 import MobileAutomation from "@/components/MobileAutomation";
 
 const Index = () => {
@@ -46,6 +46,10 @@ const Index = () => {
               <a href="#features" className="hover:text-yellow-400 transition-colors">Features</a>
               <a href="#devices" className="hover:text-yellow-400 transition-colors">Devices</a>
               <a href="#pricing" className="hover:text-yellow-400 transition-colors">Pricing</a>
+              <Link to="/admin-login" className="hover:text-purple-400 transition-colors flex items-center gap-1">
+                <Shield className="h-4 w-4" />
+                Admin
+              </Link>
             </div>
           </nav>
 
@@ -56,6 +60,19 @@ const Index = () => {
             </Button>
           </div>
         </div>
+
+        {/* Mobile Navigation with Admin Link */}
+        <nav className="md:hidden mt-4">
+          <div className="flex justify-center space-x-6 text-sm">
+            <a href="#features" className="hover:text-yellow-400 transition-colors">Features</a>
+            <a href="#devices" className="hover:text-yellow-400 transition-colors">Devices</a>
+            <a href="#pricing" className="hover:text-yellow-400 transition-colors">Pricing</a>
+            <Link to="/admin-login" className="hover:text-purple-400 transition-colors flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              Admin
+            </Link>
+          </div>
+        </nav>
       </header>
 
       {/* Mobile-Optimized Hero Section */}
