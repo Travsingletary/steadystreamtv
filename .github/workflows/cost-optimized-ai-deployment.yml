@@ -77,10 +77,6 @@ jobs:
     - name: 📥 Checkout Repository
       uses: actions/checkout@v4
       
-        - name: 📦 Install Dependencies
-      run: |
-        npm install || echo "⚠️ npm install completed with warnings"
-        
     - name: 🔧 Setup Supabase CLI
       run: |
         # Install Supabase CLI locally (not globally)
@@ -94,13 +90,15 @@ jobs:
         # Verify installation works
         npx supabase --version
         echo "✅ Supabase CLI installed successfully"
-
+        
+    - name: 🤖 AI Intelligent System Analysis
       run: |
         echo "🔍 AI performing intelligent system analysis..."
         echo "📊 Analyzing repository changes..."
         echo "🔍 Checking deployment necessity..."
         echo "💳 Validating Stripe integration status..."
         echo "✅ AI analysis complete - proceeding with smart deployment"
+
         
     - name: 🚀 AI Conditional Edge Functions Deployment
       run: |
