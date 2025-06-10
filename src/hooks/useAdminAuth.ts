@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -61,6 +62,24 @@ export const useAdminAuth = () => {
     checkAdminStatus();
   }, [navigate]);
 
+  // Check for password reset on component mount
+  useEffect(() => {
+    const checkForPasswordReset = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error && error.message.includes('Email link is invalid or has expired')) {
+        toast({
+          title: "Invalid Link",
+          description: "The password reset link has expired. Please request a new one.",
+          variant: "destructive",
+        });
+        setIsResetMode(true);
+      }
+    };
+
+    checkForPasswordReset();
+  }, [toast]);
+
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
 
@@ -115,7 +134,7 @@ export const useAdminAuth = () => {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/admin-login`,
+        redirectTo: `${window.location.origin}/admin-login?reset=true`,
       });
 
       if (error) {
