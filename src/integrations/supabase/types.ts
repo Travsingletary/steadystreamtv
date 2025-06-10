@@ -461,6 +461,10 @@ export type Database = {
         Args: Record<PropertyKey, never> | { playlist_token: string }
         Returns: string
       }
+      make_user_admin: {
+        Args: { user_email: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

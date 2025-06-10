@@ -1,17 +1,18 @@
 
 import { CustomDashboardAdmin } from "@/components/CustomDashboardAdmin";
+import { AdminRoute } from "@/components/admin/AdminRoute";
 import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
 
 const CustomDashboardAdminPage = () => {
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <div className="pt-16">
-        <CustomDashboardAdmin />
+    <AdminRoute>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <div className="pt-16">
+          <CustomDashboardAdmin />
+        </div>
       </div>
-      <FooterSection />
-    </div>
+    </AdminRoute>
   );
 };
 

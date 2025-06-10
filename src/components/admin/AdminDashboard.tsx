@@ -3,12 +3,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { UserManagement } from "./UserManagement";
 import { SubscriptionAnalytics } from "./SubscriptionAnalytics";
 import { RevenueTracking } from "./RevenueTracking";
 import { MegaOTTCredits } from "./MegaOTTCredits";
-import { Users, CreditCard, TrendingUp, DollarSign } from "lucide-react";
+import { Users, CreditCard, TrendingUp, DollarSign, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AdminStats {
   totalUsers: number;
@@ -26,6 +28,7 @@ export const AdminDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAdminStats();
@@ -78,9 +81,18 @@ export const AdminDashboard = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
-        <p className="text-gray-400">Manage users, subscriptions, and monitor platform performance</p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+          <p className="text-gray-400">Manage users, subscriptions, and monitor platform performance</p>
+        </div>
+        <Button
+          onClick={() => navigate('/custom-dashboard-admin')}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Custom Dashboard Manager
+        </Button>
       </div>
 
       {/* Stats Overview */}
