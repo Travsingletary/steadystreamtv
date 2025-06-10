@@ -1,12 +1,44 @@
 
 import React, { useState } from 'react';
 
-// 🧪 MEGAOTT API TESTER COMPONENT
+// Type definitions for better TypeScript support
+interface TestResult {
+  success: boolean;
+  status?: number;
+  statusText?: string;
+  data?: any;
+  error?: string;
+  timestamp: string;
+}
 
+interface TestConfig {
+  name: string;
+  title: string;
+  description: string;
+  endpoint: string;
+  method: string;
+  body?: any;
+  requiresCredentials?: boolean;
+}
+
+interface LoadingState {
+  [key: string]: boolean;
+}
+
+interface ResultsState {
+  [key: string]: TestResult;
+}
+
+interface TestCredentials {
+  username: string;
+  password: string;
+}
+
+// 🧪 MEGAOTT API TESTER COMPONENT
 export const MegaOTTAPITester = () => {
-  const [results, setResults] = useState({});
-  const [loading, setLoading] = useState({});
-  const [testCredentials, setTestCredentials] = useState({
+  const [results, setResults] = useState<ResultsState>({});
+  const [loading, setLoading] = useState<LoadingState>({});
+  const [testCredentials, setTestCredentials] = useState<TestCredentials>({
     username: '',
     password: ''
   });
@@ -17,7 +49,7 @@ export const MegaOTTAPITester = () => {
     apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
   };
 
-  const testAPI = async (testName, endpoint, method = 'GET', body = null, headers = {}) => {
+  const testAPI = async (testName: string, endpoint: string, method: string = 'GET', body: any = null, headers: Record<string, string> = {}) => {
     setLoading(prev => ({ ...prev, [testName]: true }));
     
     try {
@@ -53,7 +85,7 @@ export const MegaOTTAPITester = () => {
         }
       }));
 
-    } catch (error) {
+    } catch (error: any) {
       setResults(prev => ({
         ...prev,
         [testName]: {
@@ -67,7 +99,7 @@ export const MegaOTTAPITester = () => {
     }
   };
 
-  const tests = [
+  const tests: TestConfig[] = [
     {
       name: 'basic_auth',
       title: '🔐 Basic Authentication',
@@ -112,7 +144,7 @@ export const MegaOTTAPITester = () => {
     }
   ];
 
-  const advancedTests = [
+  const advancedTests: TestConfig[] = [
     {
       name: 'user_login',
       title: '🔑 User Login Test',
@@ -151,7 +183,7 @@ export const MegaOTTAPITester = () => {
     }
   };
 
-  const runAdvancedTest = async (test) => {
+  const runAdvancedTest = async (test: TestConfig) => {
     if (test.requiresCredentials && (!testCredentials.username || !testCredentials.password)) {
       alert('Please enter test credentials first');
       return;
@@ -164,7 +196,7 @@ export const MegaOTTAPITester = () => {
     await testAPI(test.name, test.endpoint, test.method, body);
   };
 
-  const copyAsCurl = (test) => {
+  const copyAsCurl = (test: TestConfig) => {
     const headers = [
       `-H "Authorization: Bearer ${MEGAOTT_CONFIG.apiKey}"`,
       `-H "Content-Type: application/json"`
@@ -178,7 +210,7 @@ export const MegaOTTAPITester = () => {
     alert('cURL command copied to clipboard!');
   };
 
-  const ResultDisplay = ({ testName, result }) => {
+  const ResultDisplay = ({ testName, result }: { testName: string; result: TestResult | undefined }) => {
     if (!result) return null;
 
     return (
