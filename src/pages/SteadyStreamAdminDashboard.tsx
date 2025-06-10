@@ -16,12 +16,9 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/Navbar";
-import FooterSection from "@/components/FooterSection";
 import { 
   Users, 
   Plus, 
-  Edit, 
   Trash2, 
   Shield, 
   LogOut, 
@@ -80,14 +77,9 @@ const SteadyStreamAdminDashboard = () => {
           return;
         }
 
-        const { data: adminRole } = await supabase
-          .from('admin_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .single();
+        const { data: isAdmin } = await supabase.rpc('is_admin', { user_id: user.id });
 
-        if (!adminRole) {
+        if (!isAdmin) {
           navigate('/admin-login');
           return;
         }
@@ -104,15 +96,13 @@ const SteadyStreamAdminDashboard = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('steadystream_users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_steadystream_users');
 
       if (error) throw error;
 
-      setUsers(data || []);
-      calculateStats(data || []);
+      const usersData = data || [];
+      setUsers(usersData);
+      calculateStats(usersData);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -174,37 +164,28 @@ const SteadyStreamAdminDashboard = () => {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + newUser.expiry_days);
 
-      // Create user in steadystream_users table
-      const { data: userData, error: userError } = await supabase
-        .from('steadystream_users')
-        .insert({
-          full_name: newUser.full_name,
-          email: newUser.email,
-          username: newUser.username,
-          password: newUser.password,
-          subscription_plan: newUser.subscription_plan,
-          subscription_status: 'active',
-          max_connections: newUser.max_connections,
-          expiry_date: expiryDate.toISOString(),
-          is_active: true
-        })
-        .select()
-        .single();
+      // Create user using RPC function
+      const { data: userId, error: userError } = await supabase.rpc('create_steadystream_user', {
+        p_full_name: newUser.full_name,
+        p_email: newUser.email,
+        p_username: newUser.username,
+        p_password: newUser.password,
+        p_subscription_plan: newUser.subscription_plan,
+        p_max_connections: newUser.max_connections,
+        p_expiry_date: expiryDate.toISOString()
+      });
 
       if (userError) throw userError;
 
-      // Create playlist entry
+      // Create playlist entry using RPC function
       const playlistUrl = `${window.location.origin}/api/playlist/${playlistToken}.m3u8`;
       
-      const { error: playlistError } = await supabase
-        .from('steadystream_playlists')
-        .insert({
-          steadystream_user_id: userData.id,
-          playlist_url: playlistUrl,
-          activation_code: activationCode,
-          playlist_token: playlistToken,
-          is_active: true
-        });
+      const { error: playlistError } = await supabase.rpc('create_steadystream_playlist', {
+        p_user_id: userId,
+        p_playlist_url: playlistUrl,
+        p_activation_code: activationCode,
+        p_playlist_token: playlistToken
+      });
 
       if (playlistError) throw playlistError;
 
@@ -242,10 +223,9 @@ const SteadyStreamAdminDashboard = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('steadystream_users')
-        .delete()
-        .eq('id', userId);
+      const { error } = await supabase.rpc('delete_steadystream_user', { 
+        p_user_id: userId 
+      });
 
       if (error) throw error;
 

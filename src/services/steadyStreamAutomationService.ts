@@ -1,8 +1,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import type { UserData } from './types';
 
-export interface SteadyStreamUserData extends UserData {
+export interface SteadyStreamUserData {
+  name: string;
+  email: string;
+  password: string;
+  plan: 'trial' | 'standard' | 'premium' | 'ultimate';
   username?: string;
 }
 
@@ -43,42 +46,32 @@ export class SteadyStreamAutomationService {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + expiryDays);
 
-      // Create user in our SteadyStream system
-      const { data: steadyStreamUser, error: userError } = await supabase
-        .from('steadystream_users')
-        .insert({
-          full_name: userData.name,
-          email: userData.email,
-          username: username,
-          password: password,
-          subscription_plan: userData.plan || 'trial',
-          subscription_status: 'active',
-          max_connections: this.getMaxConnections(userData.plan || 'trial'),
-          expiry_date: expiryDate.toISOString(),
-          is_active: true,
-          trial_end_date: userData.plan === 'trial' ? expiryDate.toISOString() : null
-        })
-        .select()
-        .single();
+      // Create user in our SteadyStream system using raw SQL
+      const { data: steadyStreamUser, error: userError } = await supabase.rpc('create_steadystream_user', {
+        p_full_name: userData.name,
+        p_email: userData.email,
+        p_username: username,
+        p_password: password,
+        p_subscription_plan: userData.plan || 'trial',
+        p_max_connections: this.getMaxConnections(userData.plan || 'trial'),
+        p_expiry_date: expiryDate.toISOString()
+      });
 
       if (userError) {
         throw new Error(`User creation failed: ${userError.message}`);
       }
 
-      console.log('✅ SteadyStream user created:', steadyStreamUser.id);
+      console.log('✅ SteadyStream user created');
 
-      // Create playlist entry
+      // Create playlist entry using raw SQL
       const playlistUrl = `${window.location.origin}/api/playlist/${playlistToken}.m3u8`;
       
-      const { error: playlistError } = await supabase
-        .from('steadystream_playlists')
-        .insert({
-          steadystream_user_id: steadyStreamUser.id,
-          playlist_url: playlistUrl,
-          activation_code: activationCode,
-          playlist_token: playlistToken,
-          is_active: true
-        });
+      const { error: playlistError } = await supabase.rpc('create_steadystream_playlist', {
+        p_user_id: steadyStreamUser,
+        p_playlist_url: playlistUrl,
+        p_activation_code: activationCode,
+        p_playlist_token: playlistToken
+      });
 
       if (playlistError) {
         throw new Error(`Playlist creation failed: ${playlistError.message}`);
@@ -94,25 +87,22 @@ export class SteadyStreamAutomationService {
           options: {
             data: {
               full_name: userData.name,
-              steadystream_user_id: steadyStreamUser.id
+              steadystream_user_id: steadyStreamUser
             }
           }
         });
 
         if (authData.user) {
-          // Create profile entry
-          await supabase
-            .from('profiles')
-            .insert({
-              id: authData.user.id,
-              name: userData.name,
-              email: userData.email,
-              subscription_tier: userData.plan || 'trial',
-              subscription_status: 'active',
-              trial_end_date: userData.plan === 'trial' ? expiryDate.toISOString() : null,
-              xtream_username: username,
-              xtream_password: password
-            });
+          // Create profile entry using raw SQL
+          await supabase.rpc('create_user_profile', {
+            p_user_id: authData.user.id,
+            p_name: userData.name,
+            p_email: userData.email,
+            p_subscription_tier: userData.plan || 'trial',
+            p_trial_end_date: userData.plan === 'trial' ? expiryDate.toISOString() : null,
+            p_xtream_username: username,
+            p_xtream_password: password
+          });
         }
       } catch (authError) {
         console.warn('Auth user creation failed (non-critical):', authError);
@@ -132,7 +122,7 @@ export class SteadyStreamAutomationService {
 
       return {
         success: true,
-        user: steadyStreamUser,
+        user: { id: steadyStreamUser },
         credentials: {
           username,
           password,
