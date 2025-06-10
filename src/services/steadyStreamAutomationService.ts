@@ -50,19 +50,22 @@ export class SteadyStreamAutomationService {
 
       // Create user in our SteadyStream system using enhanced API service
       const userResult = await EnhancedApiService.safeQuery(
-        () => (supabase as any)
-          .from('steadystream_users')
-          .insert({
-            full_name: userData.name,
-            email: userData.email,
-            username: username,
-            password: password,
-            subscription_plan: userData.plan || 'trial',
-            max_connections: this.getMaxConnections(userData.plan || 'trial'),
-            expiry_date: expiryDate.toISOString()
-          })
-          .select()
-          .single(),
+        async () => {
+          const { data, error } = await supabase
+            .from('steadystream_users')
+            .insert({
+              full_name: userData.name,
+              email: userData.email,
+              username: username,
+              password: password,
+              subscription_plan: userData.plan || 'trial',
+              max_connections: this.getMaxConnections(userData.plan || 'trial'),
+              expiry_date: expiryDate.toISOString()
+            })
+            .select()
+            .single();
+          return { data, error };
+        },
         'SteadyStream user creation'
       );
 
@@ -77,14 +80,17 @@ export class SteadyStreamAutomationService {
       const playlistUrl = `${window.location.origin}/api/playlist/${playlistToken}.m3u8`;
       
       const playlistResult = await EnhancedApiService.safeQuery(
-        () => (supabase as any)
-          .from('steadystream_playlists')
-          .insert({
-            steadystream_user_id: steadyStreamUser.id,
-            playlist_url: playlistUrl,
-            activation_code: activationCode,
-            playlist_token: playlistToken
-          }),
+        async () => {
+          const { data, error } = await supabase
+            .from('steadystream_playlists')
+            .insert({
+              steadystream_user_id: steadyStreamUser.id,
+              playlist_url: playlistUrl,
+              activation_code: activationCode,
+              playlist_token: playlistToken
+            });
+          return { data, error };
+        },
         'Playlist creation'
       );
 
@@ -110,13 +116,16 @@ export class SteadyStreamAutomationService {
         if (authResult.data?.user) {
           // Create profile entry using enhanced API service
           await EnhancedApiService.safeQuery(
-            () => supabase
-              .from('profiles')
-              .insert({
-                id: authResult.data.user.id,
-                full_name: userData.name,
-                email: userData.email
-              }),
+            async () => {
+              const { data, error } = await supabase
+                .from('profiles')
+                .insert({
+                  id: authResult.data.user.id,
+                  full_name: userData.name,
+                  email: userData.email
+                });
+              return { data, error };
+            },
             'Profile creation'
           );
         }

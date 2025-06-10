@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,7 +7,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { setupGlobalErrorHandlers } from "@/utils/errorHandling";
+import { navItems } from "./nav-items";
 import Index from "./pages/Index";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 const queryClient = new QueryClient({
   defaultOptions: {

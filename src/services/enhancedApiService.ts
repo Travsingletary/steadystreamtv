@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { handleApiError, safeFetch } from "@/utils/errorHandling";
+import { handleApiError, safeJsonParse } from "@/utils/errorHandling";
+import { safeApiCall, safeApiCallWithRetry } from "@/utils/safeApiCall";
 
 // Enhanced Supabase wrapper with error handling
 export class EnhancedApiService {
@@ -17,14 +18,14 @@ export class EnhancedApiService {
       try {
         console.log(`🔄 ${context} - Attempt ${attempt}/${retries}`);
         
-        const { data, error } = await queryFn();
+        const result = await queryFn();
         
-        if (error) {
-          throw error;
+        if (result.error) {
+          throw result.error;
         }
         
         console.log(`✅ ${context} successful`);
-        return { data, error: null };
+        return { data: result.data, error: null };
         
       } catch (error: any) {
         console.error(`❌ ${context} failed (attempt ${attempt}):`, error);
@@ -119,6 +120,16 @@ export class EnhancedApiService {
       }
       
       return { data: null, error: friendlyError };
+    }
+  }
+
+  // Safe external API call wrapper
+  static async safeExternalApiCall(url: string, options: RequestInit = {}, retries: number = 3) {
+    try {
+      return await safeApiCallWithRetry(url, options, retries);
+    } catch (error: any) {
+      const friendlyError = handleApiError(error, 'External API call');
+      throw new Error(friendlyError);
     }
   }
 }
