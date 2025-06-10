@@ -9,6 +9,7 @@ import ConnectApps from "./pages/ConnectApps";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import SteadyStreamAdminDashboard from "./pages/SteadyStreamAdminDashboard";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import TestXtreamAccount from "./pages/TestXtreamAccount";
 import CustomDashboardAdminPage from "./pages/CustomDashboardAdmin";
 import MegaOTTTesterPage from "./pages/MegaOTTTester";
@@ -50,6 +51,10 @@ export const navItems = [
   {
     to: "/admin",
     page: <SteadyStreamAdminDashboard />,
+  },
+  {
+    to: "/super-admin",
+    page: <SuperAdminDashboard />,
   },
   {
     to: "/custom-dashboard-admin",
