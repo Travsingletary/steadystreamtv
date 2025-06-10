@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,6 +17,7 @@ export const useAdminAuth = () => {
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -32,6 +33,22 @@ export const useAdminAuth = () => {
       email: "",
     },
   });
+
+  // Check for password reset on component mount
+  useEffect(() => {
+    const type = searchParams.get('type');
+    const accessToken = searchParams.get('access_token');
+    const refreshToken = searchParams.get('refresh_token');
+    
+    console.log('URL params:', { type, accessToken: !!accessToken, refreshToken: !!refreshToken });
+    
+    if (type === 'recovery' && accessToken && refreshToken) {
+      console.log('Password reset detected from URL');
+      setIsPasswordReset(true);
+      setIsResetMode(false);
+      setResetEmailSent(false);
+    }
+  }, [searchParams]);
 
   // Check if user is already logged in and is admin
   useEffect(() => {
@@ -76,19 +93,13 @@ export const useAdminAuth = () => {
           setResetEmailSent(false);
         } else if (event === 'SIGNED_IN' && session) {
           // Check if this is from a password reset
-          const url = new URL(window.location.href);
-          const accessToken = url.searchParams.get('access_token');
-          const refreshToken = url.searchParams.get('refresh_token');
-          const type = url.searchParams.get('type');
+          const type = searchParams.get('type');
           
-          if (type === 'recovery' || (accessToken && refreshToken)) {
+          if (type === 'recovery') {
             console.log('Password reset session detected');
             setIsPasswordReset(true);
             setIsResetMode(false);
             setResetEmailSent(false);
-            
-            // Clean up the URL
-            window.history.replaceState({}, document.title, '/admin-login');
           } else {
             // Regular login - check admin status
             try {
@@ -113,21 +124,7 @@ export const useAdminAuth = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  // Check for password reset on component mount
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const type = url.searchParams.get('type');
-    const accessToken = url.searchParams.get('access_token');
-    
-    if (type === 'recovery' || accessToken) {
-      console.log('Password reset detected from URL');
-      setIsPasswordReset(true);
-      // Clean up the URL
-      window.history.replaceState({}, document.title, '/admin-login');
-    }
-  }, []);
+  }, [navigate, searchParams]);
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
@@ -182,8 +179,12 @@ export const useAdminAuth = () => {
     setIsLoading(true);
 
     try {
+      // Use the current window location as the redirect URL
+      const redirectUrl = window.location.origin + '/admin-login';
+      console.log('Sending reset email with redirect URL:', redirectUrl);
+
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/admin-login`,
+        redirectTo: redirectUrl,
       });
 
       if (error) {
@@ -193,9 +194,10 @@ export const useAdminAuth = () => {
       setResetEmailSent(true);
       toast({
         title: "Reset email sent",
-        description: "Check your email for a password reset link",
+        description: "Check your email for a password reset link. The link will expire in 1 hour.",
       });
     } catch (error: any) {
+      console.error('Reset email error:', error);
       toast({
         title: "Reset failed",
         description: error.message || "Failed to send reset email",
@@ -211,6 +213,8 @@ export const useAdminAuth = () => {
     setResetEmailSent(false);
     setIsPasswordReset(false);
     resetForm.reset();
+    // Clear URL parameters
+    window.history.replaceState({}, document.title, '/admin-login');
   };
 
   const handleForgotPassword = () => {
@@ -224,6 +228,8 @@ export const useAdminAuth = () => {
 
   const handlePasswordUpdateComplete = () => {
     setIsPasswordReset(false);
+    // Clear URL parameters
+    window.history.replaceState({}, document.title, '/admin-login');
     toast({
       title: "Password updated successfully",
       description: "You can now log in with your new password",

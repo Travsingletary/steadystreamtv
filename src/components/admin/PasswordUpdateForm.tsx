@@ -6,7 +6,7 @@ import { z } from "zod";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock } from "lucide-react";
+import { Lock, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,6 +24,7 @@ interface PasswordUpdateFormProps {
 
 export const PasswordUpdateForm = ({ onComplete }: PasswordUpdateFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof passwordUpdateSchema>>({
@@ -36,8 +37,16 @@ export const PasswordUpdateForm = ({ onComplete }: PasswordUpdateFormProps) => {
 
   const onSubmit = async (values: z.infer<typeof passwordUpdateSchema>) => {
     setIsLoading(true);
+    setError(null);
 
     try {
+      // Check if we have a valid session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('Invalid or expired reset session. Please request a new password reset.');
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: values.password
       });
@@ -46,15 +55,23 @@ export const PasswordUpdateForm = ({ onComplete }: PasswordUpdateFormProps) => {
         throw error;
       }
 
-      // Sign out after password update to force re-login
+      // Sign out after password update to force re-login with new password
       await supabase.auth.signOut();
+      
+      toast({
+        title: "Password updated successfully",
+        description: "You can now log in with your new password",
+      });
       
       onComplete();
     } catch (error: any) {
       console.error('Password update error:', error);
+      const errorMessage = error.message || "Failed to update password";
+      setError(errorMessage);
+      
       toast({
         title: "Failed to update password",
-        description: error.message || "Please try again",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -63,60 +80,69 @@ export const PasswordUpdateForm = ({ onComplete }: PasswordUpdateFormProps) => {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-white">New Password</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                  <Input
-                    placeholder="Enter your new password"
-                    type="password"
-                    className="pl-10 bg-dark-300 border-gray-700 text-white"
-                    {...field}
-                  />
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <div className="space-y-6">
+      {error && (
+        <div className="p-3 bg-red-900/20 border border-red-700 rounded-md flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-red-400" />
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">New Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                    <Input
+                      placeholder="Enter your new password"
+                      type="password"
+                      className="pl-10 bg-dark-300 border-gray-700 text-white"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-white">Confirm Password</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                  <Input
-                    placeholder="Confirm your new password"
-                    type="password"
-                    className="pl-10 bg-dark-300 border-gray-700 text-white"
-                    {...field}
-                  />
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Confirm Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                    <Input
+                      placeholder="Confirm your new password"
+                      type="password"
+                      className="pl-10 bg-dark-300 border-gray-700 text-white"
+                      {...field}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <Button
-          type="submit"
-          className="w-full bg-gold hover:bg-gold-dark text-black font-semibold"
-          disabled={isLoading}
-        >
-          {isLoading ? "Updating..." : "Update Password"}
-        </Button>
-      </form>
-    </Form>
+          <Button
+            type="submit"
+            className="w-full bg-gold hover:bg-gold-dark text-black font-semibold"
+            disabled={isLoading}
+          >
+            {isLoading ? "Updating..." : "Update Password"}
+          </Button>
+        </form>
+      </Form>
+    </div>
   );
 };
