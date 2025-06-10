@@ -3,11 +3,6 @@ import { useState } from 'react';
 import { SimpleAutomationService } from '@/services/automationService';
 import type { UserData, RegistrationResult } from '@/services/types';
 
-console.log('🔧 useAutomation hook loaded, checking types:', { 
-  UserData: typeof UserData, 
-  RegistrationResult: typeof RegistrationResult 
-});
-
 export const useAutomation = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
