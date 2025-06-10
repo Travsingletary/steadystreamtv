@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -6,7 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { loginSchema, resetSchema } from "@/components/admin/AdminLoginForm";
+import { loginSchema } from "@/components/admin/AdminLoginForm";
+import { resetSchema } from "@/components/admin/PasswordResetForm";
 
 export const useAdminAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
