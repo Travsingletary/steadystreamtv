@@ -7,6 +7,8 @@ import Favorites from "./pages/Favorites";
 import Account from "./pages/Account";
 import ConnectApps from "./pages/ConnectApps";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminLogin from "./pages/AdminLogin";
+import SteadyStreamAdminDashboard from "./pages/SteadyStreamAdminDashboard";
 import TestXtreamAccount from "./pages/TestXtreamAccount";
 import CustomDashboardAdminPage from "./pages/CustomDashboardAdmin";
 import MegaOTTTesterPage from "./pages/MegaOTTTester";
@@ -42,8 +44,12 @@ export const navItems = [
     page: <ConnectApps />,
   },
   {
+    to: "/admin-login",
+    page: <AdminLogin />,
+  },
+  {
     to: "/admin",
-    page: <AdminDashboard />,
+    page: <SteadyStreamAdminDashboard />,
   },
   {
     to: "/custom-dashboard-admin",

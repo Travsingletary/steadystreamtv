@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AutomationModal } from './AutomationModal';
+import { SteadyStreamAutomationModal } from './SteadyStreamAutomationModal';
 import { SuccessModal } from './SuccessModal';
 
 interface IntegratedAutomationProps {
@@ -14,8 +14,14 @@ export const IntegratedAutomation: React.FC<IntegratedAutomationProps> = ({ chil
   const [successData, setSuccessData] = useState<any>(null);
 
   const handleSignupSuccess = (data: any) => {
-    console.log('🎉 Signup success:', data);
-    setSuccessData(data);
+    console.log('🎉 SteadyStream signup success:', data);
+    setSuccessData({
+      userData: data.userData,
+      activationCode: data.credentials.activationCode,
+      playlistUrl: data.credentials.playlistUrl,
+      username: data.credentials.username,
+      password: data.credentials.password
+    });
     setShowSignupModal(false);
     setShowSuccessModal(true);
   };
@@ -31,7 +37,7 @@ export const IntegratedAutomation: React.FC<IntegratedAutomationProps> = ({ chil
         </button>
       )}
 
-      <AutomationModal
+      <SteadyStreamAutomationModal
         isOpen={showSignupModal}
         onClose={() => setShowSignupModal(false)}
         onSuccess={handleSignupSuccess}
