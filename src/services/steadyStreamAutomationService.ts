@@ -4,6 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { MegaOTTService } from './megaOTTService';
+import type { UserData } from './types';
 
 export interface SteadyStreamUserData {
   name: string;
@@ -56,10 +57,25 @@ export class SteadyStreamAutomationService {
       // 3. Create IPTV subscription with fallback
       let iptvCredentials;
       try {
+        // Convert to compatible UserData format
+        const completeUserData: UserData = {
+          name: userData.name,
+          email: userData.email,
+          password: userData.password,
+          plan: userData.plan,
+          deviceType: 'mobile',
+          preferences: {
+            favoriteGenres: ['sports', 'movies', 'news', 'documentary', 'kids', 'entertainment'],
+            parentalControls: false,
+            autoOptimization: true,
+            videoQuality: 'Auto'
+          }
+        };
+
         const subscription = await MegaOTTService.createSubscription(
           authData.user.id,
           userData.plan,
-          userData
+          completeUserData
         );
         
         iptvCredentials = {

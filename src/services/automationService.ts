@@ -1,25 +1,9 @@
-
 // src/services/automationService.ts
 // Enhanced automation service with better error handling
 
 import { supabase } from "@/integrations/supabase/client";
 import { MegaOTTService } from './megaOTTService';
-
-export interface UserData {
-  name: string;
-  email: string;
-  password: string;
-  plan: 'trial' | 'standard' | 'premium' | 'ultimate';
-}
-
-export interface RegistrationResult {
-  success: boolean;
-  error?: string;
-  user?: any;
-  activationCode?: string;
-  playlistUrl?: string;
-  megaottSubscription?: any;
-}
+import type { UserData, RegistrationResult } from './types';
 
 export class SimpleAutomationService {
   static async executeCompleteAutomation(userData: UserData): Promise<RegistrationResult> {
@@ -34,8 +18,8 @@ export class SimpleAutomationService {
           data: {
             full_name: userData.name,
             plan: userData.plan,
-            device_type: 'mobile',
-            preferences: JSON.stringify({
+            device_type: userData.deviceType || 'mobile',
+            preferences: JSON.stringify(userData.preferences || {
               favoriteGenres: ['sports', 'movies', 'news', 'documentary', 'kids', 'entertainment'],
               parentalControls: false,
               autoOptimization: true,
@@ -62,10 +46,22 @@ export class SimpleAutomationService {
       // 3. Create IPTV subscription with enhanced error handling
       let megaottSubscription;
       try {
+        // Create complete userData object for MegaOTTService
+        const completeUserData: UserData = {
+          ...userData,
+          deviceType: userData.deviceType || 'mobile',
+          preferences: userData.preferences || {
+            favoriteGenres: ['sports', 'movies', 'news', 'documentary', 'kids', 'entertainment'],
+            parentalControls: false,
+            autoOptimization: true,
+            videoQuality: 'Auto'
+          }
+        };
+
         megaottSubscription = await MegaOTTService.createSubscription(
           authData.user.id,
           userData.plan,
-          userData
+          completeUserData
         );
         console.log('✅ IPTV subscription created:', megaottSubscription.message);
       } catch (megaottError) {
@@ -110,9 +106,13 @@ export class SimpleAutomationService {
       return {
         success: true,
         user: authData.user,
-        activationCode,
-        playlistUrl: megaottSubscription.playlistUrls?.m3u || 'https://steadystreamtv.com/playlist/demo',
-        megaottSubscription
+        assets: {
+          activationCode,
+          playlistToken: activationCode,
+          playlistUrl: megaottSubscription.playlistUrls?.m3u || 'https://steadystreamtv.com/playlist/demo',
+          qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(megaottSubscription.playlistUrls?.m3u || 'https://steadystreamtv.com/playlist/demo')}`
+        },
+        subscription: megaottSubscription
       };
 
     } catch (error: any) {
@@ -123,4 +123,27 @@ export class SimpleAutomationService {
       };
     }
   }
+}
+
+// Keep the old interface for backward compatibility
+export interface UserData {
+  name: string;
+  email: string;
+  password: string;
+  plan: 'trial' | 'standard' | 'premium' | 'ultimate';
+}
+
+export interface RegistrationResult {
+  success: boolean;
+  error?: string;
+  user?: any;
+  activationCode?: string;
+  playlistUrl?: string;
+  megaottSubscription?: any;
+  assets?: {
+    activationCode: string;
+    playlistToken: string;
+    playlistUrl: string;
+    qrCodeUrl: string;
+  };
 }

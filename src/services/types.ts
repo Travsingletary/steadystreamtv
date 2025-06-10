@@ -7,8 +7,8 @@ export interface UserData {
   email: string;
   password: string;
   plan: 'trial' | 'basic' | 'duo' | 'family' | 'standard' | 'premium' | 'ultimate';
-  deviceType: string;
-  preferences: {
+  deviceType?: string;
+  preferences?: {
     favoriteGenres: string[];
     parentalControls: boolean;
     autoOptimization: boolean;
