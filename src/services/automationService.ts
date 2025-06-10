@@ -1,10 +1,11 @@
-
 // src/services/automationService.ts
 // Enhanced automation service with better error handling
 
 import { supabase } from "@/integrations/supabase/client";
 import { MegaOTTService } from './megaOTTService';
 import type { UserData, RegistrationResult } from './types';
+
+console.log('🔧 AutomationService loaded, types imported:', { UserData: !!UserData, RegistrationResult: !!RegistrationResult });
 
 export class SimpleAutomationService {
   static async executeCompleteAutomation(userData: UserData): Promise<RegistrationResult> {
