@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
-import { SimpleAutomationService, UserData, RegistrationResult } from '@/services/automationService';
+import { SimpleAutomationService } from '@/services/automationService';
+import type { UserData, RegistrationResult } from '@/services/types';
 
 export const useAutomation = () => {
   const [loading, setLoading] = useState(false);
