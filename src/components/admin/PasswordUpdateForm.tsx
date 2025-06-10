@@ -40,28 +40,40 @@ export const PasswordUpdateForm = ({ onComplete }: PasswordUpdateFormProps) => {
     setError(null);
 
     try {
-      // Check if we have a valid session first
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Attempting to update password...');
       
-      if (sessionError || !session) {
-        throw new Error('Invalid or expired reset session. Please request a new password reset.');
+      // Get current session to verify we have a valid reset session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Current session:', session);
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Session error: ' + sessionError.message);
+      }
+      
+      if (!session) {
+        throw new Error('No active session found. Please request a new password reset link.');
       }
 
-      const { error } = await supabase.auth.updateUser({
+      // Update the password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: values.password
       });
 
-      if (error) {
-        throw error;
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        throw updateError;
       }
 
-      // Sign out after password update to force re-login with new password
-      await supabase.auth.signOut();
+      console.log('Password updated successfully');
       
       toast({
         title: "Password updated successfully",
         description: "You can now log in with your new password",
       });
+      
+      // Sign out to force re-login with new password
+      await supabase.auth.signOut();
       
       onComplete();
     } catch (error: any) {

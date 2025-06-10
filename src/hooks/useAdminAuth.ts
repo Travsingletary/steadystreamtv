@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,7 +17,6 @@ export const useAdminAuth = () => {
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -34,21 +33,44 @@ export const useAdminAuth = () => {
     },
   });
 
+  // Helper function to safely get URL parameters
+  const getUrlParams = () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      return {
+        type: urlParams.get('type'),
+        accessToken: urlParams.get('access_token'),
+        refreshToken: urlParams.get('refresh_token'),
+        error: urlParams.get('error'),
+        errorDescription: urlParams.get('error_description')
+      };
+    } catch (error) {
+      console.error('Error parsing URL parameters:', error);
+      return {};
+    }
+  };
+
   // Check for password reset on component mount
   useEffect(() => {
-    const type = searchParams.get('type');
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
+    const params = getUrlParams();
+    console.log('URL params:', params);
     
-    console.log('URL params:', { type, accessToken: !!accessToken, refreshToken: !!refreshToken });
-    
-    if (type === 'recovery' && accessToken && refreshToken) {
+    if (params.type === 'recovery' && params.accessToken && params.refreshToken) {
       console.log('Password reset detected from URL');
       setIsPasswordReset(true);
       setIsResetMode(false);
       setResetEmailSent(false);
     }
-  }, [searchParams]);
+
+    if (params.error) {
+      console.error('Auth error from URL:', params.error, params.errorDescription);
+      toast({
+        title: "Authentication Error",
+        description: params.errorDescription || params.error || "An authentication error occurred",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
 
   // Check if user is already logged in and is admin
   useEffect(() => {
@@ -93,9 +115,9 @@ export const useAdminAuth = () => {
           setResetEmailSent(false);
         } else if (event === 'SIGNED_IN' && session) {
           // Check if this is from a password reset
-          const type = searchParams.get('type');
+          const params = getUrlParams();
           
-          if (type === 'recovery') {
+          if (params.type === 'recovery') {
             console.log('Password reset session detected');
             setIsPasswordReset(true);
             setIsResetMode(false);
@@ -124,7 +146,7 @@ export const useAdminAuth = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, [navigate, searchParams]);
+  }, [navigate]);
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
@@ -180,7 +202,7 @@ export const useAdminAuth = () => {
 
     try {
       // Use the current window location as the redirect URL
-      const redirectUrl = window.location.origin + '/admin-login';
+      const redirectUrl = `${window.location.origin}/admin-login`;
       console.log('Sending reset email with redirect URL:', redirectUrl);
 
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
