@@ -8,8 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, CheckCircle, XCircle } from "lucide-react";
 
 interface Subscription {
-  id: string;
-  user_id: string;
+  id: number; // Changed to number to match database schema
+  user_id: string | null;
   plan: string;
   start_date: string;
   end_date: string;
@@ -133,7 +133,7 @@ export const SubscriptionAnalytics = ({ onStatsUpdate }: SubscriptionAnalyticsPr
                 return (
                   <TableRow key={subscription.id} className="border-gray-700">
                     <TableCell className="text-white font-mono">
-                      {subscription.user_id.slice(0, 8)}...
+                      {subscription.user_id ? subscription.user_id.slice(0, 8) + '...' : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <Badge className={`${getPlanBadgeColor(subscription.plan)} text-white`}>

@@ -5,18 +5,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { DollarSign, TrendingUp, Calendar, CreditCard } from "lucide-react";
 
+interface RevenueMetrics {
+  totalRevenue: number;
+  monthlyRevenue: number;
+  weeklyRevenue: number;
+  totalTransactions: number;
+  activeSubscriptions: number;
+  averageOrderValue: number;
+}
+
 interface RevenueTrackingProps {
   onStatsUpdate: (stats: any) => void;
 }
 
 export const RevenueTracking = ({ onStatsUpdate }: RevenueTrackingProps) => {
-  const [loading, setLoading] = useState(true);
-  const [revenueData, setRevenueData] = useState({
+  const [metrics, setMetrics] = useState<RevenueMetrics>({
     totalRevenue: 0,
     monthlyRevenue: 0,
+    weeklyRevenue: 0,
     totalTransactions: 0,
-    averageTransaction: 0
+    activeSubscriptions: 0,
+    averageOrderValue: 0,
   });
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -26,50 +37,77 @@ export const RevenueTracking = ({ onStatsUpdate }: RevenueTrackingProps) => {
   const fetchRevenueData = async () => {
     try {
       setLoading(true);
-      
-      // Since payments table doesn't exist in the current schema,
-      // we'll calculate estimated revenue based on subscriptions
-      const { data: subscriptions, error } = await supabase
+
+      // Since there's no payments table in the schema, we'll calculate from subscriptions
+      const { data: subscriptions, error: subscriptionsError } = await supabase
         .from('subscriptions')
-        .select('plan, start_date, end_date');
+        .select('*');
 
-      if (error) throw error;
+      if (subscriptionsError) throw subscriptionsError;
 
-      // Estimate revenue based on plan types
-      const planPrices = {
+      // Define plan pricing
+      const planPricing = {
         trial: 0,
         standard: 29.99,
         premium: 49.99,
-        ultimate: 79.99
+        ultimate: 79.99,
       };
 
+      const now = new Date();
+      const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // Calculate metrics
       let totalRevenue = 0;
       let monthlyRevenue = 0;
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
+      let weeklyRevenue = 0;
+      let activeCount = 0;
 
       subscriptions?.forEach(sub => {
-        const price = planPrices[sub.plan as keyof typeof planPrices] || 0;
-        totalRevenue += price;
-        
         const startDate = new Date(sub.start_date);
-        if (startDate.getMonth() === currentMonth && startDate.getFullYear() === currentYear) {
-          monthlyRevenue += price;
+        const endDate = new Date(sub.end_date);
+        const price = planPricing[sub.plan as keyof typeof planPricing] || 0;
+
+        // Only count paid plans
+        if (price > 0) {
+          totalRevenue += price;
+
+          if (startDate >= oneMonthAgo) {
+            monthlyRevenue += price;
+          }
+
+          if (startDate >= oneWeekAgo) {
+            weeklyRevenue += price;
+          }
+
+          // Count as active if end date is in the future
+          if (endDate > now) {
+            activeCount++;
+          }
         }
       });
 
-      const avgTransaction = subscriptions?.length > 0 ? totalRevenue / subscriptions.length : 0;
+      const totalTransactions = subscriptions?.filter(sub => 
+        planPricing[sub.plan as keyof typeof planPricing] > 0
+      ).length || 0;
 
-      const calculatedData = {
+      const averageOrderValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+
+      const calculatedMetrics: RevenueMetrics = {
         totalRevenue,
         monthlyRevenue,
-        totalTransactions: subscriptions?.length || 0,
-        averageTransaction: avgTransaction
+        weeklyRevenue,
+        totalTransactions,
+        activeSubscriptions: activeCount,
+        averageOrderValue,
       };
 
-      setRevenueData(calculatedData);
-      onStatsUpdate({ totalRevenue });
-      
+      setMetrics(calculatedMetrics);
+      onStatsUpdate({ 
+        totalRevenue: totalRevenue,
+        monthlyRevenue: monthlyRevenue 
+      });
+
     } catch (error: any) {
       console.error('Error fetching revenue data:', error);
       toast({
@@ -93,91 +131,119 @@ export const RevenueTracking = ({ onStatsUpdate }: RevenueTrackingProps) => {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-dark-200 border-gray-800">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Revenue Tracking
-          </CardTitle>
-          <CardDescription className="text-gray-400">
-            Monitor platform revenue and transaction analytics
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-dark-300 rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Total Revenue</p>
-                  <p className="text-2xl font-bold text-white">
-                    ${revenueData.totalRevenue.toFixed(2)}
-                  </p>
-                </div>
-                <DollarSign className="h-8 w-8 text-gold" />
+    <Card className="bg-dark-200 border-gray-800">
+      <CardHeader>
+        <CardTitle className="text-white flex items-center gap-2">
+          <DollarSign className="h-5 w-5" />
+          Revenue Tracking
+        </CardTitle>
+        <CardDescription className="text-gray-400">
+          Monitor subscription revenue and financial metrics
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Total Revenue */}
+          <div className="bg-dark-300 p-6 rounded-lg border border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Revenue</p>
+                <p className="text-2xl font-bold text-green-400">
+                  ${metrics.totalRevenue.toFixed(2)}
+                </p>
               </div>
-            </div>
-
-            <div className="bg-dark-300 rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">This Month</p>
-                  <p className="text-2xl font-bold text-white">
-                    ${revenueData.monthlyRevenue.toFixed(2)}
-                  </p>
-                </div>
-                <Calendar className="h-8 w-8 text-blue-400" />
-              </div>
-            </div>
-
-            <div className="bg-dark-300 rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Total Transactions</p>
-                  <p className="text-2xl font-bold text-white">
-                    {revenueData.totalTransactions}
-                  </p>
-                </div>
-                <CreditCard className="h-8 w-8 text-green-400" />
-              </div>
-            </div>
-
-            <div className="bg-dark-300 rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Avg Transaction</p>
-                  <p className="text-2xl font-bold text-white">
-                    ${revenueData.averageTransaction.toFixed(2)}
-                  </p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-purple-400" />
-              </div>
+              <DollarSign className="h-8 w-8 text-green-400" />
             </div>
           </div>
 
-          <div className="mt-6 p-4 bg-dark-300 rounded-lg border border-gray-700">
-            <h3 className="text-lg font-semibold text-white mb-2">Revenue Breakdown by Plan</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-400">Trial</p>
-                <p className="text-lg font-bold text-yellow-400">$0.00</p>
+          {/* Monthly Revenue */}
+          <div className="bg-dark-300 p-6 rounded-lg border border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">This Month</p>
+                <p className="text-2xl font-bold text-blue-400">
+                  ${metrics.monthlyRevenue.toFixed(2)}
+                </p>
               </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-400">Standard</p>
-                <p className="text-lg font-bold text-blue-400">$29.99</p>
+              <Calendar className="h-8 w-8 text-blue-400" />
+            </div>
+          </div>
+
+          {/* Weekly Revenue */}
+          <div className="bg-dark-300 p-6 rounded-lg border border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">This Week</p>
+                <p className="text-2xl font-bold text-purple-400">
+                  ${metrics.weeklyRevenue.toFixed(2)}
+                </p>
               </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-400">Premium</p>
-                <p className="text-lg font-bold text-purple-400">$49.99</p>
+              <TrendingUp className="h-8 w-8 text-purple-400" />
+            </div>
+          </div>
+
+          {/* Total Transactions */}
+          <div className="bg-dark-300 p-6 rounded-lg border border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Transactions</p>
+                <p className="text-2xl font-bold text-yellow-400">
+                  {metrics.totalTransactions}
+                </p>
               </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-400">Ultimate</p>
-                <p className="text-lg font-bold text-gold">$79.99</p>
+              <CreditCard className="h-8 w-8 text-yellow-400" />
+            </div>
+          </div>
+
+          {/* Active Subscriptions */}
+          <div className="bg-dark-300 p-6 rounded-lg border border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Active Subscriptions</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {metrics.activeSubscriptions}
+                </p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-400" />
+            </div>
+          </div>
+
+          {/* Average Order Value */}
+          <div className="bg-dark-300 p-6 rounded-lg border border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Avg Order Value</p>
+                <p className="text-2xl font-bold text-blue-400">
+                  ${metrics.averageOrderValue.toFixed(2)}
+                </p>
+              </div>
+              <DollarSign className="h-8 w-8 text-blue-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* Revenue Summary */}
+        <div className="mt-8 bg-dark-300 p-6 rounded-lg border border-gray-700">
+          <h4 className="text-lg font-semibold text-white mb-4">Revenue Summary</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 className="text-sm font-medium text-gray-400 mb-2">Quick Stats</h5>
+              <ul className="space-y-2 text-sm text-gray-300">
+                <li>• MRR (Monthly Recurring): ${(metrics.activeSubscriptions * metrics.averageOrderValue).toFixed(2)}</li>
+                <li>• Conversion Rate: {metrics.totalTransactions > 0 ? ((metrics.totalTransactions / metrics.totalTransactions) * 100).toFixed(1) : 0}%</li>
+                <li>• Revenue Growth: +{metrics.monthlyRevenue > 0 ? ((metrics.weeklyRevenue / metrics.monthlyRevenue) * 100).toFixed(1) : 0}% this week</li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="text-sm font-medium text-gray-400 mb-2">Plan Distribution</h5>
+              <div className="text-sm text-gray-300">
+                <p>Based on subscription data from your database</p>
+                <p className="text-xs text-gray-400 mt-1">Revenue calculated from plan pricing</p>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

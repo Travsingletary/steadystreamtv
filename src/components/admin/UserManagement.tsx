@@ -4,18 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, User, Mail, Calendar } from "lucide-react";
 
 interface UserProfile {
   id: string;
+  user_id: string;
   full_name: string;
   email: string;
-  subscription_plan: string;
-  activation_code: string;
-  created_at: string;
+  subscription_plan: string | null;
+  activation_code: string | null;
+  created_at: string | null;
 }
 
 interface UserManagementProps {
@@ -63,7 +63,7 @@ export const UserManagement = ({ onStatsUpdate }: UserManagementProps) => {
     user.subscription_plan?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getPlanBadgeColor = (plan: string) => {
+  const getPlanBadgeColor = (plan: string | null) => {
     switch (plan) {
       case 'trial':
         return 'bg-yellow-500';
@@ -149,7 +149,7 @@ export const UserManagement = ({ onStatsUpdate }: UserManagementProps) => {
                   <TableCell className="text-gray-400">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
                     </div>
                   </TableCell>
                 </TableRow>
