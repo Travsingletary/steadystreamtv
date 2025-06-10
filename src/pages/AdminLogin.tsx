@@ -38,10 +38,15 @@ const AdminLogin = () => {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
-          // Check if user has admin role using RPC function
-          const { data: isAdmin } = await supabase.rpc('is_admin', { user_id: user.id });
+          // Check if user has admin role using direct query
+          const { data: adminRole } = await supabase
+            .from('admin_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('role', 'admin')
+            .single();
 
-          if (isAdmin) {
+          if (adminRole) {
             navigate('/admin');
             return;
           }
@@ -74,10 +79,15 @@ const AdminLogin = () => {
         throw new Error('Login failed');
       }
 
-      // Check if user has admin role using RPC function
-      const { data: isAdmin, error: roleError } = await supabase.rpc('is_admin', { user_id: data.user.id });
+      // Check if user has admin role using direct query
+      const { data: adminRole, error: roleError } = await supabase
+        .from('admin_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .eq('role', 'admin')
+        .single();
 
-      if (roleError || !isAdmin) {
+      if (roleError || !adminRole) {
         // Sign out the user if they're not an admin
         await supabase.auth.signOut();
         throw new Error('Access denied. Admin privileges required.');

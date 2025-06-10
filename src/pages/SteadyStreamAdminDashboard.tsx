@@ -77,9 +77,14 @@ const SteadyStreamAdminDashboard = () => {
           return;
         }
 
-        const { data: isAdmin } = await supabase.rpc('is_admin', { user_id: user.id });
+        const { data: adminRole } = await supabase
+          .from('admin_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .single();
 
-        if (!isAdmin) {
+        if (!adminRole) {
           navigate('/admin-login');
           return;
         }
@@ -96,7 +101,10 @@ const SteadyStreamAdminDashboard = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_steadystream_users');
+      const { data, error } = await supabase
+        .from('steadystream_users')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -164,28 +172,34 @@ const SteadyStreamAdminDashboard = () => {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + newUser.expiry_days);
 
-      // Create user using RPC function
-      const { data: userId, error: userError } = await supabase.rpc('create_steadystream_user', {
-        p_full_name: newUser.full_name,
-        p_email: newUser.email,
-        p_username: newUser.username,
-        p_password: newUser.password,
-        p_subscription_plan: newUser.subscription_plan,
-        p_max_connections: newUser.max_connections,
-        p_expiry_date: expiryDate.toISOString()
-      });
+      // Create user using direct insert
+      const { data: userData, error: userError } = await supabase
+        .from('steadystream_users')
+        .insert({
+          full_name: newUser.full_name,
+          email: newUser.email,
+          username: newUser.username,
+          password: newUser.password,
+          subscription_plan: newUser.subscription_plan,
+          max_connections: newUser.max_connections,
+          expiry_date: expiryDate.toISOString()
+        })
+        .select()
+        .single();
 
       if (userError) throw userError;
 
-      // Create playlist entry using RPC function
+      // Create playlist entry using direct insert
       const playlistUrl = `${window.location.origin}/api/playlist/${playlistToken}.m3u8`;
       
-      const { error: playlistError } = await supabase.rpc('create_steadystream_playlist', {
-        p_user_id: userId,
-        p_playlist_url: playlistUrl,
-        p_activation_code: activationCode,
-        p_playlist_token: playlistToken
-      });
+      const { error: playlistError } = await supabase
+        .from('steadystream_playlists')
+        .insert({
+          steadystream_user_id: userData.id,
+          playlist_url: playlistUrl,
+          activation_code: activationCode,
+          playlist_token: playlistToken
+        });
 
       if (playlistError) throw playlistError;
 
@@ -223,9 +237,10 @@ const SteadyStreamAdminDashboard = () => {
     }
 
     try {
-      const { error } = await supabase.rpc('delete_steadystream_user', { 
-        p_user_id: userId 
-      });
+      const { error } = await supabase
+        .from('steadystream_users')
+        .delete()
+        .eq('id', userId);
 
       if (error) throw error;
 

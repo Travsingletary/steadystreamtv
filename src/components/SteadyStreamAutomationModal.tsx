@@ -23,11 +23,14 @@ export const SteadyStreamAutomationModal: React.FC<AutomationModalProps> = ({
     name: '',
     email: '',
     password: '',
-    plan: 'trial'
+    plan: 'trial' as 'trial' | 'standard' | 'premium' | 'ultimate'
   });
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ 
+      ...prev, 
+      [field]: field === 'plan' ? value as 'trial' | 'standard' | 'premium' | 'ultimate' : value 
+    }));
   };
 
   const handleSubmit = async () => {

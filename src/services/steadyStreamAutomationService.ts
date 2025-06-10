@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface SteadyStreamUserData {
@@ -46,16 +45,20 @@ export class SteadyStreamAutomationService {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + expiryDays);
 
-      // Create user in our SteadyStream system using raw SQL
-      const { data: steadyStreamUser, error: userError } = await supabase.rpc('create_steadystream_user', {
-        p_full_name: userData.name,
-        p_email: userData.email,
-        p_username: username,
-        p_password: password,
-        p_subscription_plan: userData.plan || 'trial',
-        p_max_connections: this.getMaxConnections(userData.plan || 'trial'),
-        p_expiry_date: expiryDate.toISOString()
-      });
+      // Create user in our SteadyStream system using direct insert
+      const { data: steadyStreamUser, error: userError } = await supabase
+        .from('steadystream_users')
+        .insert({
+          full_name: userData.name,
+          email: userData.email,
+          username: username,
+          password: password,
+          subscription_plan: userData.plan || 'trial',
+          max_connections: this.getMaxConnections(userData.plan || 'trial'),
+          expiry_date: expiryDate.toISOString()
+        })
+        .select()
+        .single();
 
       if (userError) {
         throw new Error(`User creation failed: ${userError.message}`);
@@ -63,15 +66,17 @@ export class SteadyStreamAutomationService {
 
       console.log('✅ SteadyStream user created');
 
-      // Create playlist entry using raw SQL
+      // Create playlist entry using direct insert
       const playlistUrl = `${window.location.origin}/api/playlist/${playlistToken}.m3u8`;
       
-      const { error: playlistError } = await supabase.rpc('create_steadystream_playlist', {
-        p_user_id: steadyStreamUser,
-        p_playlist_url: playlistUrl,
-        p_activation_code: activationCode,
-        p_playlist_token: playlistToken
-      });
+      const { error: playlistError } = await supabase
+        .from('steadystream_playlists')
+        .insert({
+          steadystream_user_id: steadyStreamUser.id,
+          playlist_url: playlistUrl,
+          activation_code: activationCode,
+          playlist_token: playlistToken
+        });
 
       if (playlistError) {
         throw new Error(`Playlist creation failed: ${playlistError.message}`);
@@ -87,22 +92,20 @@ export class SteadyStreamAutomationService {
           options: {
             data: {
               full_name: userData.name,
-              steadystream_user_id: steadyStreamUser
+              steadystream_user_id: steadyStreamUser.id
             }
           }
         });
 
         if (authData.user) {
-          // Create profile entry using raw SQL
-          await supabase.rpc('create_user_profile', {
-            p_user_id: authData.user.id,
-            p_name: userData.name,
-            p_email: userData.email,
-            p_subscription_tier: userData.plan || 'trial',
-            p_trial_end_date: userData.plan === 'trial' ? expiryDate.toISOString() : null,
-            p_xtream_username: username,
-            p_xtream_password: password
-          });
+          // Create profile entry using direct insert
+          await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,
+              full_name: userData.name,
+              email: userData.email
+            });
         }
       } catch (authError) {
         console.warn('Auth user creation failed (non-critical):', authError);
@@ -122,7 +125,7 @@ export class SteadyStreamAutomationService {
 
       return {
         success: true,
-        user: { id: steadyStreamUser },
+        user: { id: steadyStreamUser.id },
         credentials: {
           username,
           password,
