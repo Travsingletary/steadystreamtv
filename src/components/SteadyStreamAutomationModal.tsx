@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSteadyStreamAutomation } from '@/hooks/useSteadyStreamAutomation';
-import { X } from 'lucide-react';
+import { X, AlertCircle, CheckCircle } from 'lucide-react';
+import { setupGlobalErrorHandlers } from '@/utils/errorHandling';
 
 interface AutomationModalProps {
   isOpen: boolean;
@@ -25,6 +26,15 @@ export const SteadyStreamAutomationModal: React.FC<AutomationModalProps> = ({
     password: '',
     plan: 'trial' as 'trial' | 'standard' | 'premium' | 'ultimate'
   });
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  // Setup global error handlers when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setupGlobalErrorHandlers();
+    }
+  }, [isOpen]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ 
@@ -33,25 +43,56 @@ export const SteadyStreamAutomationModal: React.FC<AutomationModalProps> = ({
     }));
   };
 
-  const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      return;
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      return 'Please enter your full name';
     }
-
+    if (!formData.email.trim()) {
+      return 'Please enter your email address';
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      return 'Please enter a valid email address';
+    }
+    if (!formData.password.trim()) {
+      return 'Please enter a password';
+    }
     if (formData.password.length < 6) {
+      return 'Password must be at least 6 characters long';
+    }
+    return null;
+  };
+
+  const handleSubmit = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      alert(validationError);
       return;
     }
 
-    const result = await executeAutomation(formData);
+    try {
+      setIsRetrying(false);
+      const result = await executeAutomation(formData);
 
-    if (result.success) {
-      onSuccess({
-        userData: formData,
-        credentials: result.credentials,
-        user: result.user
-      });
-      onClose();
+      if (result.success) {
+        onSuccess({
+          userData: formData,
+          credentials: result.credentials,
+          user: result.user
+        });
+        onClose();
+        setRetryCount(0);
+      }
+    } catch (err: any) {
+      console.error('💥 Automation submission failed:', err);
+      setRetryCount(prev => prev + 1);
     }
+  };
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay
+    await handleSubmit();
+    setIsRetrying(false);
   };
 
   if (!isOpen) return null;
@@ -79,7 +120,30 @@ export const SteadyStreamAutomationModal: React.FC<AutomationModalProps> = ({
         <CardContent className="space-y-4">
           {error && (
             <div className="bg-red-900/30 border border-red-600 p-3 rounded-lg text-red-300 text-sm">
-              ❌ {error}
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>{error}</span>
+              </div>
+              {retryCount > 0 && retryCount < 3 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetry}
+                  disabled={isRetrying}
+                  className="mt-2 text-xs"
+                >
+                  {isRetrying ? 'Retrying...' : `Try Again (${retryCount}/3)`}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!error && loading && (
+            <div className="bg-blue-900/30 border border-blue-600 p-3 rounded-lg text-blue-300 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-300 border-t-transparent"></div>
+                <span>Creating your account...</span>
+              </div>
             </div>
           )}
           
@@ -133,10 +197,17 @@ export const SteadyStreamAutomationModal: React.FC<AutomationModalProps> = ({
 
           <Button
             onClick={handleSubmit}
-            disabled={loading || !formData.name || !formData.email || !formData.password || formData.password.length < 6}
+            disabled={loading || isRetrying || !formData.name || !formData.email || !formData.password || formData.password.length < 6}
             className="w-full bg-gold hover:bg-gold-dark text-black font-bold"
           >
-            {loading ? '🔄 Creating Your Account...' : '🚀 Start Streaming Now'}
+            {loading || isRetrying ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-black border-t-transparent"></div>
+                {isRetrying ? 'Retrying...' : 'Creating Your Account...'}
+              </div>
+            ) : (
+              '🚀 Start Streaming Now'
+            )}
           </Button>
 
           <div className="text-center text-sm text-gray-400 space-y-1">

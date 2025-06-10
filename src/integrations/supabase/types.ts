@@ -9,6 +9,27 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       channels_catalog: {
         Row: {
           category: string
@@ -212,6 +233,92 @@ export type Database = {
           panel_url?: string | null
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      steadystream_playlists: {
+        Row: {
+          activation_code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          playlist_token: string
+          playlist_url: string
+          steadystream_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          activation_code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          playlist_token: string
+          playlist_url: string
+          steadystream_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          activation_code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          playlist_token?: string
+          playlist_url?: string
+          steadystream_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steadystream_playlists_steadystream_user_id_fkey"
+            columns: ["steadystream_user_id"]
+            isOneToOne: false
+            referencedRelation: "steadystream_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steadystream_users: {
+        Row: {
+          created_at: string
+          email: string
+          expiry_date: string
+          full_name: string
+          id: string
+          is_active: boolean
+          max_connections: number
+          password: string
+          subscription_plan: string
+          subscription_status: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expiry_date: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          max_connections?: number
+          password: string
+          subscription_plan?: string
+          subscription_status?: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expiry_date?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          max_connections?: number
+          password?: string
+          subscription_plan?: string
+          subscription_status?: string
+          updated_at?: string
+          username?: string
         }
         Relationships: []
       }

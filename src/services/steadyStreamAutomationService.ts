@@ -1,4 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { EnhancedApiService } from "./enhancedApiService";
+import { handleApiError } from "@/utils/errorHandling";
 
 export interface SteadyStreamUserData {
   name: string;
@@ -22,7 +25,7 @@ export interface SteadyStreamResult {
 
 export class SteadyStreamAutomationService {
   /**
-   * Complete automation flow using our independent SteadyStream system
+   * Complete automation flow using our independent SteadyStream system with enhanced error handling
    */
   static async executeCompleteAutomation(userData: SteadyStreamUserData): Promise<SteadyStreamResult> {
     try {
@@ -45,48 +48,55 @@ export class SteadyStreamAutomationService {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + expiryDays);
 
-      // Create user in our SteadyStream system using direct insert
-      const { data: steadyStreamUser, error: userError } = await supabase
-        .from('steadystream_users')
-        .insert({
-          full_name: userData.name,
-          email: userData.email,
-          username: username,
-          password: password,
-          subscription_plan: userData.plan || 'trial',
-          max_connections: this.getMaxConnections(userData.plan || 'trial'),
-          expiry_date: expiryDate.toISOString()
-        })
-        .select()
-        .single();
+      // Create user in our SteadyStream system using enhanced API service
+      const userResult = await EnhancedApiService.safeQuery(
+        () => (supabase as any)
+          .from('steadystream_users')
+          .insert({
+            full_name: userData.name,
+            email: userData.email,
+            username: username,
+            password: password,
+            subscription_plan: userData.plan || 'trial',
+            max_connections: this.getMaxConnections(userData.plan || 'trial'),
+            expiry_date: expiryDate.toISOString()
+          })
+          .select()
+          .single(),
+        'SteadyStream user creation'
+      );
 
-      if (userError) {
-        throw new Error(`User creation failed: ${userError.message}`);
+      if (userResult.error || !userResult.data) {
+        throw new Error(userResult.error || 'Failed to create user');
       }
 
+      const steadyStreamUser = userResult.data;
       console.log('✅ SteadyStream user created');
 
-      // Create playlist entry using direct insert
+      // Create playlist entry using enhanced API service
       const playlistUrl = `${window.location.origin}/api/playlist/${playlistToken}.m3u8`;
       
-      const { error: playlistError } = await supabase
-        .from('steadystream_playlists')
-        .insert({
-          steadystream_user_id: steadyStreamUser.id,
-          playlist_url: playlistUrl,
-          activation_code: activationCode,
-          playlist_token: playlistToken
-        });
+      const playlistResult = await EnhancedApiService.safeQuery(
+        () => (supabase as any)
+          .from('steadystream_playlists')
+          .insert({
+            steadystream_user_id: steadyStreamUser.id,
+            playlist_url: playlistUrl,
+            activation_code: activationCode,
+            playlist_token: playlistToken
+          }),
+        'Playlist creation'
+      );
 
-      if (playlistError) {
-        throw new Error(`Playlist creation failed: ${playlistError.message}`);
+      if (playlistResult.error) {
+        console.warn('⚠️ Playlist creation failed (non-critical):', playlistResult.error);
+      } else {
+        console.log('✅ Playlist created with activation code:', activationCode);
       }
-
-      console.log('✅ Playlist created with activation code:', activationCode);
 
       // Optionally create Supabase auth user for dashboard access
       try {
-        const { data: authData } = await supabase.auth.signUp({
+        const authResult = await EnhancedApiService.safeAuth('signUp', {
           email: userData.email,
           password: password,
           options: {
@@ -97,28 +107,43 @@ export class SteadyStreamAutomationService {
           }
         });
 
-        if (authData.user) {
-          // Create profile entry using direct insert
-          await supabase
-            .from('profiles')
-            .insert({
-              id: authData.user.id,
-              full_name: userData.name,
-              email: userData.email
-            });
+        if (authResult.data?.user) {
+          // Create profile entry using enhanced API service
+          await EnhancedApiService.safeQuery(
+            () => supabase
+              .from('profiles')
+              .insert({
+                id: authResult.data.user.id,
+                full_name: userData.name,
+                email: userData.email
+              }),
+            'Profile creation'
+          );
         }
       } catch (authError) {
         console.warn('Auth user creation failed (non-critical):', authError);
       }
 
-      // Send welcome email via edge function
+      // Send welcome email via edge function with enhanced error handling
       try {
-        await this.sendWelcomeEmail(userData, {
-          username,
-          password,
-          activationCode,
-          playlistUrl
-        });
+        const emailResult = await EnhancedApiService.safeInvokeFunction(
+          'send-welcome-email',
+          {
+            email: userData.email,
+            name: userData.name,
+            credentials: {
+              username,
+              password,
+              activationCode,
+              playlistUrl
+            }
+          },
+          'Welcome email'
+        );
+        
+        if (emailResult.error) {
+          console.warn('Welcome email failed (non-critical):', emailResult.error);
+        }
       } catch (emailError) {
         console.warn('Welcome email failed (non-critical):', emailError);
       }
@@ -136,9 +161,10 @@ export class SteadyStreamAutomationService {
 
     } catch (error: any) {
       console.error('💥 SteadyStream automation failed:', error);
+      const friendlyError = handleApiError(error, 'SteadyStream automation');
       return {
         success: false,
-        error: error.message
+        error: friendlyError
       };
     }
   }
@@ -152,9 +178,6 @@ export class SteadyStreamAutomationService {
     return `steady_${cleanName.substring(0, 8)}_${randomSuffix}`;
   }
 
-  /**
-   * Generate a secure password
-   */
   private static generateSecurePassword(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
     let password = '';
@@ -164,9 +187,6 @@ export class SteadyStreamAutomationService {
     return password;
   }
 
-  /**
-   * Get max connections for plan
-   */
   private static getMaxConnections(plan: string): number {
     const connections = {
       trial: 1,
@@ -175,18 +195,5 @@ export class SteadyStreamAutomationService {
       ultimate: 6
     };
     return connections[plan as keyof typeof connections] || 1;
-  }
-
-  /**
-   * Send welcome email with credentials
-   */
-  private static async sendWelcomeEmail(userData: SteadyStreamUserData, credentials: any) {
-    await supabase.functions.invoke('send-welcome-email', {
-      body: {
-        email: userData.email,
-        name: userData.name,
-        credentials: credentials
-      }
-    });
   }
 }
