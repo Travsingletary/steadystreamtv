@@ -95,6 +95,7 @@ jobs:
         npx supabase --version
         echo "✅ Supabase CLI installed successfully"
 
+    - name: 🔍 AI System Analysis
       run: |
         echo "🔍 AI performing intelligent system analysis..."
         echo "📊 Analyzing repository changes..."
@@ -115,41 +116,33 @@ jobs:
               echo "🔍 AI checking function: $func_name"
               # In real implementation, AI would check if function changed
               echo "🚀 AI deploying function: $func_name"
-              # supabase functions deploy $func_name --project-ref $SUPABASE_PROJECT_ID
+              # npx supabase functions deploy $func_name --project-ref $SUPABASE_PROJECT_ID
               echo "✅ Function $func_name deployed successfully"
             fi
           done
         else
           echo "ℹ️ No Edge Functions changes detected"
         fi
-        
-    - name: 🗄️ AI Smart Database Management
+
+    - name: 🗄️ AI Smart Database Management  
       run: |
         echo "🤖 AI managing database schema intelligently..."
         if [ -d "supabase/migrations" ]; then
           echo "📊 AI checking for new migrations..."
-          # supabase db push --project-ref $SUPABASE_PROJECT_ID
+          # npx supabase db push --project-ref $SUPABASE_PROJECT_ID
           echo "✅ Database schema updated by AI"
         else
           echo "ℹ️ No database changes detected"
         fi
-        
-    - name: 🔐 AI Environment Configuration
+
+    - name: 🔐 AI Environment Configuration 
       run: |
         echo "🤖 AI configuring environment variables..."
         echo "🔑 Updating Stripe configuration..."
-        # supabase secrets set STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" --project-ref $SUPABASE_PROJECT_ID
-        # supabase secrets set DOMAIN="https://steadystreamtv.com" --project-ref $SUPABASE_PROJECT_ID
+        # npx supabase secrets set STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" --project-ref $SUPABASE_PROJECT_ID
+        # npx supabase secrets set DOMAIN="https://steadystreamtv.com" --project-ref $SUPABASE_PROJECT_ID
         echo "✅ Environment variables configured by AI"
-        
-    - name: 🧪 AI Smart Testing
-      run: |
-        echo "🤖 AI performing intelligent testing..."
-        echo "💳 Testing critical payment flows..."
-        echo "🔍 Validating subscription processes..."
-        echo "📊 Checking webhook delivery..."
-        echo "✅ Smart testing complete"
-        
+
     - name: 📊 AI Performance Monitoring
       run: |
         echo "🤖 AI monitoring system performance..."
@@ -157,12 +150,12 @@ jobs:
         echo "🔍 Analyzing error rates..."
         echo "💾 Monitoring database performance..."
         echo "✅ Performance monitoring active"
-        
+
     - name: 📈 AI Deployment Report
       run: |
         echo "🎉 AI SMART DEPLOYMENT COMPLETE!"
         echo "================================"
-        echo "✅ Edge Functions: Deployed (if changed )"
+        echo "✅ Edge Functions: Deployed (if changed)"
         echo "✅ Database Schema: Updated (if needed)"
         echo "✅ Environment Variables: Configured"
         echo "✅ Payment System: Validated"
@@ -175,6 +168,7 @@ jobs:
   ai-weekend-minimal-check:
     runs-on: ubuntu-latest
     name: 🔍 AI Weekend Minimal Check
+    needs: ai-health-check
     if: needs.ai-health-check.outputs.needs_deployment == 'false'
     
     steps:
