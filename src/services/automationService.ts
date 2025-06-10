@@ -1,3 +1,4 @@
+
 // src/services/automationService.ts
 // Enhanced automation service with better error handling
 
@@ -123,27 +124,4 @@ export class SimpleAutomationService {
       };
     }
   }
-}
-
-// Keep the old interface for backward compatibility
-export interface UserData {
-  name: string;
-  email: string;
-  password: string;
-  plan: 'trial' | 'standard' | 'premium' | 'ultimate';
-}
-
-export interface RegistrationResult {
-  success: boolean;
-  error?: string;
-  user?: any;
-  activationCode?: string;
-  playlistUrl?: string;
-  megaottSubscription?: any;
-  assets?: {
-    activationCode: string;
-    playlistToken: string;
-    playlistUrl: string;
-    qrCodeUrl: string;
-  };
 }

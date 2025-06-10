@@ -10,7 +10,7 @@ export interface SteadyStreamUserData {
   name: string;
   email: string;
   password: string;
-  plan: 'trial' | 'standard' | 'premium' | 'ultimate';
+  plan: 'trial' | 'basic' | 'duo' | 'family' | 'standard' | 'premium' | 'ultimate';
 }
 
 export interface SteadyStreamResult {
