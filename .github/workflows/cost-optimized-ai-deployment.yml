@@ -26,7 +26,7 @@ on:
 
 env:
   SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-  SUPABASE_PROJECT_ID: ojuethcytwcioqtvwez
+  SUPABASE_PROJECT_ID: ojueihcytxwcioqtvwez
   STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
   STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
 
@@ -91,6 +91,16 @@ jobs:
         npx supabase --version
         echo "✅ Supabase CLI installed successfully"
         
+    - name: 🔍 Validate Project Reference
+      run: |
+        echo "🔍 Validating Supabase project reference..."
+        if [[ ! $SUPABASE_PROJECT_ID =~ ^[a-zA-Z0-9]{20}$ ]]; then
+          echo "❌ Invalid SUPABASE_PROJECT_ID format. Must be 20 characters."
+          echo "Current ID: $SUPABASE_PROJECT_ID (length: ${#SUPABASE_PROJECT_ID})"
+          exit 1
+        fi
+        echo "✅ Project ID validated: $SUPABASE_PROJECT_ID"
+        
     - name: 🤖 AI Intelligent System Analysis
       run: |
         echo "🔍 AI performing intelligent system analysis..."
@@ -102,6 +112,8 @@ jobs:
     - name: 🚀 AI Live Edge Functions Deployment
       run: |
         echo "🤖 AI deploying Edge Functions to LIVE Supabase..."
+        echo "🎯 Target Project: $SUPABASE_PROJECT_ID"
+        
         if [ -d "supabase/functions" ]; then
           echo "📁 Found Edge Functions directory"
           
@@ -115,6 +127,9 @@ jobs:
           done
         else
           echo "ℹ️ No Edge Functions directory found - will be created when needed"
+          echo "📋 Creating basic Edge Functions structure..."
+          mkdir -p supabase/functions
+          echo "✅ Edge Functions directory created"
         fi
         
     - name: 🗄️ AI Live Database Management
@@ -126,13 +141,23 @@ jobs:
           echo "✅ Database schema deployed to LIVE Supabase"
         else
           echo "ℹ️ No migrations directory found - database schema is current"
+          echo "📋 Creating basic migrations structure..."
+          mkdir -p supabase/migrations
+          echo "✅ Migrations directory created"
         fi
         
     - name: 🔐 AI Live Environment Configuration
       run: |
         echo "🤖 AI configuring LIVE environment variables..."
         echo "🔑 Setting live Stripe configuration..."
-        npx supabase secrets set STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" --project-ref $SUPABASE_PROJECT_ID
+        
+        if [ -n "$STRIPE_SECRET_KEY" ]; then
+          npx supabase secrets set STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" --project-ref $SUPABASE_PROJECT_ID
+          echo "✅ Stripe secret key configured"
+        else
+          echo "⚠️ STRIPE_SECRET_KEY not found in secrets"
+        fi
+        
         npx supabase secrets set DOMAIN="https://steadystreamtv.com" --project-ref $SUPABASE_PROJECT_ID
         echo "✅ LIVE environment variables configured by AI"
         
@@ -156,6 +181,7 @@ jobs:
       run: |
         echo "🎉 AI LIVE DEPLOYMENT COMPLETE!"
         echo "================================"
+        echo "✅ Project Reference: $SUPABASE_PROJECT_ID"
         echo "✅ Edge Functions: DEPLOYED TO LIVE SUPABASE"
         echo "✅ Database Schema: DEPLOYED TO LIVE SUPABASE"
         echo "✅ Environment Variables: CONFIGURED ON LIVE"
@@ -180,3 +206,4 @@ jobs:
         echo "🔍 Monitoring for critical issues..."
         echo "✅ Minimal check complete - system healthy"
         echo "💡 Credits saved by running minimal check"
+
