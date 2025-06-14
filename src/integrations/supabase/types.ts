@@ -236,6 +236,21 @@ export type Database = {
         }
         Relationships: []
       }
+      roles: {
+        Row: {
+          id: string
+          role_name: string
+        }
+        Insert: {
+          id?: string
+          role_name: string
+        }
+        Update: {
+          id?: string
+          role_name?: string
+        }
+        Relationships: []
+      }
       steadystream_playlists: {
         Row: {
           activation_code: string
@@ -350,7 +365,7 @@ export type Database = {
         Row: {
           activation_code: string
           created_at: string | null
-          id: string
+          id: number
           is_active: boolean | null
           playlist_token: string
           user_id: string
@@ -358,7 +373,7 @@ export type Database = {
         Insert: {
           activation_code: string
           created_at?: string | null
-          id?: string
+          id?: never
           is_active?: boolean | null
           playlist_token: string
           user_id: string
@@ -366,12 +381,20 @@ export type Database = {
         Update: {
           activation_code?: string
           created_at?: string | null
-          id?: string
+          id?: never
           is_active?: boolean | null
           playlist_token?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_playlists_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_profiles: {
         Row: {
@@ -381,7 +404,6 @@ export type Database = {
           full_name: string
           id: string
           subscription_plan: string | null
-          user_id: string
         }
         Insert: {
           activation_code?: string | null
@@ -390,7 +412,6 @@ export type Database = {
           full_name: string
           id?: string
           subscription_plan?: string | null
-          user_id: string
         }
         Update: {
           activation_code?: string | null
@@ -399,9 +420,38 @@ export type Database = {
           full_name?: string
           id?: string
           subscription_plan?: string | null
-          user_id?: string
         }
         Relationships: []
+      }
+      user_roles: {
+        Row: {
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       Users: {
         Row: {
