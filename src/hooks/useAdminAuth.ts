@@ -77,23 +77,29 @@ export const useAdminAuth = () => {
     const checkAdminStatus = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        console.log('Current user:', user);
         
         if (user) {
-          // Check if user has admin role using direct query
-          const { data: adminRole } = await supabase
+          // Check if user has admin role using direct query with better logging
+          console.log('Checking admin role for user:', user.id);
+          const { data: adminRole, error: roleError } = await supabase
             .from('admin_roles')
-            .select('role')
+            .select('*')
             .eq('user_id', user.id)
-            .eq('role', 'admin')
             .single();
 
-          if (adminRole) {
+          console.log('Admin role query result:', { adminRole, roleError });
+
+          if (adminRole && !roleError) {
+            console.log('User is admin, redirecting to /admin');
             navigate('/admin');
             return;
+          } else {
+            console.log('User is not admin or error occurred:', roleError);
           }
         }
       } catch (error) {
-        console.log('No active admin session');
+        console.log('No active admin session or error:', error);
       } finally {
         setIsCheckingAdmin(false);
       }
@@ -125,18 +131,23 @@ export const useAdminAuth = () => {
           } else {
             // Regular login - check admin status
             try {
-              const { data: adminRole } = await supabase
+              console.log('Checking admin role for signed in user:', session.user.id);
+              const { data: adminRole, error: roleError } = await supabase
                 .from('admin_roles')
-                .select('role')
+                .select('*')
                 .eq('user_id', session.user.id)
-                .eq('role', 'admin')
                 .single();
 
-              if (adminRole) {
+              console.log('Admin role check result:', { adminRole, roleError });
+
+              if (adminRole && !roleError) {
+                console.log('User has admin role, navigating to /admin');
                 navigate('/admin');
+              } else {
+                console.log('User does not have admin role');
               }
             } catch (error) {
-              console.log('User is not an admin');
+              console.log('Error checking admin role:', error);
             }
           }
         } else if (event === 'SIGNED_OUT') {
@@ -150,6 +161,7 @@ export const useAdminAuth = () => {
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
+    console.log('Starting login process for:', values.email);
 
     try {
       // Sign in with Supabase
@@ -159,26 +171,39 @@ export const useAdminAuth = () => {
       });
 
       if (error) {
+        console.error('Login error:', error);
         throw error;
       }
 
       if (!data.user) {
-        throw new Error('Login failed');
+        throw new Error('Login failed - no user returned');
       }
 
-      // Check if user has admin role using direct query
+      console.log('Login successful, checking admin role for user:', data.user.id);
+
+      // Check if user has admin role using direct query with detailed logging
       const { data: adminRole, error: roleError } = await supabase
         .from('admin_roles')
-        .select('role')
-        .eq('user_id', data.user.id)
-        .eq('role', 'admin')
-        .single();
+        .select('*')
+        .eq('user_id', data.user.id);
 
-      if (roleError || !adminRole) {
+      console.log('Admin role query result:', { adminRole, roleError, userId: data.user.id });
+
+      // Check if we got any results
+      if (roleError) {
+        console.error('Error querying admin roles:', roleError);
+        await supabase.auth.signOut();
+        throw new Error('Error checking admin privileges: ' + roleError.message);
+      }
+
+      if (!adminRole || adminRole.length === 0) {
+        console.log('No admin role found for user');
         // Sign out the user if they're not an admin
         await supabase.auth.signOut();
         throw new Error('Access denied. Admin privileges required.');
       }
+
+      console.log('Admin role found:', adminRole);
 
       toast({
         title: "Login successful",
@@ -187,6 +212,7 @@ export const useAdminAuth = () => {
 
       navigate('/admin');
     } catch (error: any) {
+      console.error('Login failed:', error);
       toast({
         title: "Login failed",
         description: error.message || "Invalid credentials or insufficient privileges",
