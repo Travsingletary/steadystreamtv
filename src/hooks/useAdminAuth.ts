@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -18,7 +17,7 @@ export const useAdminAuth = () => {
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn } = useAuth();
+  const { user, isAdmin, signIn, checkAdminStatus } = useAuth();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -76,45 +75,31 @@ export const useAdminAuth = () => {
 
   // Check if user is already logged in and is admin
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const checkAdminStatusAsync = async () => {
       try {
         if (user) {
-          // Use setTimeout to prevent infinite loops
-          setTimeout(async () => {
-            try {
-              console.log('Checking admin role for user:', user.id);
-              const { data: adminRole, error: roleError } = await supabase
-                .from('admin_roles')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
-
-              console.log('Admin role query result:', { adminRole, roleError });
-
-              if (adminRole && !roleError) {
-                console.log('User is admin, redirecting to /admin');
-                navigate('/admin');
-                return;
-              } else {
-                console.log('User is not admin or error occurred:', roleError);
-              }
-            } catch (error) {
-              console.log('Error checking admin role:', error);
-            } finally {
-              setIsCheckingAdmin(false);
-            }
-          }, 0);
-        } else {
-          setIsCheckingAdmin(false);
+          console.log('Checking admin role for user:', user.id);
+          
+          // Use the AuthContext method to check admin status
+          const adminStatus = await checkAdminStatus();
+          
+          if (adminStatus || isAdmin) {
+            console.log('User is admin, redirecting to /admin');
+            navigate('/admin');
+            return;
+          } else {
+            console.log('User is not admin');
+          }
         }
+        setIsCheckingAdmin(false);
       } catch (error) {
-        console.log('No active admin session or error:', error);
+        console.log('Error checking admin status:', error);
         setIsCheckingAdmin(false);
       }
     };
 
-    checkAdminStatus();
-  }, [user, navigate]);
+    checkAdminStatusAsync();
+  }, [user, isAdmin, navigate, checkAdminStatus]);
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
@@ -129,14 +114,24 @@ export const useAdminAuth = () => {
         throw error;
       }
 
-      console.log('Login successful, waiting for auth state change...');
+      console.log('Login successful, checking admin status...');
       
-      toast({
-        title: "Login successful",
-        description: "Welcome to the admin dashboard",
-      });
-
-      // Navigation will be handled by the useEffect that monitors user changes
+      // Check admin status after login
+      const adminStatus = await checkAdminStatus();
+      
+      if (adminStatus) {
+        toast({
+          title: "Login successful",
+          description: "Welcome to the admin dashboard",
+        });
+        navigate('/admin');
+      } else {
+        toast({
+          title: "Access denied",
+          description: "You don't have admin privileges",
+          variant: "destructive",
+        });
+      }
 
     } catch (error: any) {
       console.error('Login failed:', error);
@@ -154,7 +149,6 @@ export const useAdminAuth = () => {
     setIsLoading(true);
 
     try {
-      // Use the current window location as the redirect URL
       const redirectUrl = `${window.location.origin}/admin-login`;
       console.log('Sending reset email with redirect URL:', redirectUrl);
 
@@ -188,7 +182,6 @@ export const useAdminAuth = () => {
     setResetEmailSent(false);
     setIsPasswordReset(false);
     resetForm.reset();
-    // Clear URL parameters
     window.history.replaceState({}, document.title, '/admin-login');
   };
 
@@ -203,7 +196,6 @@ export const useAdminAuth = () => {
 
   const handlePasswordUpdateComplete = () => {
     setIsPasswordReset(false);
-    // Clear URL parameters
     window.history.replaceState({}, document.title, '/admin-login');
     toast({
       title: "Password updated successfully",

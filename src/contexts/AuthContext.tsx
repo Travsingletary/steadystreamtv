@@ -7,10 +7,12 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData?: any) => Promise<{ error: any }>;
   signOut: () => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
+  checkAdminStatus: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +29,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const checkAdminStatus = async (): Promise<boolean> => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (!currentUser) {
+        setIsAdmin(false);
+        return false;
+      }
+
+      // Check multiple possible locations for admin role
+      const isAdminUser = currentUser.user_metadata?.role === 'admin' || 
+                         currentUser.app_metadata?.role === 'admin' ||
+                         currentUser.user_metadata?.is_admin === true;
+
+      // Also check the admin_roles table
+      if (!isAdminUser) {
+        const { data: adminRole } = await supabase
+          .from('admin_roles')
+          .select('role')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        const hasAdminRole = !!adminRole;
+        setIsAdmin(hasAdminRole);
+        return hasAdminRole;
+      }
+
+      setIsAdmin(isAdminUser);
+      return isAdminUser;
+    } catch (error) {
+      console.log('Error checking admin status:', error);
+      setIsAdmin(false);
+      return false;
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -40,10 +79,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           console.log('User authenticated:', session.user.email);
-          // Any additional async operations can go here
-          // For example: fetchUserProfile(session.user.id);
+          // Check admin status for authenticated user
+          await checkAdminStatus();
         } else {
           console.log('User signed out');
+          setIsAdmin(false);
         }
         
         setLoading(false);
@@ -52,9 +92,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setTimeout(() => {
+      setTimeout(async () => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await checkAdminStatus();
+        }
+        
         setLoading(false);
       }, 0);
     });
@@ -121,10 +166,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     loading,
+    isAdmin,
     signIn,
     signUp,
     signOut,
     signInWithGoogle,
+    checkAdminStatus,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

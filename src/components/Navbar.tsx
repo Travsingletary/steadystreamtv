@@ -1,41 +1,16 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { NavLinks } from "./navbar/NavLinks";
 import { UserMenu } from "./navbar/UserMenu";
 import { MobileMenu } from "./navbar/MobileMenu";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
-
-  // Check admin status when user changes
-  useEffect(() => {
-    if (user) {
-      // Use setTimeout to prevent infinite loops
-      setTimeout(async () => {
-        try {
-          const { data: adminRole } = await supabase
-            .from('admin_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .single();
-          
-          setIsAdmin(!!adminRole);
-        } catch (error) {
-          console.log('Error checking admin status:', error);
-          setIsAdmin(false);
-        }
-      }, 0);
-    } else {
-      setIsAdmin(false);
-    }
-  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -60,12 +35,14 @@ const Navbar = () => {
           </div>
           
           <div className="hidden md:block">
-            <NavLinks items={navItems} />
-            <UserMenu 
-              isAuthenticated={!!user}
-              isAdmin={isAdmin}
-              onSignOut={handleSignOut}
-            />
+            <div className="ml-10 flex items-baseline space-x-4">
+              <NavLinks items={navItems} />
+              <UserMenu 
+                isAuthenticated={!!user}
+                isAdmin={isAdmin}
+                onSignOut={handleSignOut}
+              />
+            </div>
           </div>
 
           {/* Mobile menu button */}

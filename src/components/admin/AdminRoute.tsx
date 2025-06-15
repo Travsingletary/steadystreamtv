@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 interface AdminRouteProps {
@@ -10,37 +10,30 @@ interface AdminRouteProps {
 
 export const AdminRoute = ({ children }: AdminRouteProps) => {
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, isAdmin, checkAdminStatus } = useAuth();
 
   useEffect(() => {
-    checkAdminAccess();
-  }, []);
+    checkAccess();
+  }, [user, isAdmin]);
 
-  const checkAdminAccess = async () => {
+  const checkAccess = async () => {
     try {
-      // Check if user is authenticated
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
+      if (!user) {
         toast({
           title: "Authentication Required",
           description: "Please sign in to access the admin dashboard",
           variant: "destructive",
         });
-        navigate("/onboarding");
+        navigate("/admin-login");
         return;
       }
 
-      // Check if user has admin role
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-
-      if (adminError || !adminData) {
+      // Double-check admin status
+      const adminStatus = await checkAdminStatus();
+      
+      if (!adminStatus && !isAdmin) {
         toast({
           title: "Access Denied",
           description: "You don't have admin privileges",
@@ -50,7 +43,7 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
         return;
       }
 
-      setIsAdmin(true);
+      setLoading(false);
     } catch (error: any) {
       console.error('Error checking admin access:', error);
       toast({
@@ -59,8 +52,6 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
         variant: "destructive",
       });
       navigate("/dashboard");
-    } finally {
-      setLoading(false);
     }
   };
 
