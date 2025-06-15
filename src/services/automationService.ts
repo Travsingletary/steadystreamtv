@@ -1,3 +1,4 @@
+
 // src/services/automationService.ts
 // Enhanced automation service with better error handling
 
@@ -47,24 +48,32 @@ export class SimpleAutomationService {
       let megaottSubscription;
       try {
         // Create complete userData object for MegaOTTService
-        const completeUserData: UserData = {
-          ...userData,
-          deviceType: userData.deviceType || 'mobile',
-          preferences: userData.preferences || {
-            favoriteGenres: ['sports', 'movies', 'news', 'documentary', 'kids', 'entertainment'],
-            parentalControls: false,
-            autoOptimization: true,
-            videoQuality: 'Auto'
-          }
+        const completeUserData = {
+          name: userData.name,
+          email: userData.email,
+          password: userData.password,
+          plan: userData.plan as 'trial' | 'solo' | 'duo' | 'family',
+          deviceType: userData.deviceType || 'mobile'
         };
 
-        megaottSubscription = await MegaOTTService.createSubscription(
-          authData.user.id,
-          userData.plan,
-          completeUserData
-        );
+        const megaOTTService = new MegaOTTService();
+        const credentials = await megaOTTService.createIPTVAccount(completeUserData);
+        
+        megaottSubscription = {
+          success: true,
+          plan: userData.plan,
+          message: 'IPTV subscription created successfully',
+          credentials: {
+            username: credentials.username,
+            password: credentials.password
+          },
+          playlistUrls: {
+            m3u: credentials.playlistUrl
+          }
+        };
+        
         console.log('✅ IPTV subscription created:', megaottSubscription.message);
-      } catch (megaottError) {
+      } catch (megaottError: any) {
         console.warn('⚠️ IPTV subscription creation failed, continuing with basic account:', megaottError.message);
         
         // Create a basic subscription record anyway
@@ -77,6 +86,9 @@ export class SimpleAutomationService {
             activationCode,
             username: `pending_${authData.user.id.substring(0, 8)}`,
             password: 'pending'
+          },
+          playlistUrls: {
+            m3u: 'https://steadystreamtv.com/playlist/demo'
           }
         };
       }

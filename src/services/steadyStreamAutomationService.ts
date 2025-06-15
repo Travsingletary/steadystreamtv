@@ -4,7 +4,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { MegaOTTService } from './megaOTTService';
-import type { UserData } from './types';
 
 export interface SteadyStreamUserData {
   name: string;
@@ -57,35 +56,26 @@ export class SteadyStreamAutomationService {
       // 3. Create IPTV subscription with fallback
       let iptvCredentials;
       try {
-        // Convert to compatible UserData format
-        const completeUserData: UserData = {
+        // Convert to compatible format for MegaOTTService
+        const completeUserData = {
           name: userData.name,
           email: userData.email,
           password: userData.password,
-          plan: userData.plan,
-          deviceType: 'mobile',
-          preferences: {
-            favoriteGenres: ['sports', 'movies', 'news', 'documentary', 'kids', 'entertainment'],
-            parentalControls: false,
-            autoOptimization: true,
-            videoQuality: 'Auto'
-          }
+          plan: userData.plan as 'trial' | 'solo' | 'duo' | 'family',
+          deviceType: 'mobile' as const
         };
 
-        const subscription = await MegaOTTService.createSubscription(
-          authData.user.id,
-          userData.plan,
-          completeUserData
-        );
+        const megaOTTService = new MegaOTTService();
+        const credentials = await megaOTTService.createIPTVAccount(completeUserData);
         
         iptvCredentials = {
           activationCode,
-          username: subscription.credentials?.username || `demo_${activationCode.toLowerCase()}`,
-          password: subscription.credentials?.password || 'demo123'
+          username: credentials.username,
+          password: credentials.password
         };
 
         console.log('✅ IPTV subscription created successfully');
-      } catch (iptvError) {
+      } catch (iptvError: any) {
         console.warn('⚠️ IPTV creation failed, using demo credentials:', iptvError.message);
         
         // Provide demo credentials for trial users
