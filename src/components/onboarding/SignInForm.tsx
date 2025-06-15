@@ -55,7 +55,20 @@ export const SignInForm = ({ switchToSignUp }: SignInFormProps) => {
         description: "Welcome back!",
       });
       
-      navigate("/dashboard");
+      // Check if user has recent purchase that needs credential access
+      const { data: iptvAccounts } = await supabase
+        .from('iptv_accounts')
+        .select('stripe_session_id')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (iptvAccounts && iptvAccounts.length > 0) {
+        // User has credentials, redirect to success page with session
+        navigate(`/payment-success?session_id=${iptvAccounts[0].stripe_session_id}`);
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       toast({
         title: "Sign in failed",

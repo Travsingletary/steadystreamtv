@@ -3,226 +3,362 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { CheckCircle, Loader2, Copy, Download, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+interface Credentials {
+  username: string;
+  password: string;
+  activation_code: string;
+  playlist_url: string;
+  server_url: string;
+  plan_type: string;
+  status: string;
+}
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [isProcessing, setIsProcessing] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const completeOnboarding = async () => {
+    const fetchCredentials = async () => {
       try {
-        console.log("Processing payment success...");
-        console.log("Current URL:", window.location.href);
-        console.log("Search params:", Object.fromEntries(searchParams.entries()));
-        
         const sessionId = searchParams.get('session_id');
-        let userId = searchParams.get('user_id');
-        
-        console.log("Session ID:", sessionId);
-        console.log("User ID from URL:", userId);
         
         if (!sessionId) {
-          console.error("No session ID found in URL params");
-          setError("Payment session not found. Please complete the onboarding process again.");
-          setIsProcessing(false);
+          setError("No session ID found. Please check your email for credentials.");
+          setIsLoading(false);
           return;
         }
 
-        // Get current authenticated user
+        // Get current user
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
-          console.error("User authentication error:", userError);
-          setError("User authentication failed. Please sign in and try again.");
-          setIsProcessing(false);
+          setError("Please sign in to view your credentials.");
+          setIsLoading(false);
           return;
         }
 
-        // Use the authenticated user's ID
-        userId = userData.user.id;
-        console.log("Using authenticated user ID:", userId);
+        // Fetch IPTV account credentials
+        const { data: iptvAccount, error: iptvError } = await supabase
+          .from('iptv_accounts')
+          .select('*')
+          .eq('stripe_session_id', sessionId)
+          .eq('user_id', userData.user.id)
+          .single();
 
-        // Try to get onboarding data from storage first
-        let onboardingDataStr = localStorage.getItem('onboarding-data');
-        if (!onboardingDataStr) {
-          onboardingDataStr = sessionStorage.getItem('onboarding-data');
-        }
-        
-        let onboardingData = null;
-        if (onboardingDataStr) {
-          console.log("Found onboarding data in storage");
-          onboardingData = JSON.parse(onboardingDataStr);
-          // Update the user ID in onboarding data to match authenticated user
-          onboardingData.userId = userId;
-        } else {
-          console.log("No onboarding data in storage, creating minimal data");
-          
-          onboardingData = {
-            userId: userId,
-            email: userData.user.email,
-            name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'User',
-            preferredDevice: "web",
-            genres: [],
-            subscription: {
-              plan: "premium", // Default, will be updated from Stripe
-              name: "Premium",
-              price: 35,
-              trialDays: 30
-            }
-          };
-          console.log("Created minimal onboarding data from user:", onboardingData);
-        }
-        
-        console.log("Using onboarding data:", onboardingData);
-        
-        // Create or update the user profile
-        console.log("Creating/updating user profile...");
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: userId,
-            email: onboardingData.email,
-            name: onboardingData.name,
-            preferred_device: onboardingData.preferredDevice || "web",
-            genres: onboardingData.genres || [],
-            subscription_tier: onboardingData.subscription?.plan || null,
-            subscription_status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'id'
-          });
-
-        if (profileError) {
-          console.error("Profile creation/update error:", profileError);
-          throw new Error(`Profile creation failed: ${profileError.message}`);
+        if (iptvError || !iptvAccount) {
+          // Credentials might still be processing, show loading state
+          setTimeout(() => fetchCredentials(), 2000);
+          return;
         }
 
-        console.log("Profile created/updated successfully");
-
-        // Create Xtream account if subscription is selected
-        if (onboardingData.subscription && onboardingData.subscription.plan !== "free-trial") {
-          console.log("Creating Xtream account...");
-          
-          try {
-            const { data: xtreamData, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
-              body: {
-                email: onboardingData.email,
-                name: onboardingData.name,
-                planId: onboardingData.subscription.plan
-              }
-            });
-
-            if (xtreamError) {
-              console.error("Xtream account creation error:", xtreamError);
-              toast.error("Account created but streaming setup failed. You can set this up later in your dashboard.");
-            } else if (xtreamData?.data?.username && xtreamData?.data?.password) {
-              console.log("Xtream account created successfully");
-              
-              // Update profile with Xtream credentials
-              const { error: updateError } = await supabase
-                .from('profiles')
-                .update({
-                  xtream_username: xtreamData.data.username,
-                  xtream_password: xtreamData.data.password,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', userId);
-
-              if (updateError) {
-                console.error("Failed to update profile with Xtream credentials:", updateError);
-              } else {
-                console.log("Profile updated with Xtream credentials");
-              }
-            }
-          } catch (xtreamError) {
-            console.error("Xtream account creation failed:", xtreamError);
-            toast.error("Account created but streaming setup failed. You can set this up later in your dashboard.");
-          }
-        }
-
-        // Send welcome email
-        try {
-          await supabase.functions.invoke('send-welcome-email', {
-            body: {
-              email: onboardingData.email,
-              name: onboardingData.name
-            }
-          });
-          console.log("Welcome email sent");
-        } catch (emailError) {
-          console.error("Welcome email failed:", emailError);
-          // Don't throw - this is not critical
-        }
-
-        // Clear onboarding data from both storages
-        localStorage.removeItem('onboarding-data');
-        sessionStorage.removeItem('onboarding-data');
+        setCredentials({
+          username: iptvAccount.username,
+          password: iptvAccount.password,
+          activation_code: iptvAccount.activation_code,
+          playlist_url: iptvAccount.playlist_url,
+          server_url: iptvAccount.server_url,
+          plan_type: iptvAccount.plan_type,
+          status: iptvAccount.status
+        });
         
-        setIsProcessing(false);
-        toast.success("Welcome to SteadyStream TV! Your account has been created successfully.");
-        
-        // Navigate to dashboard after a short delay
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 2000);
+        setIsLoading(false);
+        toast.success("Your SteadyStream TV account is ready!");
 
       } catch (error: any) {
-        console.error("Complete onboarding error:", error);
-        setError(error.message || "Failed to complete onboarding. Please try again.");
-        setIsProcessing(false);
+        console.error("Error fetching credentials:", error);
+        setError("Failed to load credentials. Please check your email or contact support.");
+        setIsLoading(false);
       }
     };
 
-    completeOnboarding();
-  }, [navigate, searchParams]);
+    fetchCredentials();
+  }, [searchParams]);
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard!`);
+  };
+
+  const downloadM3U = () => {
+    if (!credentials) return;
+    
+    const m3uContent = `#EXTM3U\n#EXTINF:-1,SteadyStream TV Playlist\n${credentials.playlist_url}`;
+    const blob = new Blob([m3uContent], { type: 'application/x-mpegURL' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'steadystream-playlist.m3u';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Playlist file downloaded!");
+  };
 
   if (error) {
     return (
       <div className="min-h-screen bg-black py-20 px-4 flex items-center justify-center">
-        <div className="max-w-md w-full bg-dark-200 rounded-xl border border-gray-800 p-8 text-center">
-          <div className="inline-flex items-center justify-center bg-red-500/20 rounded-full p-4 mb-4">
-            <span className="text-red-500 text-xl">⚠️</span>
-          </div>
-          <h1 className="text-2xl font-bold mb-4">Payment Processing Error</h1>
-          <p className="text-gray-400 mb-6">{error}</p>
-          <button 
-            onClick={() => navigate("/onboarding")}
-            className="bg-gold hover:bg-gold-dark text-black font-semibold px-6 py-3 rounded-lg"
-          >
-            Try Again
-          </button>
-        </div>
+        <Card className="max-w-md w-full bg-dark-200 border-gray-800">
+          <CardHeader className="text-center">
+            <div className="inline-flex items-center justify-center bg-red-500/20 rounded-full p-4 mb-4">
+              <span className="text-red-500 text-xl">⚠️</span>
+            </div>
+            <CardTitle className="text-white">Unable to Load Credentials</CardTitle>
+            <CardDescription className="text-gray-400">{error}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={() => navigate("/dashboard")}
+              className="w-full bg-gold hover:bg-gold-dark text-black"
+            >
+              Go to Dashboard
+            </Button>
+            <Button 
+              onClick={() => navigate("/")}
+              variant="outline"
+              className="w-full border-gray-600"
+            >
+              Return Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black py-20 px-4 flex items-center justify-center">
+        <Card className="max-w-md w-full bg-dark-200 border-gray-800">
+          <CardHeader className="text-center">
+            <div className="inline-flex items-center justify-center bg-blue-500/20 rounded-full p-4 mb-4">
+              <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+            </div>
+            <CardTitle className="text-white">Setting Up Your Account</CardTitle>
+            <CardDescription className="text-gray-400">
+              We're creating your IPTV credentials and sending your welcome email. This will only take a moment.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black py-20 px-4 flex items-center justify-center">
-      <div className="max-w-md w-full bg-dark-200 rounded-xl border border-gray-800 p-8 text-center">
-        <div className="inline-flex items-center justify-center bg-green-500/20 rounded-full p-4 mb-4">
-          {isProcessing ? (
-            <Loader2 className="h-8 w-8 text-green-500 animate-spin" />
-          ) : (
-            <CheckCircle className="h-8 w-8 text-green-500" />
-          )}
+    <div className="min-h-screen bg-black py-20 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Success Header */}
+        <Card className="mb-8 bg-dark-200 border-gray-800">
+          <CardHeader className="text-center">
+            <div className="inline-flex items-center justify-center bg-green-500/20 rounded-full p-4 mb-4">
+              <CheckCircle className="h-8 w-8 text-green-500" />
+            </div>
+            <CardTitle className="text-3xl text-white mb-2">
+              🎉 Welcome to SteadyStream TV!
+            </CardTitle>
+            <CardDescription className="text-xl text-gray-300">
+              Your {credentials?.plan_type.toUpperCase()} plan is now active
+              {credentials?.status === 'demo' && (
+                <span className="block text-yellow-400 text-sm mt-2">
+                  ⚠️ Demo Mode - Contact support to activate full features
+                </span>
+              )}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Credentials Card */}
+          <Card className="bg-dark-200 border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                🔑 Your IPTV Credentials
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Use these credentials with any IPTV app
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Username</label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <code className="flex-1 bg-dark-300 text-white p-2 rounded text-sm font-mono">
+                      {credentials?.username}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(credentials?.username || '', 'Username')}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Password</label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <code className="flex-1 bg-dark-300 text-white p-2 rounded text-sm font-mono">
+                      {credentials?.password}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(credentials?.password || '', 'Password')}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Activation Code</label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <code className="flex-1 bg-dark-300 text-white p-2 rounded text-sm font-mono">
+                      {credentials?.activation_code}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(credentials?.activation_code || '', 'Activation Code')}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Playlist URL</label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <code className="flex-1 bg-dark-300 text-white p-2 rounded text-sm font-mono break-all">
+                      {credentials?.playlist_url}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(credentials?.playlist_url || '', 'Playlist URL')}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 space-y-2">
+                <Button
+                  onClick={downloadM3U}
+                  className="w-full bg-gold hover:bg-gold-dark text-black"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download M3U Playlist
+                </Button>
+                <Button
+                  onClick={() => window.open(credentials?.playlist_url, '_blank')}
+                  variant="outline"
+                  className="w-full border-gray-600"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Test Playlist
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Setup Instructions */}
+          <Card className="bg-dark-200 border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                📺 Setup Instructions
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Get started in 3 easy steps
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-gold text-black rounded-full flex items-center justify-center font-bold text-sm">
+                    1
+                  </div>
+                  <div>
+                    <h4 className="text-white font-medium">Download IPTV App</h4>
+                    <p className="text-gray-400 text-sm">
+                      Get TiviMate (recommended), IPTV Smarters, or VLC Media Player
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-gold text-black rounded-full flex items-center justify-center font-bold text-sm">
+                    2
+                  </div>
+                  <div>
+                    <h4 className="text-white font-medium">Add Playlist</h4>
+                    <p className="text-gray-400 text-sm">
+                      Use the playlist URL above or download the M3U file
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-gold text-black rounded-full flex items-center justify-center font-bold text-sm">
+                    3
+                  </div>
+                  <div>
+                    <h4 className="text-white font-medium">Start Streaming!</h4>
+                    <p className="text-gray-400 text-sm">
+                      Enjoy thousands of channels in HD quality
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <h4 className="text-blue-400 font-medium mb-2">📱 QR Code Setup</h4>
+                <p className="text-gray-400 text-sm">
+                  A QR code has been sent to your email for instant app configuration.
+                </p>
+              </div>
+
+              <div className="mt-6 space-y-2">
+                <Button
+                  onClick={() => navigate("/dashboard")}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Go to Dashboard
+                </Button>
+                <Button
+                  onClick={() => navigate("/")}
+                  variant="outline"
+                  className="w-full border-gray-600"
+                >
+                  Return Home
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-        <h1 className="text-2xl font-bold mb-4">
-          {isProcessing ? "Setting Up Your Account..." : "Payment Successful!"}
-        </h1>
-        <p className="text-gray-400 mb-6">
-          {isProcessing 
-            ? "We're creating your account and setting up your streaming services. This will only take a moment."
-            : "Your SteadyStream TV account has been created successfully. Redirecting to your dashboard..."
-          }
-        </p>
-        {isProcessing && (
-          <div className="text-sm text-gray-500">
-            Please don't close this page while we complete your setup.
-          </div>
-        )}
+
+        {/* Email Notice */}
+        <Card className="mt-8 bg-dark-200 border-gray-800">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0 text-2xl">📧</div>
+              <div>
+                <h4 className="text-white font-medium">Check Your Email</h4>
+                <p className="text-gray-400 text-sm">
+                  We've sent a detailed welcome email with your credentials, QR code, and setup instructions.
+                  {credentials?.status === 'demo' && " Please contact support to upgrade from demo mode."}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
