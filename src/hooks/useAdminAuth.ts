@@ -1,13 +1,14 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema } from "@/components/admin/AdminLoginForm";
 import { resetSchema } from "@/components/admin/PasswordResetForm";
-import { supabase } from "@/integrations/supabase/client";
 
 export const useAdminAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +18,7 @@ export const useAdminAuth = () => {
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn, isAdmin, loading: authLoading, checkAdminAccess } = useAuth();
+  const { user, signIn } = useAuth();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -75,83 +76,70 @@ export const useAdminAuth = () => {
 
   // Check if user is already logged in and is admin
   useEffect(() => {
-    const checkExistingAdminSession = async () => {
+    const checkAdminStatus = async () => {
       try {
-        // Wait for auth to finish loading
-        if (authLoading) {
-          return;
-        }
-
-        console.log('useAdminAuth: Checking existing admin session...');
-        console.log('User:', user?.email);
-        console.log('IsAdmin from context:', isAdmin);
-
         if (user) {
-          // Double-check admin status
-          const adminStatus = await checkAdminAccess();
-          console.log('useAdminAuth: Admin status check result:', adminStatus);
+          // Use setTimeout to prevent infinite loops
+          setTimeout(async () => {
+            try {
+              console.log('Checking admin role for user:', user.id);
+              const { data: adminRole, error: roleError } = await supabase
+                .from('admin_roles')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
 
-          if (adminStatus || isAdmin) {
-            console.log('useAdminAuth: User is admin, redirecting to admin dashboard');
-            navigate('/super-admin');
-            return;
-          } else {
-            console.log('useAdminAuth: User is not admin');
-          }
+              console.log('Admin role query result:', { adminRole, roleError });
+
+              if (adminRole && !roleError) {
+                console.log('User is admin, redirecting to /admin');
+                navigate('/admin');
+                return;
+              } else {
+                console.log('User is not admin or error occurred:', roleError);
+              }
+            } catch (error) {
+              console.log('Error checking admin role:', error);
+            } finally {
+              setIsCheckingAdmin(false);
+            }
+          }, 0);
+        } else {
+          setIsCheckingAdmin(false);
         }
-
-        setIsCheckingAdmin(false);
       } catch (error) {
-        console.error('useAdminAuth: Error checking admin session:', error);
+        console.log('No active admin session or error:', error);
         setIsCheckingAdmin(false);
       }
     };
 
-    checkExistingAdminSession();
-  }, [user, isAdmin, authLoading, navigate, checkAdminAccess]);
+    checkAdminStatus();
+  }, [user, navigate]);
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
-    console.log('useAdminAuth: Starting login process for:', values.email);
+    console.log('Starting login process for:', values.email);
 
     try {
       // Use the AuthContext signIn method
       const { error } = await signIn(values.email, values.password);
 
       if (error) {
-        console.error('useAdminAuth: Login error:', error);
+        console.error('Login error:', error);
         throw error;
       }
 
-      console.log('useAdminAuth: Login successful, checking admin status...');
+      console.log('Login successful, waiting for auth state change...');
       
-      // Wait a moment for the auth context to update
-      setTimeout(async () => {
-        try {
-          const adminStatus = await checkAdminAccess();
-          console.log('useAdminAuth: Post-login admin check:', adminStatus);
+      toast({
+        title: "Login successful",
+        description: "Welcome to the admin dashboard",
+      });
 
-          if (adminStatus) {
-            toast({
-              title: "Login successful",
-              description: "Welcome to the admin dashboard",
-            });
-            navigate('/super-admin');
-          } else {
-            throw new Error('Insufficient admin privileges');
-          }
-        } catch (adminError: any) {
-          console.error('useAdminAuth: Admin check failed:', adminError);
-          toast({
-            title: "Access Denied",
-            description: "You don't have admin privileges for this system",
-            variant: "destructive",
-          });
-        }
-      }, 500);
+      // Navigation will be handled by the useEffect that monitors user changes
 
     } catch (error: any) {
-      console.error('useAdminAuth: Login failed:', error);
+      console.error('Login failed:', error);
       toast({
         title: "Login failed",
         description: error.message || "Invalid credentials or insufficient privileges",

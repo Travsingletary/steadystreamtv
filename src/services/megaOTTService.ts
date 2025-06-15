@@ -1,180 +1,104 @@
 
-// =====================================
-// AUTOMATED MEGAOTT INTEGRATION SERVICE
-// =====================================
-import type { UnifiedUserData, IPTVCredentials } from '@/types/automation';
+// src/services/megaOTTService.ts
+// UPDATED: Enhanced fallback handling for missing API credentials
+
+import { CONFIG } from './config';
+import type { UserData } from './types';
 
 export class MegaOTTService {
-  private apiKey = '411|LglDT244VcSuG75GXMAmsqm7IiCG8E3GTvFd23QR89d97e12';
-  private baseUrl = 'https://megaott.net/api/v1';
-
-  async createIPTVAccount(userData: UnifiedUserData): Promise<IPTVCredentials> {
+  /**
+   * Create Custom Dashboard subscription via secure edge function with fallback
+   */
+  static async createSubscription(userId: string, plan: string, userData: UserData) {
     try {
-      // Generate credentials
-      const username = `SST_${Date.now().toString(36)}`;
-      const password = Math.random().toString(36).substring(2, 12);
-      const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      console.log('Creating SECURE Custom Dashboard subscription for user:', userId, 'plan:', plan);
       
-      // Get plan configuration
-      const planConfig = this.getPlanConfig(userData.plan);
-      
-      // Create account via MegaOTT API
-      const response = await fetch(`${this.baseUrl}/user`, {
+      // Call the secure create-xtream-account Supabase edge function
+      const response = await fetch(`${CONFIG.supabase.url}/functions/v1/create-xtream-account`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          'Authorization': `Bearer ${CONFIG.supabase.anonKey}`,
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
-          username,
-          password,
+          userId: userId,
+          planType: plan,
           email: userData.email,
-          full_name: userData.name,
-          ...planConfig,
-          auto_renew: true,
-          trial_period: userData.plan === 'trial' ? 24 : 0
+          name: userData.name
         })
       });
 
       if (!response.ok) {
-        throw new Error(`MegaOTT API error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Custom Dashboard API error:', response.status, errorData);
+        
+        // Check if it's a missing API key error
+        if (errorData.details?.includes('API_KEY is not set') || errorData.details?.includes('not set')) {
+          console.log('API credentials not configured, providing trial credentials');
+          return this.createTrialFallback(userId, plan, userData);
+        }
+        
+        throw new Error(`Failed to create IPTV account: ${errorData.error || response.statusText}`);
       }
 
       const result = await response.json();
-      
-      // Generate playlist URL
-      const playlistUrl = `http://megaott.net:8080/get.php?username=${username}&password=${password}&type=m3u_plus&output=ts`;
+      console.log('Custom Dashboard subscription created successfully:', result);
       
       return {
+        success: true,
+        plan,
+        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated via Custom Dashboard`,
+        subscriptionId: result.data?.dashboardId,
+        credentials: {
+          username: result.data?.username,
+          password: result.data?.password
+        },
+        playlistUrls: result.data?.playlistUrls
+      };
+      
+    } catch (error) {
+      console.error('Custom Dashboard integration error:', error);
+      
+      // If it's a trial plan, provide fallback credentials
+      if (plan === 'trial' || plan === 'free-trial') {
+        console.log('Providing trial fallback for plan:', plan);
+        return this.createTrialFallback(userId, plan, userData);
+      }
+      
+      throw new Error(`Failed to create IPTV subscription: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create trial fallback when API is not available
+   */
+  private static createTrialFallback(userId: string, plan: string, userData: UserData) {
+    console.log('Creating trial fallback credentials for user:', userId);
+    
+    // Generate trial credentials
+    const username = `trial_${userId.substring(0, 8)}`;
+    const password = `temp_${Math.random().toString(36).substring(2, 8)}`;
+    
+    // Generate a basic playlist URL (you can enhance this)
+    const playlistUrl = `https://steadystreamtv.com/api/playlist/${userId}`;
+    
+    return {
+      success: true,
+      plan,
+      message: 'Trial account created (Demo mode - API configuration pending)',
+      subscriptionId: `trial_${userId}`,
+      credentials: {
         username,
         password,
-        serverUrl: 'http://megaott.net:8080',
-        activationCode,
-        playlistUrl,
-        expiresAt: new Date(Date.now() + (planConfig.duration * 24 * 60 * 60 * 1000)).toISOString()
-      };
-
-    } catch (error) {
-      console.error('MegaOTT account creation failed:', error);
-      // Return demo credentials as fallback
-      return this.generateDemoCredentials(userData);
-    }
-  }
-
-  private getPlanConfig(plan: string) {
-    const configs = {
-      trial: { duration: 1, max_connections: 1, package_id: 'trial_package' },
-      solo: { duration: 30, max_connections: 1, package_id: 'solo_package' },
-      duo: { duration: 30, max_connections: 2, package_id: 'duo_package' },
-      family: { duration: 30, max_connections: 3, package_id: 'family_package' }
+        activationCode: username.toUpperCase()
+      },
+      playlistUrls: {
+        m3u: playlistUrl,
+        m3u_plus: playlistUrl,
+        xspf: playlistUrl
+      },
+      isTrialFallback: true
     };
-    return configs[plan] || configs.trial;
-  }
-
-  private generateDemoCredentials(userData: UnifiedUserData): IPTVCredentials {
-    const username = `DEMO_${Date.now().toString(36)}`;
-    const password = Math.random().toString(36).substring(2, 12);
-    const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
-    return {
-      username,
-      password,
-      serverUrl: 'http://demo.steadystreamtv.com:8080',
-      activationCode,
-      playlistUrl: `${window.location.origin}/api/demo-playlist/${username}`,
-      expiresAt: new Date(Date.now() + (24 * 60 * 60 * 1000)).toISOString()
-    };
-  }
-
-  async optimizePlaylist(credentials: IPTVCredentials, userPreferences?: any): Promise<string> {
-    try {
-      // Fetch and optimize playlist based on user preferences
-      const response = await fetch(credentials.playlistUrl);
-      const m3uContent = await response.text();
-      
-      // Parse and optimize playlist
-      const optimizedPlaylist = this.processPlaylist(m3uContent, userPreferences);
-      
-      // Store optimized playlist
-      const optimizedUrl = await this.storeOptimizedPlaylist(optimizedPlaylist, credentials.username);
-      
-      return optimizedUrl;
-    } catch (error) {
-      console.error('Playlist optimization failed:', error);
-      return credentials.playlistUrl; // Return original if optimization fails
-    }
-  }
-
-  private processPlaylist(m3uContent: string, preferences?: any): string {
-    const lines = m3uContent.split('\n');
-    const optimizedLines: string[] = ['#EXTM3U'];
-    
-    // Add EPG URL if available
-    optimizedLines.push('#EXT-X-SESSION-DATA:DATA-ID="com.steadystream.epg",VALUE="http://megaott.net:8080/xmltv.php"');
-    
-    let currentChannel: any = null;
-    
-    for (const line of lines) {
-      if (line.startsWith('#EXTINF:')) {
-        currentChannel = this.parseChannelInfo(line);
-      } else if (line.startsWith('http') && currentChannel) {
-        // Apply optimization logic
-        if (this.shouldIncludeChannel(currentChannel, preferences)) {
-          optimizedLines.push(this.formatChannelInfo(currentChannel));
-          optimizedLines.push(line);
-        }
-        currentChannel = null;
-      }
-    }
-    
-    return optimizedLines.join('\n');
-  }
-
-  private parseChannelInfo(extinf: string): any {
-    const match = extinf.match(/#EXTINF:-?1\s*(?:tvg-id="([^"]*)")?\s*(?:tvg-name="([^"]*)")?\s*(?:tvg-logo="([^"]*)")?\s*(?:group-title="([^"]*)")?,(.+)/);
-    
-    if (!match) return null;
-    
-    return {
-      id: match[1] || '',
-      name: match[2] || match[5] || '',
-      logo: match[3] || '',
-      group: match[4] || 'General',
-      displayName: match[5] || ''
-    };
-  }
-
-  private shouldIncludeChannel(channel: any, preferences?: any): boolean {
-    if (!preferences) return true;
-    
-    // Filter out adult content if parental controls enabled
-    if (preferences.parentalControls && channel.group?.toLowerCase().includes('adult')) {
-      return false;
-    }
-    
-    // Prioritize user's favorite genres
-    if (preferences.favoriteGenres?.length > 0) {
-      const isPreferred = preferences.favoriteGenres.some((genre: string) => 
-        channel.group?.toLowerCase().includes(genre.toLowerCase())
-      );
-      if (isPreferred) return true;
-    }
-    
-    // Filter low-quality streams if HD preferred
-    if (preferences.qualityPreference === 'hd' && !channel.name.includes('HD')) {
-      return false;
-    }
-    
-    return true;
-  }
-
-  private formatChannelInfo(channel: any): string {
-    return `#EXTINF:-1 tvg-id="${channel.id}" tvg-name="${channel.name}" tvg-logo="${channel.logo}" group-title="${channel.group}",${channel.displayName}`;
-  }
-
-  private async storeOptimizedPlaylist(content: string, username: string): Promise<string> {
-    // In a real implementation, you'd store this in your CDN or file storage
-    // For now, return a generated URL
-    return `${window.location.origin}/api/optimized-playlist/${username}.m3u8`;
   }
 }

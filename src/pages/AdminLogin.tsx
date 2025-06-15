@@ -7,10 +7,7 @@ import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
 import { PasswordResetForm } from "@/components/admin/PasswordResetForm";
 import { AdminLoginFooter } from "@/components/admin/AdminLoginFooter";
 import { PasswordUpdateForm } from "@/components/admin/PasswordUpdateForm";
-import { AdminSetup } from "@/components/admin/AdminSetup";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { useAuth } from "@/contexts/AuthContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AdminLogin = () => {
   const {
@@ -29,8 +26,6 @@ const AdminLogin = () => {
     handlePasswordUpdateComplete,
   } = useAdminAuth();
 
-  const { user } = useAuth();
-
   if (isCheckingAdmin) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -41,94 +36,39 @@ const AdminLogin = () => {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-4">
-        {user ? (
-          <Tabs defaultValue="setup" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-dark-200">
-              <TabsTrigger value="setup" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-                Admin Setup
-              </TabsTrigger>
-              <TabsTrigger value="login" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-                Login
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="setup">
-              <AdminSetup />
-            </TabsContent>
-            
-            <TabsContent value="login">
-              <Card className="bg-dark-200 border-gray-800">
-                <AdminLoginHeader 
-                  isResetMode={isResetMode} 
-                  isPasswordUpdate={isPasswordReset}
-                />
-                <CardContent>
-                  {isPasswordReset ? (
-                    <PasswordUpdateForm onComplete={handlePasswordUpdateComplete} />
-                  ) : !isResetMode ? (
-                    <AdminLoginForm
-                      form={loginForm}
-                      onSubmit={onLoginSubmit}
-                      isLoading={isLoading}
-                    />
-                  ) : (
-                    <PasswordResetForm
-                      form={resetForm}
-                      onSubmit={onResetSubmit}
-                      isLoading={isLoading}
-                      resetEmailSent={resetEmailSent}
-                    />
-                  )}
-
-                  {!isPasswordReset && (
-                    <AdminLoginFooter
-                      isResetMode={isResetMode}
-                      onForgotPassword={handleForgotPassword}
-                      onBackToLogin={handleBackToLogin}
-                      onReturnToMain={handleReturnToMain}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <Card className="bg-dark-200 border-gray-800">
-            <AdminLoginHeader 
-              isResetMode={isResetMode} 
-              isPasswordUpdate={isPasswordReset}
+      <Card className="w-full max-w-md bg-dark-200 border-gray-800">
+        <AdminLoginHeader 
+          isResetMode={isResetMode} 
+          isPasswordUpdate={isPasswordReset}
+        />
+        <CardContent>
+          {isPasswordReset ? (
+            <PasswordUpdateForm onComplete={handlePasswordUpdateComplete} />
+          ) : !isResetMode ? (
+            <AdminLoginForm
+              form={loginForm}
+              onSubmit={onLoginSubmit}
+              isLoading={isLoading}
             />
-            <CardContent>
-              {isPasswordReset ? (
-                <PasswordUpdateForm onComplete={handlePasswordUpdateComplete} />
-              ) : !isResetMode ? (
-                <AdminLoginForm
-                  form={loginForm}
-                  onSubmit={onLoginSubmit}
-                  isLoading={isLoading}
-                />
-              ) : (
-                <PasswordResetForm
-                  form={resetForm}
-                  onSubmit={onResetSubmit}
-                  isLoading={isLoading}
-                  resetEmailSent={resetEmailSent}
-                />
-              )}
+          ) : (
+            <PasswordResetForm
+              form={resetForm}
+              onSubmit={onResetSubmit}
+              isLoading={isLoading}
+              resetEmailSent={resetEmailSent}
+            />
+          )}
 
-              {!isPasswordReset && (
-                <AdminLoginFooter
-                  isResetMode={isResetMode}
-                  onForgotPassword={handleForgotPassword}
-                  onBackToLogin={handleBackToLogin}
-                  onReturnToMain={handleReturnToMain}
-                />
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          {!isPasswordReset && (
+            <AdminLoginFooter
+              isResetMode={isResetMode}
+              onForgotPassword={handleForgotPassword}
+              onBackToLogin={handleBackToLogin}
+              onReturnToMain={handleReturnToMain}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
