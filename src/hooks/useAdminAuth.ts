@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema } from "@/components/admin/AdminLoginForm";
 import { resetSchema } from "@/components/admin/PasswordResetForm";
 
@@ -17,6 +18,7 @@ export const useAdminAuth = () => {
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, signIn } = useAuth();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -76,141 +78,66 @@ export const useAdminAuth = () => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log('Current user:', user);
-        
         if (user) {
-          // Check if user has admin role using direct query with better logging
-          console.log('Checking admin role for user:', user.id);
-          const { data: adminRole, error: roleError } = await supabase
-            .from('admin_roles')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
+          // Use setTimeout to prevent infinite loops
+          setTimeout(async () => {
+            try {
+              console.log('Checking admin role for user:', user.id);
+              const { data: adminRole, error: roleError } = await supabase
+                .from('admin_roles')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
 
-          console.log('Admin role query result:', { adminRole, roleError });
+              console.log('Admin role query result:', { adminRole, roleError });
 
-          if (adminRole && !roleError) {
-            console.log('User is admin, redirecting to /admin');
-            navigate('/admin');
-            return;
-          } else {
-            console.log('User is not admin or error occurred:', roleError);
-          }
+              if (adminRole && !roleError) {
+                console.log('User is admin, redirecting to /admin');
+                navigate('/admin');
+                return;
+              } else {
+                console.log('User is not admin or error occurred:', roleError);
+              }
+            } catch (error) {
+              console.log('Error checking admin role:', error);
+            } finally {
+              setIsCheckingAdmin(false);
+            }
+          }, 0);
+        } else {
+          setIsCheckingAdmin(false);
         }
       } catch (error) {
         console.log('No active admin session or error:', error);
-      } finally {
         setIsCheckingAdmin(false);
       }
     };
 
     checkAdminStatus();
-  }, [navigate]);
-
-  // Listen for auth state changes to detect password reset flow
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session);
-        
-        if (event === 'PASSWORD_RECOVERY') {
-          console.log('Password recovery event detected');
-          setIsPasswordReset(true);
-          setIsResetMode(false);
-          setResetEmailSent(false);
-        } else if (event === 'SIGNED_IN' && session) {
-          // Check if this is from a password reset
-          const params = getUrlParams();
-          
-          if (params.type === 'recovery') {
-            console.log('Password reset session detected');
-            setIsPasswordReset(true);
-            setIsResetMode(false);
-            setResetEmailSent(false);
-          } else {
-            // Regular login - check admin status
-            try {
-              console.log('Checking admin role for signed in user:', session.user.id);
-              const { data: adminRole, error: roleError } = await supabase
-                .from('admin_roles')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .single();
-
-              console.log('Admin role check result:', { adminRole, roleError });
-
-              if (adminRole && !roleError) {
-                console.log('User has admin role, navigating to /admin');
-                navigate('/admin');
-              } else {
-                console.log('User does not have admin role');
-              }
-            } catch (error) {
-              console.log('Error checking admin role:', error);
-            }
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setIsPasswordReset(false);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [user, navigate]);
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     console.log('Starting login process for:', values.email);
 
     try {
-      // Sign in with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      // Use the AuthContext signIn method
+      const { error } = await signIn(values.email, values.password);
 
       if (error) {
         console.error('Login error:', error);
         throw error;
       }
 
-      if (!data.user) {
-        throw new Error('Login failed - no user returned');
-      }
-
-      console.log('Login successful, checking admin role for user:', data.user.id);
-
-      // Check if user has admin role using direct query with detailed logging
-      const { data: adminRole, error: roleError } = await supabase
-        .from('admin_roles')
-        .select('*')
-        .eq('user_id', data.user.id);
-
-      console.log('Admin role query result:', { adminRole, roleError, userId: data.user.id });
-
-      // Check if we got any results
-      if (roleError) {
-        console.error('Error querying admin roles:', roleError);
-        await supabase.auth.signOut();
-        throw new Error('Error checking admin privileges: ' + roleError.message);
-      }
-
-      if (!adminRole || adminRole.length === 0) {
-        console.log('No admin role found for user');
-        // Sign out the user if they're not an admin
-        await supabase.auth.signOut();
-        throw new Error('Access denied. Admin privileges required.');
-      }
-
-      console.log('Admin role found:', adminRole);
-
+      console.log('Login successful, waiting for auth state change...');
+      
       toast({
         title: "Login successful",
         description: "Welcome to the admin dashboard",
       });
 
-      navigate('/admin');
+      // Navigation will be handled by the useEffect that monitors user changes
+
     } catch (error: any) {
       console.error('Login failed:', error);
       toast({

@@ -1,49 +1,41 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Shield } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check authentication status
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      
-      if (user) {
-        // Check if user is admin
-        const { data: adminRole } = await supabase
-          .from('admin_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-        
-        setIsAdmin(!!adminRole);
-      }
-    };
-
-    checkAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-      if (!session?.user) {
-        setIsAdmin(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  // Check admin status when user changes
+  React.useEffect(() => {
+    if (user) {
+      // Use setTimeout to prevent infinite loops
+      setTimeout(async () => {
+        try {
+          const { data: adminRole } = await supabase
+            .from('admin_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+          
+          setIsAdmin(!!adminRole);
+        } catch (error) {
+          console.log('Error checking admin status:', error);
+          setIsAdmin(false);
+        }
+      }, 0);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate('/');
   };
 
@@ -125,6 +117,7 @@ const Navbar = () => {
             </div>
           </div>
 
+          {/* Mobile menu button - keep existing code */}
           <div className="md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -136,7 +129,7 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu - keep existing code */}
       {isOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-black border-t border-gray-800">
