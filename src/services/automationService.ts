@@ -19,7 +19,7 @@ export class SimpleAutomationService {
           data: {
             full_name: userData.name,
             plan: userData.plan,
-            device_type: userData.deviceType || 'mobile',
+            device_type: userData.deviceType || 'android',
             preferences: JSON.stringify(userData.preferences || {
               favoriteGenres: ['sports', 'movies', 'news', 'documentary', 'kids', 'entertainment'],
               parentalControls: false,
@@ -53,7 +53,7 @@ export class SimpleAutomationService {
           email: userData.email,
           password: userData.password,
           plan: userData.plan as 'trial' | 'solo' | 'duo' | 'family',
-          deviceType: userData.deviceType || 'mobile'
+          deviceType: (userData.deviceType === 'mobile' ? 'android' : userData.deviceType || 'android') as 'firestick' | 'android' | 'ios' | 'web'
         };
 
         const megaOTTService = new MegaOTTService();

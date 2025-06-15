@@ -62,7 +62,7 @@ export class SteadyStreamAutomationService {
           email: userData.email,
           password: userData.password,
           plan: userData.plan as 'trial' | 'solo' | 'duo' | 'family',
-          deviceType: 'mobile' as const
+          deviceType: 'android' as const
         };
 
         const megaOTTService = new MegaOTTService();
