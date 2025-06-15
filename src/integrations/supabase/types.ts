@@ -155,6 +155,57 @@ export type Database = {
         }
         Relationships: []
       }
+      iptv_accounts: {
+        Row: {
+          activation_code: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          megaott_user_id: string | null
+          password: string
+          plan_type: string
+          playlist_url: string | null
+          server_url: string | null
+          status: string
+          stripe_session_id: string | null
+          updated_at: string
+          user_id: string | null
+          username: string
+        }
+        Insert: {
+          activation_code?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          megaott_user_id?: string | null
+          password: string
+          plan_type: string
+          playlist_url?: string | null
+          server_url?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          username: string
+        }
+        Update: {
+          activation_code?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          megaott_user_id?: string | null
+          password?: string
+          plan_type?: string
+          playlist_url?: string | null
+          server_url?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -203,6 +254,45 @@ export type Database = {
           updated_at?: string
           xtream_password?: string | null
           xtream_username?: string | null
+        }
+        Relationships: []
+      }
+      purchase_automations: {
+        Row: {
+          automation_status: string
+          created_at: string
+          email_sent: boolean | null
+          error_message: string | null
+          id: string
+          megaott_response: Json | null
+          payment_intent_id: string | null
+          stripe_session_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          automation_status?: string
+          created_at?: string
+          email_sent?: boolean | null
+          error_message?: string | null
+          id?: string
+          megaott_response?: Json | null
+          payment_intent_id?: string | null
+          stripe_session_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          automation_status?: string
+          created_at?: string
+          email_sent?: boolean | null
+          error_message?: string | null
+          id?: string
+          megaott_response?: Json | null
+          payment_intent_id?: string | null
+          stripe_session_id?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
