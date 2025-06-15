@@ -209,73 +209,76 @@ const EnhancedFinalStep: React.FC<FinalStepProps> = ({ userData, onComplete, onE
   }, [processFinalStep, isProcessing, result]);
 
   return (
-    <div className="final-step-container">
-      <div className="final-step-header">
-        <h2>🎉 Setting Up Your SteadyStream Account</h2>
-        <p>Please wait while we complete your account setup...</p>
-      </div>
+    <>
+      <div className="final-step-container">
+        <div className="final-step-header">
+          <h2>🎉 Setting Up Your SteadyStream Account</h2>
+          <p>Please wait while we complete your account setup...</p>
+        </div>
 
-      <div className="progress-container">
-        {progressSteps.map((step, index) => (
-          <div 
-            key={step.id} 
-            className={`progress-step ${step.status} ${index === currentStep ? 'current' : ''}`}
-          >
-            <div className="step-indicator">
-              {step.status === 'completed' && <span className="checkmark">✅</span>}
-              {step.status === 'processing' && <span className="spinner">⏳</span>}
-              {step.status === 'error' && <span className="error-mark">❌</span>}
-              {step.status === 'pending' && <span className="pending-mark">⚪</span>}
+        <div className="progress-container">
+          {progressSteps.map((step, index) => (
+            <div 
+              key={step.id} 
+              className={`progress-step ${step.status} ${index === currentStep ? 'current' : ''}`}
+            >
+              <div className="step-indicator">
+                {step.status === 'completed' && <span className="checkmark">✅</span>}
+                {step.status === 'processing' && <span className="spinner">⏳</span>}
+                {step.status === 'error' && <span className="error-mark">❌</span>}
+                {step.status === 'pending' && <span className="pending-mark">⚪</span>}
+              </div>
+              
+              <div className="step-content">
+                <h3>{step.title}</h3>
+                {step.message && <p className="step-message">{step.message}</p>}
+                {step.timestamp && (
+                  <small className="step-timestamp">
+                    {step.timestamp.toLocaleTimeString()}
+                  </small>
+                )}
+              </div>
             </div>
-            
-            <div className="step-content">
-              <h3>{step.title}</h3>
-              {step.message && <p className="step-message">{step.message}</p>}
-              {step.timestamp && (
-                <small className="step-timestamp">
-                  {step.timestamp.toLocaleTimeString()}
-                </small>
+          ))}
+        </div>
+
+        {result && (
+          <div className="completion-summary">
+            <h3>🎊 Account Setup Complete!</h3>
+            <div className="account-details">
+              <p><strong>Plan:</strong> {result.userData.plan}</p>
+              <p><strong>Device:</strong> {result.userData.deviceType}</p>
+              <p><strong>Activation Code:</strong> <code>{result.activationCode}</code></p>
+              {result.fallbackMode && (
+                <div className="fallback-notice">
+                  <p>⚠️ <strong>Note:</strong> Account created in fallback mode. Full features will be available shortly.</p>
+                </div>
               )}
             </div>
           </div>
-        ))}
-      </div>
+        )}
 
-      {result && (
-        <div className="completion-summary">
-          <h3>🎊 Account Setup Complete!</h3>
-          <div className="account-details">
-            <p><strong>Plan:</strong> {result.userData.plan}</p>
-            <p><strong>Device:</strong> {result.userData.deviceType}</p>
-            <p><strong>Activation Code:</strong> <code>{result.activationCode}</code></p>
-            {result.fallbackMode && (
-              <div className="fallback-notice">
-                <p>⚠️ <strong>Note:</strong> Account created in fallback mode. Full features will be available shortly.</p>
-              </div>
+        {connectionStatus && (
+          <div className="connection-status">
+            <div className={`status-indicator ${connectionStatus.isConnected ? 'connected' : 'disconnected'}`}>
+              {connectionStatus.isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+            </div>
+            {connectionStatus.latency > 0 && (
+              <small>Latency: {connectionStatus.latency}ms</small>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {connectionStatus && (
-        <div className="connection-status">
-          <div className={`status-indicator ${connectionStatus.isConnected ? 'connected' : 'disconnected'}`}>
-            {connectionStatus.isConnected ? '🟢 Connected' : '🔴 Disconnected'}
-          </div>
-          {connectionStatus.latency > 0 && (
-            <small>Latency: {connectionStatus.latency}ms</small>
-          )}
-        </div>
-      )}
+        {debugInfo && process.env.NODE_ENV === 'development' && (
+          <details className="debug-info">
+            <summary>🐛 Debug Information</summary>
+            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+          </details>
+        )}
+      </div>
 
-      {debugInfo && process.env.NODE_ENV === 'development' && (
-        <details className="debug-info">
-          <summary>🐛 Debug Information</summary>
-          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-        </details>
-      )}
-
-      <style jsx>{`
+      <style>
+        {`
         .final-step-container {
           max-width: 600px;
           margin: 0 auto;
@@ -450,10 +453,10 @@ const EnhancedFinalStep: React.FC<FinalStepProps> = ({ userData, onComplete, onE
             font-size: 1rem;
           }
         }
-      `}</style>
-    </div>
+        `}
+      </style>
+    </>
   );
 };
 
 export default EnhancedFinalStep;
-

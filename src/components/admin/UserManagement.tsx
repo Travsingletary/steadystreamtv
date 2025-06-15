@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +9,6 @@ import { Search, User, Mail, Calendar } from "lucide-react";
 
 interface UserProfile {
   id: string;
-  user_id: string;
   full_name: string;
   email: string;
   subscription_plan: string | null;

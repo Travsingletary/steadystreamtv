@@ -84,7 +84,6 @@ const TestImplementation: React.FC = () => {
     addDebugLog('Test suite initialized with 7 comprehensive tests');
   }, [addDebugLog]);
 
-  // Run system health check
   const runHealthCheck = useCallback(async (): Promise<boolean> => {
     addDebugLog('Starting system health check...');
     updateTest('health', { status: 'running', message: 'Checking system components...' });
@@ -447,7 +446,6 @@ const TestImplementation: React.FC = () => {
     }
   }, [addDebugLog, updateTest]);
 
-  // Run all tests
   const runAllTests = useCallback(async () => {
     if (isRunning) return;
     
@@ -496,100 +494,103 @@ const TestImplementation: React.FC = () => {
   }, [initializeTests, addDebugLog]);
 
   return (
-    <div className="test-implementation">
-      <div className="test-header">
-        <h1>🧪 SteadyStream Implementation Test Suite</h1>
-        <p>Comprehensive testing and validation of the enhanced onboarding system</p>
-        
-        <div className="system-health">
-          <h3>System Health Status</h3>
-          <div className="health-indicators">
-            <div className={`health-item ${systemHealth.api ? 'healthy' : 'unhealthy'}`}>
-              {systemHealth.api ? '🟢' : '🔴'} API
-            </div>
-            <div className={`health-item ${systemHealth.database ? 'healthy' : 'unhealthy'}`}>
-              {systemHealth.database ? '🟢' : '🔴'} Database
-            </div>
-            <div className={`health-item ${systemHealth.auth ? 'healthy' : 'unhealthy'}`}>
-              {systemHealth.auth ? '🟢' : '🔴'} Auth
-            </div>
-            <div className={`health-item overall ${systemHealth.overall ? 'healthy' : 'unhealthy'}`}>
-              {systemHealth.overall ? '🟢' : '🔴'} Overall
+    <>
+      <div className="test-implementation">
+        <div className="test-header">
+          <h1>🧪 SteadyStream Implementation Test Suite</h1>
+          <p>Comprehensive testing and validation of the enhanced onboarding system</p>
+          
+          <div className="system-health">
+            <h3>System Health Status</h3>
+            <div className="health-indicators">
+              <div className={`health-item ${systemHealth.api ? 'healthy' : 'unhealthy'}`}>
+                {systemHealth.api ? '🟢' : '🔴'} API
+              </div>
+              <div className={`health-item ${systemHealth.database ? 'healthy' : 'unhealthy'}`}>
+                {systemHealth.database ? '🟢' : '🔴'} Database
+              </div>
+              <div className={`health-item ${systemHealth.auth ? 'healthy' : 'unhealthy'}`}>
+                {systemHealth.auth ? '🟢' : '🔴'} Auth
+              </div>
+              <div className={`health-item overall ${systemHealth.overall ? 'healthy' : 'unhealthy'}`}>
+                {systemHealth.overall ? '🟢' : '🔴'} Overall
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="test-controls">
-        <button 
-          onClick={runAllTests} 
-          disabled={isRunning}
-          className="run-tests-btn"
-        >
-          {isRunning ? '⏳ Running Tests...' : '🚀 Run All Tests'}
-        </button>
-        
-        <button 
-          onClick={() => {
-            setTests([]);
-            setDebugLogs([]);
-            initializeTests();
-          }}
-          disabled={isRunning}
-          className="reset-btn"
-        >
-          🔄 Reset Tests
-        </button>
-      </div>
+        <div className="test-controls">
+          <button 
+            onClick={runAllTests} 
+            disabled={isRunning}
+            className="run-tests-btn"
+          >
+            {isRunning ? '⏳ Running Tests...' : '🚀 Run All Tests'}
+          </button>
+          
+          <button 
+            onClick={() => {
+              setTests([]);
+              setDebugLogs([]);
+              initializeTests();
+            }}
+            disabled={isRunning}
+            className="reset-btn"
+          >
+            🔄 Reset Tests
+          </button>
+        </div>
 
-      <div className="test-results">
-        <h3>Test Results</h3>
-        {tests.map(test => (
-          <div key={test.id} className={`test-result ${test.status}`}>
-            <div className="test-info">
-              <div className="test-name">
-                <span className="test-icon">
-                  {test.status === 'passed' && '✅'}
-                  {test.status === 'failed' && '❌'}
-                  {test.status === 'running' && '⏳'}
-                  {test.status === 'pending' && '⚪'}
-                </span>
-                {test.name}
+        <div className="test-results">
+          <h3>Test Results</h3>
+          {tests.map(test => (
+            <div key={test.id} className={`test-result ${test.status}`}>
+              <div className="test-info">
+                <div className="test-name">
+                  <span className="test-icon">
+                    {test.status === 'passed' && '✅'}
+                    {test.status === 'failed' && '❌'}
+                    {test.status === 'running' && '⏳'}
+                    {test.status === 'pending' && '⚪'}
+                  </span>
+                  {test.name}
+                </div>
+                <div className="test-message">{test.message}</div>
+                {test.duration && (
+                  <div className="test-duration">{test.duration}ms</div>
+                )}
               </div>
-              <div className="test-message">{test.message}</div>
-              {test.duration && (
-                <div className="test-duration">{test.duration}ms</div>
+              
+              {test.details && (
+                <details className="test-details">
+                  <summary>View Details</summary>
+                  <pre>{JSON.stringify(test.details, null, 2)}</pre>
+                </details>
               )}
-            </div>
-            
-            {test.details && (
-              <details className="test-details">
-                <summary>View Details</summary>
-                <pre>{JSON.stringify(test.details, null, 2)}</pre>
-              </details>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="debug-console">
-        <h3>Debug Console</h3>
-        <div className="debug-logs">
-          {debugLogs.map((log, index) => (
-            <div key={index} className="debug-log">
-              {log}
             </div>
           ))}
         </div>
-        <button 
-          onClick={() => setDebugLogs([])}
-          className="clear-logs-btn"
-        >
-          Clear Logs
-        </button>
+
+        <div className="debug-console">
+          <h3>Debug Console</h3>
+          <div className="debug-logs">
+            {debugLogs.map((log, index) => (
+              <div key={index} className="debug-log">
+                {log}
+              </div>
+            ))}
+          </div>
+          <button 
+            onClick={() => setDebugLogs([])}
+            className="clear-logs-btn"
+          >
+            Clear Logs
+          </button>
+        </div>
       </div>
 
-      <style jsx>{`
+      <style>
+        {`
         .test-implementation {
           max-width: 1200px;
           margin: 0 auto;
@@ -820,10 +821,10 @@ const TestImplementation: React.FC = () => {
             flex-direction: column;
           }
         }
-      `}</style>
-    </div>
+        `}
+      </style>
+    </>
   );
 };
 
 export default TestImplementation;
-
