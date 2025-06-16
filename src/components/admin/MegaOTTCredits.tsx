@@ -1,57 +1,54 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { CreditCard, Plus, Minus, RefreshCw } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { DollarSign, RefreshCw, TrendingUp, Clock } from 'lucide-react';
 
-interface Reseller {
+interface CreditData {
   id: string;
-  user_id: string;
-  credits: number;
-  username: string;
-  panel_url: string;
-  api_key: string;
+  amount: number;
+  last_updated: string;
   created_at: string;
 }
 
-interface MegaOTTCreditsProps {
-  onStatsUpdate: (stats: any) => void;
-}
-
-export const MegaOTTCredits = ({ onStatsUpdate }: MegaOTTCreditsProps) => {
-  const [resellers, setResellers] = useState<Reseller[]>([]);
+export const MegaOTTCredits = () => {
+  const [credits, setCredits] = useState<CreditData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchResellers();
-  }, []);
-
-  const fetchResellers = async () => {
+  const loadCredits = async () => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: reseller } = await supabase
         .from('resellers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!reseller) return;
+
+      const { data, error } = await supabase
+        .from('megaott_credits')
         .select('*')
-        .order('created_at', { ascending: false });
+        .eq('reseller_id', reseller.id)
+        .single();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
 
-      setResellers(data || []);
-      
-      const totalCredits = data?.reduce((sum, reseller) => sum + (reseller.credits || 0), 0) || 0;
-      onStatsUpdate({ megaottCredits: totalCredits });
-      
+      setCredits(data);
     } catch (error: any) {
-      console.error('Error fetching resellers:', error);
+      console.error('Error loading credits:', error);
       toast({
         title: "Error",
-        description: "Failed to load MegaOTT credits",
+        description: "Failed to load credits data",
         variant: "destructive",
       });
     } finally {
@@ -59,61 +56,70 @@ export const MegaOTTCredits = ({ onStatsUpdate }: MegaOTTCreditsProps) => {
     }
   };
 
-  const updateCredits = async (resellerId: string, newCredits: number) => {
+  const refreshCredits = async () => {
+    setRefreshing(true);
     try {
-      setUpdating(resellerId);
-      
-      const { error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: reseller } = await supabase
         .from('resellers')
-        .update({ credits: newCredits })
-        .eq('id', resellerId);
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!reseller) throw new Error('Reseller profile not found');
+
+      const { data, error } = await supabase.functions.invoke('megaott-sync', {
+        body: { 
+          reseller_id: reseller.id,
+          sync_type: 'credits' 
+        }
+      });
 
       if (error) throw error;
 
-      setResellers(prev => 
-        prev.map(reseller => 
-          reseller.id === resellerId 
-            ? { ...reseller, credits: newCredits }
-            : reseller
-        )
-      );
-
-      // Update total credits
-      const totalCredits = resellers.reduce((sum, reseller) => 
-        sum + (reseller.id === resellerId ? newCredits : reseller.credits || 0), 0
-      );
-      onStatsUpdate({ megaottCredits: totalCredits });
+      await loadCredits();
 
       toast({
-        title: "Success",
-        description: "Credits updated successfully",
+        title: "Credits Refreshed",
+        description: "Credits data has been updated from MegaOTT",
       });
-      
+
     } catch (error: any) {
-      console.error('Error updating credits:', error);
+      console.error('Error refreshing credits:', error);
       toast({
-        title: "Error",
-        description: "Failed to update credits",
+        title: "Refresh Failed",
+        description: error.message || "Failed to refresh credits",
         variant: "destructive",
       });
     } finally {
-      setUpdating(null);
+      setRefreshing(false);
     }
   };
 
-  const handleCreditChange = (resellerId: string, change: number) => {
-    const reseller = resellers.find(r => r.id === resellerId);
-    if (reseller) {
-      const newCredits = Math.max(0, (reseller.credits || 0) + change);
-      updateCredits(resellerId, newCredits);
-    }
+  useEffect(() => {
+    loadCredits();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  const getCreditStatus = (amount: number) => {
+    if (amount > 100) return { color: 'bg-green-500', text: 'High' };
+    if (amount > 20) return { color: 'bg-yellow-500', text: 'Medium' };
+    return { color: 'bg-red-500', text: 'Low' };
   };
 
   if (loading) {
     return (
       <Card className="bg-dark-200 border-gray-800">
-        <CardContent className="flex items-center justify-center h-64">
-          <div className="text-white">Loading MegaOTT credits...</div>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+            <span className="ml-2 text-gray-400">Loading credits...</span>
+          </div>
         </CardContent>
       </Card>
     );
@@ -122,102 +128,113 @@ export const MegaOTTCredits = ({ onStatsUpdate }: MegaOTTCreditsProps) => {
   return (
     <Card className="bg-dark-200 border-gray-800">
       <CardHeader>
-        <CardTitle className="text-white flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          MegaOTT Credits Management
-        </CardTitle>
-        <CardDescription className="text-gray-400">
-          Monitor and manage reseller credits for MegaOTT services
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex justify-between items-center mb-6">
-          <div className="text-white">
-            <span className="text-lg font-semibold">Total Credits Available: </span>
-            <span className="text-2xl font-bold text-gold">
-              {resellers.reduce((sum, reseller) => sum + (reseller.credits || 0), 0)}
-            </span>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="text-gold" />
+              MegaOTT Credits
+            </CardTitle>
+            <CardDescription>
+              Current credit balance and usage information
+            </CardDescription>
           </div>
           <Button
-            onClick={fetchResellers}
+            onClick={refreshCredits}
+            disabled={refreshing}
             variant="outline"
-            className="border-gray-700 text-white hover:bg-gray-800"
+            size="sm"
+            className="border-gray-600"
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            {refreshing ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
           </Button>
         </div>
+      </CardHeader>
+      <CardContent>
+        {credits ? (
+          <div className="space-y-6">
+            {/* Current Balance */}
+            <div className="bg-dark-300 p-6 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold text-gold">
+                    {credits.amount.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-400 mt-1">
+                    Available Credits
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Badge 
+                    className={`${getCreditStatus(credits.amount).color} text-white`}
+                  >
+                    {getCreditStatus(credits.amount).text}
+                  </Badge>
+                  <div className="text-xs text-gray-400 mt-2">
+                    Balance Status
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        <div className="rounded-md border border-gray-700">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-gray-700">
-                <TableHead className="text-gray-300">Username</TableHead>
-                <TableHead className="text-gray-300">Panel URL</TableHead>
-                <TableHead className="text-gray-300">Credits</TableHead>
-                <TableHead className="text-gray-300">Actions</TableHead>
-                <TableHead className="text-gray-300">Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {resellers.map((reseller) => (
-                <TableRow key={reseller.id} className="border-gray-700">
-                  <TableCell className="text-white">
-                    {reseller.username || 'N/A'}
-                  </TableCell>
-                  <TableCell className="text-white">
-                    {reseller.panel_url ? (
-                      <a 
-                        href={reseller.panel_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline"
-                      >
-                        {reseller.panel_url}
-                      </a>
-                    ) : 'N/A'}
-                  </TableCell>
-                  <TableCell className="text-white">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-gold">
-                        {reseller.credits || 0}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCreditChange(reseller.id, -1)}
-                        disabled={updating === reseller.id || (reseller.credits || 0) <= 0}
-                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCreditChange(reseller.id, 1)}
-                        disabled={updating === reseller.id}
-                        className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-gray-400">
-                    {new Date(reseller.created_at).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+            {/* Credit Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-dark-300 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-medium">Last Updated</span>
+                </div>
+                <div className="text-sm text-gray-300">
+                  {formatDate(credits.last_updated)}
+                </div>
+              </div>
 
-        {resellers.length === 0 && (
-          <div className="text-center py-8 text-gray-400">
-            No reseller accounts found.
+              <div className="bg-dark-300 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-medium">Account Created</span>
+                </div>
+                <div className="text-sm text-gray-300">
+                  {formatDate(credits.created_at)}
+                </div>
+              </div>
+            </div>
+
+            {/* Credit Alerts */}
+            {credits.amount < 20 && (
+              <div className="bg-red-900/20 border border-red-800 p-4 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-red-400" />
+                  <span className="font-medium text-red-400">Low Credit Alert</span>
+                </div>
+                <p className="text-sm text-red-300 mt-1">
+                  Your credit balance is running low. Consider topping up to avoid service interruption.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-300 mb-2">No Credits Data</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Credits data hasn't been synced yet. Click refresh to fetch the latest information.
+            </p>
+            <Button
+              onClick={refreshCredits}
+              disabled={refreshing}
+              className="bg-gold hover:bg-gold-dark text-black"
+            >
+              {refreshing ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Sync Credits
+            </Button>
           </div>
         )}
       </CardContent>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,8 @@ import {
   Calendar,
   Monitor
 } from "lucide-react";
+import { MegaOTTDiagnostics } from "@/components/admin/MegaOTTDiagnostics";
+import { MegaOTTCredits } from "@/components/admin/MegaOTTCredits";
 
 interface SteadyStreamUser {
   id: string;
@@ -345,6 +346,7 @@ const SteadyStreamAdminDashboard = () => {
           <TabsList className="bg-dark-300 border-b border-gray-800">
             <TabsTrigger value="users">Users Management</TabsTrigger>
             <TabsTrigger value="create">Create User</TabsTrigger>
+            <TabsTrigger value="megaott">MegaOTT Integration</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
@@ -521,6 +523,15 @@ const SteadyStreamAdminDashboard = () => {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="megaott" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <MegaOTTCredits />
+              <div>
+                <MegaOTTDiagnostics />
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

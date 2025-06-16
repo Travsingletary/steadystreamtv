@@ -206,6 +206,115 @@ export type Database = {
         }
         Relationships: []
       }
+      megaott_credits: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          last_updated: string
+          reseller_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          last_updated?: string
+          reseller_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          last_updated?: string
+          reseller_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "megaott_credits_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      megaott_diagnostics: {
+        Row: {
+          error_message: string | null
+          executed_at: string
+          id: string
+          response_data: Json | null
+          status: string
+          test_type: string
+        }
+        Insert: {
+          error_message?: string | null
+          executed_at?: string
+          id?: string
+          response_data?: Json | null
+          status: string
+          test_type: string
+        }
+        Update: {
+          error_message?: string | null
+          executed_at?: string
+          id?: string
+          response_data?: Json | null
+          status?: string
+          test_type?: string
+        }
+        Relationships: []
+      }
+      megaott_subscribers: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          external_id: string
+          id: string
+          last_synced: string
+          max_connections: number | null
+          password: string
+          plan: string
+          reseller_id: string | null
+          status: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          external_id: string
+          id?: string
+          last_synced?: string
+          max_connections?: number | null
+          password: string
+          plan: string
+          reseller_id?: string | null
+          status?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          external_id?: string
+          id?: string
+          last_synced?: string
+          max_connections?: number | null
+          password?: string
+          plan?: string
+          reseller_id?: string | null
+          status?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "megaott_subscribers_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
