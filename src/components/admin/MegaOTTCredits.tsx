@@ -14,7 +14,11 @@ interface CreditData {
   created_at: string;
 }
 
-export const MegaOTTCredits = () => {
+interface MegaOTTCreditsProps {
+  onStatsUpdate?: (newStats: any) => void;
+}
+
+export const MegaOTTCredits: React.FC<MegaOTTCreditsProps> = ({ onStatsUpdate }) => {
   const [credits, setCredits] = useState<CreditData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,6 +48,11 @@ export const MegaOTTCredits = () => {
       }
 
       setCredits(data);
+      
+      // Update parent stats if callback provided
+      if (onStatsUpdate && data) {
+        onStatsUpdate({ megaottCredits: data.amount });
+      }
     } catch (error: any) {
       console.error('Error loading credits:', error);
       toast({
