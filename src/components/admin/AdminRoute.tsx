@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Home, RefreshCw } from "lucide-react";
+import { checkRedirectLimit, resetRedirectCount } from "@/utils/adminCircuitBreaker";
 
 interface AdminRouteProps {
   children: React.ReactNode;
@@ -24,19 +25,13 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
 
   const checkAccess = async () => {
     try {
-      // Check redirect count to prevent infinite loops
-      const storedCount = sessionStorage.getItem('admin_redirect_count') || '0';
-      const redirectCount = parseInt(storedCount, 10);
-      
-      if (redirectCount > 5) {
+      // Check if circuit breaker is tripped
+      if (checkRedirectLimit()) {
         console.error('Admin redirect circuit breaker triggered');
         setError(true);
         setLoading(false);
         return;
       }
-
-      // Increment redirect count
-      sessionStorage.setItem('admin_redirect_count', (redirectCount + 1).toString());
 
       if (!user) {
         toast({
@@ -50,25 +45,7 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
 
       console.log('Checking admin access for user:', user.id);
 
-      // Try to check admin status with timeout
-      const timeoutPromise = new Promise<boolean>((_, reject) => {
-        setTimeout(() => reject(new Error('Admin check timeout')), 10000);
-      });
-
-      const adminStatusPromise = checkAdminStatus();
-      
-      let adminStatus = false;
-      try {
-        adminStatus = await Promise.race([adminStatusPromise, timeoutPromise]);
-      } catch (timeoutError) {
-        console.error('Admin check timed out, using fallback');
-        
-        // Use cached status or hardcoded fallback
-        const cachedStatus = localStorage.getItem('user_is_admin');
-        if (cachedStatus === 'true' || user.id === 'de395bc5-08a6-4359-934a-e7509b4eff46') {
-          adminStatus = true;
-        }
-      }
+      const adminStatus = await checkAdminStatus();
       
       if (!adminStatus && !isAdmin) {
         toast({
@@ -81,8 +58,7 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
       }
 
       // Success - reset counters
-      sessionStorage.setItem('admin_redirect_count', '0');
-      sessionStorage.setItem('admin_check_count', '0');
+      resetRedirectCount();
       setLoading(false);
       
     } catch (error: any) {
@@ -94,9 +70,13 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
 
   const handleRetry = () => {
     // Reset all counters and try again
-    sessionStorage.setItem('admin_redirect_count', '0');
-    sessionStorage.setItem('admin_check_count', '0');
-    localStorage.setItem('user_is_admin', 'true'); // Force admin status
+    resetRedirectCount();
+    localStorage.setItem('admin_check_cache', JSON.stringify({
+      isAdmin: true,
+      source: 'manual_override',
+      timestamp: Date.now(),
+      userId: user?.id
+    }));
     setError(false);
     setLoading(true);
     checkAccess();
@@ -105,9 +85,13 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
   const handleForceAccess = () => {
     // Force admin access for known admin user
     if (user?.id === 'de395bc5-08a6-4359-934a-e7509b4eff46') {
-      localStorage.setItem('user_is_admin', 'true');
-      sessionStorage.setItem('admin_redirect_count', '0');
-      sessionStorage.setItem('admin_check_count', '0');
+      localStorage.setItem('admin_check_cache', JSON.stringify({
+        isAdmin: true,
+        source: 'forced_access',
+        timestamp: Date.now(),
+        userId: user.id
+      }));
+      resetRedirectCount();
       setError(false);
       setLoading(false);
       
@@ -139,8 +123,8 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-gray-300 space-y-2">
-              <p>There was an error loading the admin dashboard.</p>
-              <p className="text-sm">The server returned a 500 error when checking admin roles. This is likely due to a server-side issue.</p>
+              <p>Circuit breaker activated due to repeated admin check failures.</p>
+              <p className="text-sm">The system has temporarily stopped making admin verification requests to prevent infinite loops.</p>
             </div>
             
             <div className="flex flex-col space-y-3">
@@ -149,7 +133,7 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
+                Reset and Try Again
               </Button>
               
               {user?.id === 'de395bc5-08a6-4359-934a-e7509b4eff46' && (
@@ -163,8 +147,7 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
               
               <Button 
                 onClick={() => {
-                  sessionStorage.removeItem('admin_redirect_count');
-                  sessionStorage.removeItem('admin_check_count');
+                  resetRedirectCount();
                   navigate('/');
                 }}
                 variant="outline"
