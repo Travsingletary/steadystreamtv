@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -243,24 +242,32 @@ export const EnhancedAdminDashboard = () => {
       const basicCount = subscriptions?.filter(s => s.plan_name.toLowerCase().includes('basic')).length || 0;
       const premiumCount = subscriptions?.filter(s => s.plan_name.toLowerCase().includes('premium')).length || 0;
 
-      // Get recent subscriptions
+      // Get recent subscriptions with user emails
+      // First get recent subscriptions
       const { data: recentSubs } = await supabase
         .from('stripe_subscriptions')
-        .select(`
-          plan_name,
-          amount,
-          created_at,
-          profiles!stripe_subscriptions_user_id_fkey(email)
-        `)
+        .select('user_id, plan_name, amount, created_at')
         .order('created_at', { ascending: false })
         .limit(5);
 
-      const recentSubscriptions = recentSubs?.map(sub => ({
-        userEmail: sub.profiles?.email || 'Unknown',
-        planName: sub.plan_name,
-        amount: sub.amount / 100,
-        createdAt: new Date(sub.created_at).toLocaleDateString()
-      })) || [];
+      // Then get user emails for those subscriptions
+      const recentSubscriptions = [];
+      if (recentSubs) {
+        for (const sub of recentSubs) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', sub.user_id)
+            .single();
+
+          recentSubscriptions.push({
+            userEmail: profile?.email || 'Unknown',
+            planName: sub.plan_name,
+            amount: sub.amount / 100,
+            createdAt: new Date(sub.created_at).toLocaleDateString()
+          });
+        }
+      }
 
       return {
         basicCount,
