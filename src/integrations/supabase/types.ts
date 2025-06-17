@@ -30,6 +30,30 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_users: {
+        Row: {
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          is_active: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       channels_catalog: {
         Row: {
           category: string
@@ -732,6 +756,10 @@ export type Database = {
       bytea_to_text: {
         Args: { data: string }
         Returns: string
+      }
+      check_admin_role: {
+        Args: { user_id: string }
+        Returns: boolean
       }
       create_megaott_subscription_v2: {
         Args: {

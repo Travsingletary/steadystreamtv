@@ -64,32 +64,30 @@ export const checkAdminStatusWithCircuitBreaker = async (userId: string): Promis
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(`/functions/v1/admin-roles/${userId}`, {
-      signal: controller.signal,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-      }
+    // Use the Supabase client directly instead of fetch
+    const { createClient } = await import('@/integrations/supabase/client');
+    const supabase = createClient;
+    
+    const { data, error } = await supabase.functions.invoke('admin-roles', {
+      body: { userId }
     });
 
     clearTimeout(timeoutId);
 
-    if (response.ok) {
-      const data = await response.json();
-      
-      // Cache successful response
-      localStorage.setItem('admin_check_cache', JSON.stringify({
-        ...data,
-        timestamp: Date.now()
-      }));
-      
-      // Reset redirect count on success
-      resetRedirectCount();
-      
-      return data.isAdmin;
-    } else {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    if (error) {
+      throw new Error(`Admin check failed: ${error.message}`);
     }
+
+    // Cache successful response
+    localStorage.setItem('admin_check_cache', JSON.stringify({
+      ...data,
+      timestamp: Date.now()
+    }));
+    
+    // Reset redirect count on success
+    resetRedirectCount();
+    
+    return data.isAdmin;
   } catch (error) {
     console.error('Admin check failed:', error);
     
