@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { checkRedirectLimit, resetRedirectCount } from "@/utils/adminCircuitBreaker";
 import { CircuitBreakerError } from "./CircuitBreakerError";
+import { AdminBypass } from "./AdminBypass";
 
 interface AdminRouteProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ interface AdminRouteProps {
 export const AdminRoute = ({ children }: AdminRouteProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [showBypass, setShowBypass] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAdmin, checkAdminStatus } = useAuth();
@@ -22,11 +24,33 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
     
     const checkAccess = async () => {
       try {
+        // First check for bypass flag
+        const bypassData = localStorage.getItem('admin_bypass');
+        if (bypassData) {
+          try {
+            const bypass = JSON.parse(bypassData);
+            const isExpired = Date.now() - bypass.timestamp > 3600000; // 1 hour
+            
+            if (!isExpired && bypass.isAdmin && bypass.bypassed) {
+              console.log('🔓 Admin bypass detected - granting access');
+              resetRedirectCount();
+              if (isMounted) {
+                setLoading(false);
+              }
+              return;
+            } else if (isExpired) {
+              localStorage.removeItem('admin_bypass');
+            }
+          } catch (e) {
+            localStorage.removeItem('admin_bypass');
+          }
+        }
+
         // Check if circuit breaker is tripped
         if (checkRedirectLimit()) {
-          console.error('Admin redirect circuit breaker triggered');
+          console.error('Admin redirect circuit breaker triggered - showing bypass');
           if (isMounted) {
-            setError(true);
+            setShowBypass(true);
             setLoading(false);
           }
           return;
@@ -95,6 +119,7 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
     // Reset all counters and try again
     resetRedirectCount();
     setError(false);
+    setShowBypass(false);
     setLoading(true);
     // The useEffect will automatically re-run
   };
@@ -122,8 +147,15 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
   const handleReset = () => {
     // Clear all admin-related storage and return to homepage
     localStorage.removeItem('admin_check_cache');
+    localStorage.removeItem('admin_bypass');
     resetRedirectCount();
     navigate('/');
+  };
+
+  const handleShowBypass = () => {
+    setShowBypass(true);
+    setError(false);
+    setLoading(false);
   };
 
   if (loading) {
@@ -137,17 +169,36 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
     );
   }
 
+  if (showBypass) {
+    return <AdminBypass />;
+  }
+
   if (error) {
     return (
       <CircuitBreakerError
         onRetry={handleRetry}
         onForceAccess={handleForceAccess}
         onReset={handleReset}
+        onShowBypass={handleShowBypass}
       />
     );
   }
 
-  if (!isAdmin && user?.id !== 'de395bc5-08a6-4359-934a-e7509b4eff46') {
+  // Check if user has bypass access
+  const bypassData = localStorage.getItem('admin_bypass');
+  let hasBypassAccess = false;
+  
+  if (bypassData) {
+    try {
+      const bypass = JSON.parse(bypassData);
+      const isExpired = Date.now() - bypass.timestamp > 3600000; // 1 hour
+      hasBypassAccess = !isExpired && bypass.isAdmin && bypass.bypassed;
+    } catch (e) {
+      localStorage.removeItem('admin_bypass');
+    }
+  }
+
+  if (!isAdmin && user?.id !== 'de395bc5-08a6-4359-934a-e7509b4eff46' && !hasBypassAccess) {
     return null;
   }
 
