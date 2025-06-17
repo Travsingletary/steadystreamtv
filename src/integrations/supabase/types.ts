@@ -96,6 +96,42 @@ export type Database = {
         }
         Relationships: []
       }
+      checkout_sessions: {
+        Row: {
+          amount: number | null
+          created_at: string
+          id: string
+          plan_name: string
+          session_id: string
+          status: string
+          stripe_customer_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          id?: string
+          plan_name: string
+          session_id: string
+          status?: string
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          id?: string
+          plan_name?: string
+          session_id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       cities: {
         Row: {
           country_id: number
@@ -357,6 +393,72 @@ export type Database = {
           },
         ]
       }
+      megaott_subscriptions: {
+        Row: {
+          canceled_at: string | null
+          created_at: string
+          id: string
+          megaott_subscription_id: string
+          plan_name: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          canceled_at?: string | null
+          created_at?: string
+          id?: string
+          megaott_subscription_id: string
+          plan_name: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          canceled_at?: string | null
+          created_at?: string
+          id?: string
+          megaott_subscription_id?: string
+          plan_name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          paid_at: string | null
+          status: string
+          stripe_invoice_id: string
+          stripe_subscription_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          paid_at?: string | null
+          status: string
+          stripe_invoice_id: string
+          stripe_subscription_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          paid_at?: string | null
+          status?: string
+          stripe_invoice_id?: string
+          stripe_subscription_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -584,6 +686,54 @@ export type Database = {
           subscription_status?: string
           updated_at?: string
           username?: string
+        }
+        Relationships: []
+      }
+      stripe_subscriptions: {
+        Row: {
+          amount: number
+          canceled_at: string | null
+          created_at: string
+          currency: string
+          current_period_end: string
+          current_period_start: string
+          id: string
+          plan_name: string
+          status: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string
+          current_period_end: string
+          current_period_start: string
+          id?: string
+          plan_name: string
+          status: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          plan_name?: string
+          status?: string
+          stripe_customer_id?: string
+          stripe_subscription_id?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
