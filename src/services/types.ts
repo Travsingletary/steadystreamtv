@@ -8,6 +8,8 @@ export interface UserData {
   password: string;
   plan: 'trial' | 'basic' | 'duo' | 'family' | 'standard' | 'premium' | 'ultimate';
   deviceType?: string;
+  phone?: string;
+  country?: string;
   preferences?: {
     favoriteGenres: string[];
     parentalControls: boolean;
