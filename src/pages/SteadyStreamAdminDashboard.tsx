@@ -307,7 +307,7 @@ const AdminLogin = () => {
   );
 };
 
-// 📊 ADMIN DASHBOARD - Protected content with REAL DATA
+// 📊 ADMIN DASHBOARD - Protected content with REAL DATA and better explanations
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const [stats, setStats] = useState({
@@ -317,31 +317,36 @@ const AdminDashboard = () => {
     megaottCredits: 0
   });
   const [loading, setLoading] = useState(true);
+  const [dataBreakdown, setDataBreakdown] = useState({
+    userProfilesCount: 0,
+    profilesCount: 0,
+    subscriptionsTotal: 0,
+    subscriptionsActive: 0,
+    resellersCount: 0,
+    iptvAccountsCount: 0
+  });
 
-  // Fetch real data from Supabase
+  // Fetch real data from Supabase with detailed breakdown
   useEffect(() => {
     const fetchRealData = async () => {
       try {
         setLoading(true);
-        console.log('📊 Fetching real admin statistics...');
+        console.log('📊 Fetching detailed admin statistics...');
 
-        // Get total users from multiple possible tables
-        let totalUsers = 0;
-        
-        // Try user_profiles first
+        // Get total users from user_profiles
         const { count: userProfilesCount } = await supabase
           .from('user_profiles')
           .select('*', { count: 'exact', head: true });
-        
-        if (userProfilesCount) {
-          totalUsers = userProfilesCount;
-        } else {
-          // Fallback to profiles table
-          const { count: profilesCount } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true });
-          totalUsers = profilesCount || 0;
-        }
+
+        // Get total users from profiles (fallback)
+        const { count: profilesCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+
+        // Get total subscriptions
+        const { count: subscriptionsTotal } = await supabase
+          .from('subscriptions')
+          .select('*', { count: 'exact', head: true });
 
         // Get active subscriptions
         const { count: activeSubsCount } = await supabase
@@ -349,17 +354,30 @@ const AdminDashboard = () => {
           .select('*', { count: 'exact', head: true })
           .gte('end_date', new Date().toISOString());
 
-        // Get MegaOTT credits
-        const { data: resellersData } = await supabase
+        // Get resellers count
+        const { count: resellersCount } = await supabase
+          .from('resellers')
+          .select('*', { count: 'exact', head: true });
+
+        // Get IPTV accounts count
+        const { count: iptvAccountsCount } = await supabase
+          .from('iptv_accounts')
+          .select('*', { count: 'exact', head: true });
+
+        // Get MegaOTT credits with error handling
+        const { data: resellersData, error: resellersError } = await supabase
           .from('resellers')
           .select('credits');
 
         let totalCredits = 0;
-        if (resellersData && resellersData.length > 0) {
+        if (!resellersError && resellersData && resellersData.length > 0) {
           totalCredits = resellersData.reduce((sum, reseller) => sum + (reseller.credits || 0), 0);
         }
 
-        // Calculate estimated revenue (active subscriptions * average plan price)
+        // Calculate total users (prioritize user_profiles, fallback to profiles)
+        const totalUsers = userProfilesCount || profilesCount || 0;
+
+        // Calculate estimated revenue
         const estimatedRevenue = (activeSubsCount || 0) * 30; // $30 average per subscription
 
         setStats({
@@ -369,11 +387,24 @@ const AdminDashboard = () => {
           megaottCredits: totalCredits
         });
 
-        console.log('✅ Real data loaded:', {
+        setDataBreakdown({
+          userProfilesCount: userProfilesCount || 0,
+          profilesCount: profilesCount || 0,
+          subscriptionsTotal: subscriptionsTotal || 0,
+          subscriptionsActive: activeSubsCount || 0,
+          resellersCount: resellersCount || 0,
+          iptvAccountsCount: iptvAccountsCount || 0
+        });
+
+        console.log('✅ Detailed data loaded:', {
           totalUsers,
+          userProfilesCount,
+          profilesCount,
+          subscriptionsTotal,
           activeSubscriptions: activeSubsCount,
-          revenue: estimatedRevenue,
-          megaottCredits: totalCredits
+          resellersCount,
+          iptvAccountsCount,
+          totalCredits
         });
 
       } catch (error) {
@@ -434,7 +465,7 @@ const AdminDashboard = () => {
               <div className="text-2xl">👥</div>
             </div>
             <div className="mt-4 text-blue-400 text-sm">
-              📊 Live database count
+              📊 {dataBreakdown.userProfilesCount} user_profiles + {dataBreakdown.profilesCount} profiles
             </div>
           </div>
 
@@ -449,7 +480,7 @@ const AdminDashboard = () => {
               <div className="text-2xl">💳</div>
             </div>
             <div className="mt-4 text-green-400 text-sm">
-              ✅ Current active plans
+              ✅ {dataBreakdown.subscriptionsActive} active of {dataBreakdown.subscriptionsTotal} total
             </div>
           </div>
 
@@ -464,7 +495,7 @@ const AdminDashboard = () => {
               <div className="text-2xl">💰</div>
             </div>
             <div className="mt-4 text-green-400 text-sm">
-              💼 Monthly projection
+              💼 ${stats.activeSubscriptions * 30}/month projection
             </div>
           </div>
 
@@ -479,7 +510,69 @@ const AdminDashboard = () => {
               <div className="text-2xl">🔋</div>
             </div>
             <div className="mt-4 text-green-400 text-sm">
-              ✅ API credits available
+              📊 {dataBreakdown.resellersCount} reseller accounts
+            </div>
+          </div>
+        </div>
+
+        {/* Data Breakdown Section */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-8">
+          <h2 className="text-xl font-bold mb-4">📋 Database Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-400 mb-3">User Tables</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">user_profiles:</span>
+                  <span className="text-white font-bold">{dataBreakdown.userProfilesCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">profiles:</span>
+                  <span className="text-white font-bold">{dataBreakdown.profilesCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">iptv_accounts:</span>
+                  <span className="text-white font-bold">{dataBreakdown.iptvAccountsCount}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-green-400 mb-3">Subscriptions</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Total:</span>
+                  <span className="text-white font-bold">{dataBreakdown.subscriptionsTotal}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Active:</span>
+                  <span className="text-green-400 font-bold">{dataBreakdown.subscriptionsActive}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Expired:</span>
+                  <span className="text-red-400 font-bold">{dataBreakdown.subscriptionsTotal - dataBreakdown.subscriptionsActive}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-purple-400 mb-3">MegaOTT</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Resellers:</span>
+                  <span className="text-white font-bold">{dataBreakdown.resellersCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Credits:</span>
+                  <span className="text-purple-400 font-bold">{stats.megaottCredits}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Status:</span>
+                  <span className={`font-bold ${dataBreakdown.resellersCount > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {dataBreakdown.resellersCount > 0 ? 'Active' : 'No Resellers'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
