@@ -1,6 +1,6 @@
 
-const REDIRECT_LIMIT = 3; // Reduce the limit
-const REDIRECT_TIMEOUT = 60000; // 1 minute timeout
+const REDIRECT_LIMIT = 2; // Reduce the limit further
+const REDIRECT_TIMEOUT = 30000; // 30 seconds timeout
 const STORAGE_KEY = 'admin_redirect_attempts';
 const TIMEOUT_KEY = 'admin_redirect_timeout';
 

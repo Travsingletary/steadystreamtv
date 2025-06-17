@@ -34,8 +34,38 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
-    // Get userId from request body instead of URL path
-    const { userId } = await req.json()
+    // Get userId from request body
+    let userId;
+    try {
+      const body = await req.json();
+      userId = body.userId;
+    } catch (e) {
+      console.error('Error parsing request body:', e);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request body',
+          isAdmin: false
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    if (!userId) {
+      console.error('❌ No userId provided');
+      return new Response(
+        JSON.stringify({ 
+          error: 'userId is required',
+          isAdmin: false
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
 
     console.log('🔍 Checking admin status for user:', userId)
 
