@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tv, Monitor, Smartphone, Tablet, Wifi, Home, Car, Plane, CheckCircle, Clock, Globe, Download, Shield, Star } from 'lucide-react';
 import { Link } from "react-router-dom";
 import MobileAutomation from "@/components/MobileAutomation";
+import EnhancedIPTVSubscription from "@/components/EnhancedIPTVSubscription";
 
 const Index = () => {
   useAnalytics('homepage');
   const [showMobileSignup, setShowMobileSignup] = useState(false);
+  const [showIPTVSubscription, setShowIPTVSubscription] = useState(false);
 
   // If mobile signup modal is open, show the automation
   if (showMobileSignup) {
@@ -26,6 +28,23 @@ const Index = () => {
           
           {/* Mobile Automation Component */}
           <MobileAutomation onClose={() => setShowMobileSignup(false)} />
+        </div>
+      </div>;
+  }
+
+  // If IPTV subscription modal is open, show the subscription flow
+  if (showIPTVSubscription) {
+    return <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white p-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Close button */}
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => setShowIPTVSubscription(false)} variant="outline" size="sm" className="border-gray-600 text-gray-300">
+              ← Back to Homepage
+            </Button>
+          </div>
+          
+          {/* IPTV Subscription Component */}
+          <EnhancedIPTVSubscription onComplete={() => setShowIPTVSubscription(false)} />
         </div>
       </div>;
   }
@@ -55,7 +74,7 @@ const Index = () => {
 
           {/* Mobile: CTA button, full width centered */}
           <div className="flex justify-center md:justify-end md:order-3">
-            <Button onClick={() => setShowMobileSignup(true)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold px-4 md:px-6 py-2 md:py-3 text-sm md:text-base">
+            <Button onClick={() => setShowIPTVSubscription(true)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold px-4 md:px-6 py-2 md:py-3 text-sm md:text-base">
               🎉 Start Free Trial
             </Button>
           </div>
@@ -105,7 +124,7 @@ const Index = () => {
         
         {/* Mobile-Optimized Button Group */}
         <div className="flex flex-col gap-4 md:flex-row md:gap-6 justify-center items-center mb-8 md:mb-12 px-4">
-          <Button onClick={() => setShowMobileSignup(true)} size="lg" className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-3 md:py-4 px-6 md:px-8 text-base md:text-lg w-full md:w-auto md:min-w-[240px]">
+          <Button onClick={() => setShowIPTVSubscription(true)} size="lg" className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-3 md:py-4 px-6 md:px-8 text-base md:text-lg w-full md:w-auto md:min-w-[240px]">
             🎉 Start 24-Hour Free Trial
           </Button>
           <Button variant="outline" size="lg" className="border-yellow-500 text-yellow-400 hover:bg-yellow-500 hover:text-black py-3 md:py-4 px-6 md:px-8 text-base md:text-lg w-full md:w-auto md:min-w-[240px]" onClick={() => document.getElementById('features')?.scrollIntoView({
@@ -313,7 +332,7 @@ const Index = () => {
                 <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
                 <span>Perfect for Individuals</span>
               </div>
-              <Button onClick={() => setShowMobileSignup(true)} className="w-full mt-6 bg-gray-700 hover:bg-gray-600">
+              <Button onClick={() => setShowIPTVSubscription(true)} className="w-full mt-6 bg-gray-700 hover:bg-gray-600">
                 Choose Solo
               </Button>
             </CardContent>
@@ -352,7 +371,7 @@ const Index = () => {
                 <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
                 <span>Perfect for Couples</span>
               </div>
-              <Button onClick={() => setShowMobileSignup(true)} className="w-full mt-6 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold">
+              <Button onClick={() => setShowIPTVSubscription(true)} className="w-full mt-6 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold">
                 Choose Duo
               </Button>
             </CardContent>
@@ -388,7 +407,7 @@ const Index = () => {
                 <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
                 <span>Perfect for Families</span>
               </div>
-              <Button onClick={() => setShowMobileSignup(true)} className="w-full mt-6 bg-gray-700 hover:bg-gray-600">
+              <Button onClick={() => setShowIPTVSubscription(true)} className="w-full mt-6 bg-gray-700 hover:bg-gray-600">
                 Choose Family
               </Button>
             </CardContent>
@@ -406,7 +425,7 @@ const Index = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <Button onClick={() => setShowMobileSignup(true)} size="lg" className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold mb-6">
+              <Button onClick={() => setShowIPTVSubscription(true)} size="lg" className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold mb-6">
                 🎉 Start Free Trial Now
               </Button>
               <div className="grid grid-cols-3 gap-4 text-sm text-blue-200">
@@ -471,7 +490,7 @@ const Index = () => {
           {/* Centered Final CTA */}
           <div className="text-center">
             <h3 className="text-2xl font-bold mb-8">Ready for the Complete TV Experience?</h3>
-            <Button size="lg" onClick={() => setShowMobileSignup(true)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 px-8 text-lg">
+            <Button size="lg" onClick={() => setShowIPTVSubscription(true)} className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 px-8 text-lg">
               🚀 Start Your Free Trial
             </Button>
           </div>
