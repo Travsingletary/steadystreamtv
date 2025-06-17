@@ -18,6 +18,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
     if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Missing Supabase configuration')
       return new Response(
         JSON.stringify({ 
           error: 'Server configuration error',
@@ -36,12 +37,16 @@ serve(async (req) => {
     const pathParts = url.pathname.split('/')
     const userId = pathParts[pathParts.length - 1]
 
-    // Special handling for known admin user
-    const knownAdminUserId = 'de395bc5-08a6-4359-934a-e7509b4eff46'
-    if (userId === knownAdminUserId) {
+    console.log('🔍 Checking admin status for user:', userId)
+
+    // SPECIAL HANDLING FOR ADMIN USER ID
+    const ADMIN_USER_ID = 'de395bc5-08a6-4359-934a-e7509b4eff46'
+    
+    if (userId === ADMIN_USER_ID) {
+      console.log('🎯 ADMIN USER DETECTED - GRANTING ACCESS')
       return new Response(
         JSON.stringify({ 
-          isAdmin: true,
+          isAdmin: true, 
           source: 'hardcoded_admin',
           userId: userId,
           timestamp: new Date().toISOString()
@@ -58,6 +63,7 @@ serve(async (req) => {
       const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
       
       if (!userError && userData?.user?.user_metadata?.role === 'admin') {
+        console.log('✅ Admin role found in metadata')
         return new Response(
           JSON.stringify({ 
             isAdmin: true,
@@ -72,7 +78,7 @@ serve(async (req) => {
         )
       }
     } catch (metadataError) {
-      console.warn('Error checking user metadata:', metadataError)
+      console.warn('⚠️ Error checking user metadata:', metadataError)
     }
 
     // Check admin email patterns
@@ -87,6 +93,8 @@ serve(async (req) => {
         ]
         
         if (adminEmailPatterns.includes(userData.user.email.toLowerCase())) {
+          console.log('✅ Admin email pattern detected')
+          
           // Update user metadata to admin
           await supabase.auth.admin.updateUserById(userId, {
             user_metadata: { 
@@ -112,9 +120,11 @@ serve(async (req) => {
         }
       }
     } catch (emailError) {
-      console.warn('Error checking admin email pattern:', emailError)
+      console.warn('⚠️ Error checking admin email pattern:', emailError)
     }
 
+    // Default: not admin
+    console.log('❌ User is not admin')
     return new Response(
       JSON.stringify({ 
         isAdmin: false,
@@ -129,7 +139,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Unexpected error in admin_roles function:', error)
+    console.error('💥 Unexpected error in admin_roles function:', error)
     
     return new Response(
       JSON.stringify({ 

@@ -1,8 +1,7 @@
 
-import React from 'react';
-import { AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, RefreshCw, Shield, Home } from "lucide-react";
 
 interface CircuitBreakerErrorProps {
   onRetry: () => void;
@@ -13,39 +12,52 @@ interface CircuitBreakerErrorProps {
 export const CircuitBreakerError = ({ onRetry, onForceAccess, onReset }: CircuitBreakerErrorProps) => {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-dark-200 border-gray-800">
+      <Card className="w-full max-w-md bg-dark-200 border-red-500">
         <CardHeader className="text-center">
-          <AlertCircle className="h-16 w-16 mx-auto text-red-500 mb-4" />
-          <CardTitle className="text-2xl text-white">Admin Access Issue</CardTitle>
+          <AlertTriangle className="h-16 w-16 mx-auto text-red-500 mb-4" />
+          <CardTitle className="text-xl text-red-500">Admin Access Circuit Breaker</CardTitle>
+          <CardDescription className="text-gray-300">
+            Too many failed admin verification attempts detected. The system has temporarily disabled admin checks to prevent loops.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-gray-300 space-y-2">
-            <p>Multiple failed attempts detected. Circuit breaker activated to prevent infinite loops.</p>
-            <p className="text-sm">The system has temporarily stopped making admin verification requests.</p>
+          <div className="bg-yellow-900/20 border border-yellow-500 rounded p-3 text-sm">
+            <p className="text-yellow-300">
+              <strong>What happened?</strong><br />
+              The admin authentication system detected multiple failed attempts and activated circuit breaker protection.
+            </p>
           </div>
           
-          <div className="flex flex-col space-y-3">
+          <div className="space-y-2">
             <Button 
-              onClick={onRetry}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={onRetry} 
+              className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              Try Again
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry Admin Check
             </Button>
             
             <Button 
-              onClick={onForceAccess}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={onForceAccess} 
+              variant="outline" 
+              className="w-full border-green-500 text-green-400 hover:bg-green-500 hover:text-black"
             >
-              Force Admin Access
+              <Shield className="h-4 w-4 mr-2" />
+              Force Admin Access (Emergency)
             </Button>
             
             <Button 
-              onClick={onReset}
-              variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              onClick={onReset} 
+              variant="outline" 
+              className="w-full border-gray-500 text-gray-400 hover:bg-gray-500 hover:text-black"
             >
-              Reset & Clear Cache
+              <Home className="h-4 w-4 mr-2" />
+              Return to Homepage
             </Button>
+          </div>
+          
+          <div className="text-xs text-gray-500 text-center mt-4">
+            Circuit breaker will automatically reset after 30 seconds of inactivity
           </div>
         </CardContent>
       </Card>
