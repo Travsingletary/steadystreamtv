@@ -33,9 +33,9 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const url = new URL(req.url)
-    const pathParts = url.pathname.split('/')
-    const userId = pathParts[pathParts.length - 1]
+    
+    // Get userId from request body instead of URL path
+    const { userId } = await req.json()
 
     console.log('🔍 Checking admin status for user:', userId)
 
