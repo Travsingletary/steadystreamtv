@@ -1,6 +1,5 @@
 
-// src/services/steadyStreamAutomationService.ts
-// Enhanced SteadyStream automation with fallback handling
+// Enhanced SteadyStream automation with MegaOTT integration
 
 import { supabase } from "@/integrations/supabase/client";
 import { MegaOTTService } from './megaOTTService';
@@ -27,7 +26,7 @@ export interface SteadyStreamResult {
 export class SteadyStreamAutomationService {
   static async executeCompleteAutomation(userData: SteadyStreamUserData): Promise<SteadyStreamResult> {
     try {
-      console.log('🎯 Executing SteadyStream automation for:', userData.email);
+      console.log('🎯 Executing SteadyStream automation with MegaOTT for:', userData.email);
 
       // 1. Register user in Supabase
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -54,7 +53,7 @@ export class SteadyStreamAutomationService {
       // 2. Generate activation code
       const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-      // 3. Create IPTV subscription with fallback
+      // 3. Create MegaOTT subscription
       let iptvCredentials;
       try {
         // Convert to compatible UserData format
@@ -80,20 +79,14 @@ export class SteadyStreamAutomationService {
         
         iptvCredentials = {
           activationCode,
-          username: subscription.credentials?.username || `demo_${activationCode.toLowerCase()}`,
-          password: subscription.credentials?.password || 'demo123'
+          username: subscription.credentials?.username || `megaott_${activationCode.toLowerCase()}`,
+          password: subscription.credentials?.password || 'auto-generated'
         };
 
-        console.log('✅ IPTV subscription created successfully');
+        console.log('✅ MegaOTT subscription created successfully');
       } catch (iptvError) {
-        console.warn('⚠️ IPTV creation failed, using demo credentials:', iptvError.message);
-        
-        // Provide demo credentials for trial users
-        iptvCredentials = {
-          activationCode,
-          username: `demo_${activationCode.toLowerCase()}`,
-          password: 'demo123'
-        };
+        console.warn('⚠️ MegaOTT creation failed:', iptvError.message);
+        throw new Error(`Failed to create IPTV subscription: ${iptvError.message}`);
       }
 
       // 4. Update profile

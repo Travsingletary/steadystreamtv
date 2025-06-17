@@ -158,10 +158,16 @@ export type Database = {
       iptv_accounts: {
         Row: {
           activation_code: string | null
+          adult_content: boolean | null
           created_at: string
+          dns_link: string | null
+          enable_vpn: boolean | null
           expires_at: string | null
+          forced_country: string | null
           id: string
+          megaott_subscription_id: string | null
           megaott_user_id: string | null
+          package_id: number | null
           password: string
           plan_type: string
           playlist_url: string | null
@@ -174,10 +180,16 @@ export type Database = {
         }
         Insert: {
           activation_code?: string | null
+          adult_content?: boolean | null
           created_at?: string
+          dns_link?: string | null
+          enable_vpn?: boolean | null
           expires_at?: string | null
+          forced_country?: string | null
           id?: string
+          megaott_subscription_id?: string | null
           megaott_user_id?: string | null
+          package_id?: number | null
           password: string
           plan_type: string
           playlist_url?: string | null
@@ -190,10 +202,16 @@ export type Database = {
         }
         Update: {
           activation_code?: string | null
+          adult_content?: boolean | null
           created_at?: string
+          dns_link?: string | null
+          enable_vpn?: boolean | null
           expires_at?: string | null
+          forced_country?: string | null
           id?: string
+          megaott_subscription_id?: string | null
           megaott_user_id?: string | null
+          package_id?: number | null
           password?: string
           plan_type?: string
           playlist_url?: string | null
@@ -321,10 +339,13 @@ export type Database = {
           email: string | null
           genres: string[] | null
           id: string
+          megaott_subscription_id: string | null
           name: string | null
           preferred_device: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          subscription_end_date: string | null
+          subscription_start_date: string | null
           subscription_status: string | null
           subscription_tier: string | null
           trial_end_date: string | null
@@ -337,10 +358,13 @@ export type Database = {
           email?: string | null
           genres?: string[] | null
           id: string
+          megaott_subscription_id?: string | null
           name?: string | null
           preferred_device?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           trial_end_date?: string | null
@@ -353,10 +377,13 @@ export type Database = {
           email?: string | null
           genres?: string[] | null
           id?: string
+          megaott_subscription_id?: string | null
           name?: string | null
           preferred_device?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           trial_end_date?: string | null
@@ -702,6 +729,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bytea_to_text: {
+        Args: { data: string }
+        Returns: string
+      }
+      create_megaott_subscription_v2: {
+        Args: {
+          user_id_param: string
+          customer_email: string
+          customer_name: string
+          plan_type: string
+          stripe_session_id?: string
+        }
+        Returns: Json
+      }
       generate_m3u_playlist: {
         Args: { input_token: string }
         Returns: string
@@ -710,16 +751,91 @@ export type Database = {
         Args: Record<PropertyKey, never> | { playlist_token: string }
         Returns: string
       }
+      http: {
+        Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_delete: {
+        Args:
+          | { uri: string }
+          | { uri: string; content: string; content_type: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_get: {
+        Args: { uri: string } | { uri: string; data: Json }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_head: {
+        Args: { uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_header: {
+        Args: { field: string; value: string }
+        Returns: Database["public"]["CompositeTypes"]["http_header"]
+      }
+      http_list_curlopt: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          curlopt: string
+          value: string
+        }[]
+      }
+      http_patch: {
+        Args: { uri: string; content: string; content_type: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_post: {
+        Args:
+          | { uri: string; content: string; content_type: string }
+          | { uri: string; data: Json }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_put: {
+        Args: { uri: string; content: string; content_type: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_reset_curlopt: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      http_set_curlopt: {
+        Args: { curlopt: string; value: string }
+        Returns: boolean
+      }
       make_user_admin: {
         Args: { user_email: string }
         Returns: undefined
+      }
+      text_to_bytea: {
+        Args: { data: string }
+        Returns: string
+      }
+      urlencode: {
+        Args: { data: Json } | { string: string } | { string: string }
+        Returns: string
       }
     }
     Enums: {
       [_ in never]: never
     }
     CompositeTypes: {
-      [_ in never]: never
+      http_header: {
+        field: string | null
+        value: string | null
+      }
+      http_request: {
+        method: unknown | null
+        uri: string | null
+        headers: Database["public"]["CompositeTypes"]["http_header"][] | null
+        content_type: string | null
+        content: string | null
+      }
+      http_response: {
+        status: number | null
+        content_type: string | null
+        headers: Database["public"]["CompositeTypes"]["http_header"][] | null
+        content: string | null
+      }
     }
   }
 }

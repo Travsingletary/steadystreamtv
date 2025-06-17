@@ -1,19 +1,17 @@
 
-// src/services/megaOTTService.ts
-// UPDATED: Enhanced fallback handling for missing API credentials
-
+// MegaOTT Service - Updated to use real MegaOTT API
 import { CONFIG } from './config';
 import type { UserData } from './types';
 
 export class MegaOTTService {
   /**
-   * Create Custom Dashboard subscription via secure edge function with fallback
+   * Create MegaOTT subscription via secure edge function
    */
   static async createSubscription(userId: string, plan: string, userData: UserData) {
     try {
-      console.log('Creating SECURE Custom Dashboard subscription for user:', userId, 'plan:', plan);
+      console.log('Creating MegaOTT subscription for user:', userId, 'plan:', plan);
       
-      // Call the secure create-xtream-account Supabase edge function
+      // Call the updated create-xtream-account function
       const response = await fetch(`${CONFIG.supabase.url}/functions/v1/create-xtream-account`, {
         method: 'POST',
         headers: {
@@ -25,80 +23,65 @@ export class MegaOTTService {
           userId: userId,
           planType: plan,
           email: userData.email,
-          name: userData.name
+          name: userData.name,
+          useMegaOTT: true // Flag to use new MegaOTT integration
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Custom Dashboard API error:', response.status, errorData);
-        
-        // Check if it's a missing API key error
-        if (errorData.details?.includes('API_KEY is not set') || errorData.details?.includes('not set')) {
-          console.log('API credentials not configured, providing trial credentials');
-          return this.createTrialFallback(userId, plan, userData);
-        }
-        
+        console.error('MegaOTT API error:', response.status, errorData);
         throw new Error(`Failed to create IPTV account: ${errorData.error || response.statusText}`);
       }
 
       const result = await response.json();
-      console.log('Custom Dashboard subscription created successfully:', result);
+      console.log('MegaOTT subscription created successfully:', result);
       
       return {
         success: true,
         plan,
-        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated via Custom Dashboard`,
-        subscriptionId: result.data?.dashboardId,
+        message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated via MegaOTT`,
+        subscriptionId: result.data?.megaott_subscription_id,
         credentials: {
           username: result.data?.username,
-          password: result.data?.password
+          password: result.data?.password,
+          activationCode: result.data?.username?.toUpperCase()
         },
-        playlistUrls: result.data?.playlistUrls
+        playlistUrls: {
+          m3u: result.data?.playlist_url,
+          m3u_plus: result.data?.playlist_url,
+          server_url: result.data?.server_url
+        }
       };
       
     } catch (error) {
-      console.error('Custom Dashboard integration error:', error);
-      
-      // If it's a trial plan, provide fallback credentials
-      if (plan === 'trial' || plan === 'free-trial') {
-        console.log('Providing trial fallback for plan:', plan);
-        return this.createTrialFallback(userId, plan, userData);
-      }
-      
+      console.error('MegaOTT integration error:', error);
       throw new Error(`Failed to create IPTV subscription: ${error.message}`);
     }
   }
 
   /**
-   * Create trial fallback when API is not available
+   * Get user subscription status from MegaOTT
    */
-  private static createTrialFallback(userId: string, plan: string, userData: UserData) {
-    console.log('Creating trial fallback credentials for user:', userId);
-    
-    // Generate trial credentials
-    const username = `trial_${userId.substring(0, 8)}`;
-    const password = `temp_${Math.random().toString(36).substring(2, 8)}`;
-    
-    // Generate a basic playlist URL (you can enhance this)
-    const playlistUrl = `https://steadystreamtv.com/api/playlist/${userId}`;
-    
-    return {
-      success: true,
-      plan,
-      message: 'Trial account created (Demo mode - API configuration pending)',
-      subscriptionId: `trial_${userId}`,
-      credentials: {
-        username,
-        password,
-        activationCode: username.toUpperCase()
-      },
-      playlistUrls: {
-        m3u: playlistUrl,
-        m3u_plus: playlistUrl,
-        xspf: playlistUrl
-      },
-      isTrialFallback: true
-    };
+  static async getSubscriptionStatus(userId: string) {
+    try {
+      const response = await fetch(`${CONFIG.supabase.url}/functions/v1/megaott-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.supabase.anonKey}`
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get subscription status');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting subscription status:', error);
+      return { success: false, error: error.message };
+    }
   }
 }
