@@ -5,6 +5,7 @@ import { MegaOTTCredits } from '@/components/admin/MegaOTTCredits';
 import { StatsCards } from './StatsCards';
 import { DataBreakdown } from './DataBreakdown';
 import { QuickActions } from './QuickActions';
+import { ConfigurationCheck } from './ConfigurationCheck';
 
 // 📊 ADMIN DASHBOARD - Protected content with REAL DATA and better explanations
 export const AdminDashboard = () => {
@@ -191,6 +192,11 @@ export const AdminDashboard = () => {
         />
 
         <QuickActions />
+
+        {/* Configuration Check Section */}
+        <div className="mb-8">
+          <ConfigurationCheck />
+        </div>
 
         {/* MegaOTT Credits Section */}
         <MegaOTTCredits onStatsUpdate={onStatsUpdate} />
