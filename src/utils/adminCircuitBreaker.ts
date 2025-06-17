@@ -84,15 +84,9 @@ export const checkAdminStatusWithCircuitBreaker = async (userId: string): Promis
     // Use dynamic import to avoid module loading issues
     const { supabase } = await import('@/integrations/supabase/client');
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
     const { data, error } = await supabase.functions.invoke('admin-roles', {
-      body: { userId },
-      signal: controller.signal
+      body: { userId }
     });
-
-    clearTimeout(timeoutId);
 
     if (error) {
       console.error('Admin check API error:', error);
