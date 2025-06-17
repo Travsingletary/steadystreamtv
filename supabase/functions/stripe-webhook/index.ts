@@ -48,47 +48,24 @@ serve(async (req) => {
       
       // Get customer email and plan info
       const customerEmail = session.customer_details?.email;
-      const planType = session.metadata?.plan || "standard";
+      const customerName = session.customer_details?.name || 'Unknown';
+      const planType = session.metadata?.plan || "basic";
       
       if (!customerEmail) {
         console.error("No customer email found in session");
         return new Response("No customer email", { status: 400 });
       }
 
-      // Find or create user
-      let user;
-      try {
-        const { data: existingUser } = await supabase.auth.admin.getUserByEmail(customerEmail);
-        user = existingUser.user;
-        
-        if (!user) {
-          // Create user if doesn't exist
-          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-            email: customerEmail,
-            email_confirm: true,
-            user_metadata: {
-              plan: planType,
-              stripe_session_id: session.id
-            }
-          });
-          
-          if (createError) throw createError;
-          user = newUser.user;
-        }
-      } catch (error) {
-        console.error("Error handling user:", error);
-        return new Response("User handling failed", { status: 500 });
-      }
-
       try {
         // Create MegaOTT subscription using the new function
         const { data: megaottResult, error: megaottError } = await supabase
-          .rpc('create_megaott_subscription_v2', {
-            user_id_param: user!.id,
+          .rpc('create_megaott_subscription', {
             customer_email: customerEmail,
-            customer_name: session.customer_details?.name || 'Unknown',
+            customer_name: customerName,
             plan_type: planType,
-            stripe_session_id: session.id
+            stripe_subscription_id: session.id,
+            customer_country: 'Unknown',
+            customer_phone: ''
           });
 
         if (megaottError) {
@@ -105,7 +82,7 @@ serve(async (req) => {
 
         // Update purchase automation log
         await supabase.from("purchase_automations").insert({
-          user_id: user!.id,
+          user_id: null, // We don't have user_id in this context
           stripe_session_id: session.id,
           payment_intent_id: session.payment_intent,
           automation_status: "completed",
@@ -117,7 +94,7 @@ serve(async (req) => {
         
         // Log the failure
         await supabase.from("purchase_automations").insert({
-          user_id: user!.id,
+          user_id: null,
           stripe_session_id: session.id,
           automation_status: "failed",
           error_message: error.message
@@ -129,17 +106,17 @@ serve(async (req) => {
     if (event.type === "invoice.payment_succeeded") {
       const invoice = event.data.object as Stripe.Invoice;
       await supabase
-        .from('iptv_accounts')
+        .from('subscriptions')
         .update({ status: 'active', updated_at: new Date().toISOString() })
-        .eq('stripe_session_id', invoice.subscription);
+        .eq('stripe_subscription_id', invoice.subscription);
     }
 
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
       await supabase
-        .from('iptv_accounts')
+        .from('subscriptions')
         .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-        .eq('stripe_session_id', subscription.id);
+        .eq('stripe_subscription_id', subscription.id);
     }
 
     return new Response(JSON.stringify({ received: true }), {

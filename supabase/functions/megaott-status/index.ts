@@ -18,24 +18,25 @@ serve(async (req) => {
   }
 
   try {
-    const { userId } = await req.json();
+    const { email } = await req.json();
 
-    if (!userId) {
-      throw new Error("User ID is required");
+    if (!email) {
+      throw new Error("Email is required");
     }
 
-    // Get subscription from our database
-    const { data: account, error } = await supabase
-      .from('iptv_accounts')
+    // Get subscription from the new subscriptions table
+    const { data: subscription, error } = await supabase
+      .from('subscriptions')
       .select('*')
-      .eq('user_id', userId)
+      .eq('customer_email', email)
+      .eq('status', 'active')
       .single();
 
     if (error) {
-      console.error('Error fetching account:', error);
+      console.error('Error fetching subscription:', error);
       return new Response(JSON.stringify({
         success: false,
-        error: "No subscription found"
+        error: "No active subscription found"
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 404,
@@ -45,13 +46,14 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       data: {
-        status: account.status,
-        username: account.username,
-        expires_at: account.expires_at,
-        max_connections: account.max_connections || 1,
-        plan_type: account.plan_type,
-        server_url: account.server_url,
-        playlist_url: account.playlist_url
+        status: subscription.status,
+        username: subscription.megaott_username,
+        password: subscription.megaott_password,
+        expires_at: subscription.expiration_date,
+        max_connections: subscription.max_connections || 1,
+        plan_type: subscription.plan_type,
+        server_url: subscription.server_url,
+        playlist_url: subscription.playlist_url
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

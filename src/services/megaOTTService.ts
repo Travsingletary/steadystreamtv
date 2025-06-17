@@ -1,5 +1,5 @@
 
-// MegaOTT Service - Updated to use real MegaOTT API
+// MegaOTT Service - Updated to use new subscriptions table
 import { CONFIG } from './config';
 import type { UserData } from './types';
 
@@ -24,7 +24,8 @@ export class MegaOTTService {
           planType: plan,
           email: userData.email,
           name: userData.name,
-          useMegaOTT: true // Flag to use new MegaOTT integration
+          phone: userData.phone || '',
+          country: userData.country || 'Unknown'
         })
       });
 
@@ -41,7 +42,7 @@ export class MegaOTTService {
         success: true,
         plan,
         message: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated via MegaOTT`,
-        subscriptionId: result.data?.megaott_subscription_id,
+        subscriptionId: result.data?.subscription_id,
         credentials: {
           username: result.data?.username,
           password: result.data?.password,
@@ -63,7 +64,7 @@ export class MegaOTTService {
   /**
    * Get user subscription status from MegaOTT
    */
-  static async getSubscriptionStatus(userId: string) {
+  static async getSubscriptionStatus(email: string) {
     try {
       const response = await fetch(`${CONFIG.supabase.url}/functions/v1/megaott-status`, {
         method: 'POST',
@@ -71,7 +72,7 @@ export class MegaOTTService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${CONFIG.supabase.anonKey}`
         },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ email })
       });
 
       if (!response.ok) {

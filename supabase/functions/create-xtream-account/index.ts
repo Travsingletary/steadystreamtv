@@ -18,22 +18,23 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, planType, email, name, useMegaOTT = true } = await req.json();
+    const { userId, planType, email, name, phone, country = 'Unknown' } = await req.json();
 
-    console.log('Creating subscription for:', { userId, planType, email, useMegaOTT });
+    console.log('Creating subscription for:', { userId, planType, email });
 
     if (!userId || !planType || !email || !name) {
       throw new Error("Missing required parameters");
     }
 
-    // Use the new MegaOTT function from the database
+    // Use the new create_megaott_subscription function
     const { data: result, error } = await supabase
-      .rpc('create_megaott_subscription_v2', {
-        user_id_param: userId,
+      .rpc('create_megaott_subscription', {
         customer_email: email,
         customer_name: name,
         plan_type: planType,
-        stripe_session_id: null
+        stripe_subscription_id: null,
+        customer_country: country,
+        customer_phone: phone || ''
       });
 
     if (error) {
@@ -52,7 +53,8 @@ serve(async (req) => {
       success: true,
       message: "IPTV account created successfully",
       data: {
-        megaott_subscription_id: result.subscription_id,
+        subscription_id: result.subscription_id,
+        megaott_subscription_id: result.megaott_subscription_id,
         username: result.credentials.username,
         password: result.credentials.password,
         server_url: result.credentials.server_url,
