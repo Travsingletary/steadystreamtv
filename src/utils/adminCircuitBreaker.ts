@@ -64,9 +64,8 @@ export const checkAdminStatusWithCircuitBreaker = async (userId: string): Promis
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    // Use the Supabase client directly instead of fetch
-    const { createClient } = await import('@/integrations/supabase/client');
-    const supabase = createClient;
+    // Use the correct supabase client import
+    const { supabase } = await import('@/integrations/supabase/client');
     
     const { data, error } = await supabase.functions.invoke('admin-roles', {
       body: { userId }
