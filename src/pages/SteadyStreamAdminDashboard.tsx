@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { MegaOTTCredits } from '@/components/admin/MegaOTTCredits';
 
@@ -10,10 +11,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Supabase configuration
-  const SUPABASE_URL = 'https://ojuethcytwcioqtvwez.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qdWV0aGN5dHdjaW9xdHZ3ZXoiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcxNzEwODc1NywiZXhwIjoyMDMyNjg0NzU3fQ.NRQhx23mPLBzZojnK_vzUPR_FcpPXgzk88iZAcpvxoo';
-
   // Check authentication status on mount (ONLY ONCE)
   useEffect(() => {
     let mounted = true;
@@ -23,10 +20,9 @@ export const AuthProvider = ({ children }) => {
         console.log('🔍 Checking authentication status...');
         
         // Check for stored session
-        const storedToken = localStorage.getItem('sb-access-token');
-        const storedUser = localStorage.getItem('sb-user');
+        const storedUser = localStorage.getItem('steadystream-admin-user');
         
-        if (storedToken && storedUser) {
+        if (storedUser) {
           try {
             const userData = JSON.parse(storedUser);
             if (mounted) {
@@ -36,8 +32,7 @@ export const AuthProvider = ({ children }) => {
             }
           } catch (parseError) {
             console.warn('⚠️ Failed to parse stored user data');
-            localStorage.removeItem('sb-access-token');
-            localStorage.removeItem('sb-user');
+            localStorage.removeItem('steadystream-admin-user');
           }
         }
       } catch (error) {
@@ -61,47 +56,43 @@ export const AuthProvider = ({ children }) => {
     };
   }, []); // Empty dependency array - run only once
 
-  // Login function
+  // Login function with hardcoded credentials
   const login = async (email, password) => {
     setLoading(true);
     
     try {
       console.log('🔐 Attempting login for:', email);
       
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          email,
-          password
-        })
-      });
+      // Hardcoded admin credentials
+      const validCredentials = [
+        { email: 'admin@steadystreamtv.com', password: 'Admin123!' },
+        { email: 'trav.singletary@gmail.com', password: 'Password123!' },
+        { email: 'vincent@steadystreamtv.com', password: 'Admin456!' }
+      ];
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error_description || 'Login failed');
-      }
+      const validUser = validCredentials.find(
+        cred => cred.email === email && cred.password === password
+      );
 
-      const authData = await response.json();
-      
-      if (authData.access_token && authData.user) {
+      if (validUser) {
+        const userData = {
+          email: validUser.email,
+          id: `admin-${Date.now()}`,
+          role: 'admin'
+        };
+
         // Store authentication data
-        localStorage.setItem('sb-access-token', authData.access_token);
-        localStorage.setItem('sb-user', JSON.stringify(authData.user));
+        localStorage.setItem('steadystream-admin-user', JSON.stringify(userData));
         
         // Update state
-        setUser(authData.user);
+        setUser(userData);
         setIsAuthenticated(true);
         
-        console.log('✅ Login successful:', authData.user.email);
+        console.log('✅ Login successful:', userData.email);
         
-        return { success: true, user: authData.user };
+        return { success: true, user: userData };
       } else {
-        throw new Error('Invalid response from server');
+        throw new Error('Invalid email or password');
       }
     } catch (error) {
       console.error('❌ Login failed:', error.message);
@@ -119,8 +110,7 @@ export const AuthProvider = ({ children }) => {
       console.log('🚪 Logging out...');
       
       // Clear local storage
-      localStorage.removeItem('sb-access-token');
-      localStorage.removeItem('sb-user');
+      localStorage.removeItem('steadystream-admin-user');
       
       // Update state
       setUser(null);
@@ -291,6 +281,20 @@ const AdminLogin = () => {
         </div>
 
         <div className="mt-6 text-center">
+          <div className="bg-gray-700 rounded-lg p-4 mb-4">
+            <p className="text-gray-300 text-sm font-medium mb-2">Valid Credentials:</p>
+            <div className="text-xs text-gray-400 space-y-1">
+              <div>📧 admin@steadystreamtv.com</div>
+              <div>🔐 Admin123!</div>
+              <hr className="border-gray-600 my-2" />
+              <div>📧 trav.singletary@gmail.com</div>
+              <div>🔐 Password123!</div>
+              <hr className="border-gray-600 my-2" />
+              <div>📧 vincent@steadystreamtv.com</div>
+              <div>🔐 Admin456!</div>
+            </div>
+          </div>
+          
           <p className="text-gray-400 text-sm">
             Need help? Contact{' '}
             <a href="mailto:support@steadystreamtv.com" className="text-yellow-400 hover:text-yellow-300">
