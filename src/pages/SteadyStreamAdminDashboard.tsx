@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect, createContext, useContext } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { MegaOTTCredits } from '@/components/admin/MegaOTTCredits';
 
 // 🔐 AUTHENTICATION CONTEXT - Fixes infinite loops
@@ -307,15 +307,85 @@ const AdminLogin = () => {
   );
 };
 
-// 📊 ADMIN DASHBOARD - Protected content
+// 📊 ADMIN DASHBOARD - Protected content with REAL DATA
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const [stats, setStats] = useState({
-    totalUsers: 1234,
-    activeSubscriptions: 987,
-    revenue: 24567,
+    totalUsers: 0,
+    activeSubscriptions: 0,
+    revenue: 0,
     megaottCredits: 0
   });
+  const [loading, setLoading] = useState(true);
+
+  // Fetch real data from Supabase
+  useEffect(() => {
+    const fetchRealData = async () => {
+      try {
+        setLoading(true);
+        console.log('📊 Fetching real admin statistics...');
+
+        // Get total users from multiple possible tables
+        let totalUsers = 0;
+        
+        // Try user_profiles first
+        const { count: userProfilesCount } = await supabase
+          .from('user_profiles')
+          .select('*', { count: 'exact', head: true });
+        
+        if (userProfilesCount) {
+          totalUsers = userProfilesCount;
+        } else {
+          // Fallback to profiles table
+          const { count: profilesCount } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true });
+          totalUsers = profilesCount || 0;
+        }
+
+        // Get active subscriptions
+        const { count: activeSubsCount } = await supabase
+          .from('subscriptions')
+          .select('*', { count: 'exact', head: true })
+          .gte('end_date', new Date().toISOString());
+
+        // Get MegaOTT credits
+        const { data: resellersData } = await supabase
+          .from('resellers')
+          .select('credits');
+
+        let totalCredits = 0;
+        if (resellersData && resellersData.length > 0) {
+          totalCredits = resellersData.reduce((sum, reseller) => sum + (reseller.credits || 0), 0);
+        }
+
+        // Calculate estimated revenue (active subscriptions * average plan price)
+        const estimatedRevenue = (activeSubsCount || 0) * 30; // $30 average per subscription
+
+        setStats({
+          totalUsers: totalUsers,
+          activeSubscriptions: activeSubsCount || 0,
+          revenue: estimatedRevenue,
+          megaottCredits: totalCredits
+        });
+
+        console.log('✅ Real data loaded:', {
+          totalUsers,
+          activeSubscriptions: activeSubsCount,
+          revenue: estimatedRevenue,
+          megaottCredits: totalCredits
+        });
+
+      } catch (error) {
+        console.error('❌ Failed to fetch real data:', error);
+        // Keep default values on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRealData();
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -352,17 +422,19 @@ const AdminDashboard = () => {
       {/* Main Content */}
       <main className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Stats Cards */}
+          {/* Stats Cards with REAL DATA */}
           <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Users</p>
-                <p className="text-2xl font-bold text-white">{stats.totalUsers.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-white">
+                  {loading ? '...' : stats.totalUsers.toLocaleString()}
+                </p>
               </div>
               <div className="text-2xl">👥</div>
             </div>
-            <div className="mt-4 text-green-400 text-sm">
-              ↗ +12% from last month
+            <div className="mt-4 text-blue-400 text-sm">
+              📊 Live database count
             </div>
           </div>
 
@@ -370,25 +442,29 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Active Subscriptions</p>
-                <p className="text-2xl font-bold text-white">{stats.activeSubscriptions.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-white">
+                  {loading ? '...' : stats.activeSubscriptions.toLocaleString()}
+                </p>
               </div>
               <div className="text-2xl">💳</div>
             </div>
             <div className="mt-4 text-green-400 text-sm">
-              ↗ +8% from last month
+              ✅ Current active plans
             </div>
           </div>
 
           <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm">Revenue</p>
-                <p className="text-2xl font-bold text-white">${stats.revenue.toLocaleString()}</p>
+                <p className="text-gray-400 text-sm">Estimated Revenue</p>
+                <p className="text-2xl font-bold text-white">
+                  ${loading ? '...' : stats.revenue.toLocaleString()}
+                </p>
               </div>
               <div className="text-2xl">💰</div>
             </div>
             <div className="mt-4 text-green-400 text-sm">
-              ↗ +15% from last month
+              💼 Monthly projection
             </div>
           </div>
 
@@ -396,12 +472,14 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">MegaOTT Credits</p>
-                <p className="text-2xl font-bold text-white">{stats.megaottCredits.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-white">
+                  {loading ? '...' : stats.megaottCredits.toLocaleString()}
+                </p>
               </div>
               <div className="text-2xl">🔋</div>
             </div>
             <div className="mt-4 text-green-400 text-sm">
-              ✅ All systems operational
+              ✅ API credits available
             </div>
           </div>
         </div>
