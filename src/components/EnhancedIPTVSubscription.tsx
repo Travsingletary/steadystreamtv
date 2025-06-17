@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,9 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Tv, Copy, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe('pk_live_51RMcvVRwOs2QPPvggeWS8jHf1SBl9HDwyzw0gRdRnSFKaJNBHSHK3bwfOly3hyMErV1qEJYErEi2HmXrUxYLP3u300ixHe6K7C');
 
 const EnhancedIPTVSubscription = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -56,21 +54,21 @@ const EnhancedIPTVSubscription = ({ onComplete }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: subscription } = await supabase
-          .from('subscriptions')
+        const { data: iptvAccount } = await supabase
+          .from('iptv_accounts')
           .select('*')
-          .eq('customer_email', user.email)
+          .eq('user_id', user.id)
           .eq('status', 'active')
           .single();
 
-        if (subscription) {
+        if (iptvAccount) {
           setCredentials({
-            username: subscription.megaott_username,
-            password: subscription.megaott_password,
-            server_url: subscription.server_url,
-            playlist_url: subscription.playlist_url,
-            max_connections: subscription.max_connections,
-            expiration_date: subscription.expiration_date
+            username: iptvAccount.username,
+            password: iptvAccount.password,
+            server_url: iptvAccount.server_url,
+            playlist_url: iptvAccount.playlist_url,
+            max_connections: iptvAccount.package_id,
+            expiration_date: iptvAccount.expires_at
           });
           setCurrentStep(4);
         }
