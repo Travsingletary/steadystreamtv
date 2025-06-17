@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MegaOTTAdminService } from '@/services/megaOTTAdminService';
 
 interface DashboardData {
   overview: {
@@ -40,6 +41,8 @@ interface DashboardData {
       planName: string;
       amount: number;
       createdAt: string;
+      type?: string;
+      status?: string;
     }>;
   };
   system: {
@@ -74,32 +77,67 @@ export const EnhancedAdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Fetching real MegaOTT dashboard data...');
       
-      // Fetch data from multiple sources
-      const [overviewData, revenueData, userData, subscriptionData] = await Promise.all([
-        fetchOverviewData(),
-        fetchRevenueData(),
-        fetchUserData(),
-        fetchSubscriptionData()
+      // Fetch data from MegaOTT API and Supabase
+      const [megaOTTSubscriptions, supabaseData] = await Promise.all([
+        MegaOTTAdminService.fetchSubscriptions(),
+        fetchSupabaseData()
       ]);
 
-      setDashboardData({
-        overview: overviewData,
-        revenue: revenueData,
-        users: userData,
-        subscriptions: subscriptionData,
+      console.log('📊 MegaOTT subscriptions:', megaOTTSubscriptions.length);
+      
+      // Analyze MegaOTT data
+      const megaOTTAnalysis = MegaOTTAdminService.analyzeSubscriptions(megaOTTSubscriptions);
+      
+      // Combine with Supabase data
+      const combinedData = {
+        overview: {
+          totalRevenue: megaOTTAnalysis.estimatedRevenue + (supabaseData.totalRevenue || 0),
+          activeSubscriptions: megaOTTAnalysis.activeSubscriptions + (supabaseData.activeSubscriptions || 0),
+          totalUsers: megaOTTAnalysis.totalSubscriptions + (supabaseData.totalUsers || 0),
+          conversionRate: megaOTTAnalysis.conversionRate,
+          revenueChange: 12.5,
+          subscriptionChange: 8.3,
+          userChange: 15.2,
+          conversionChange: 3.1
+        },
+        revenue: {
+          mrr: megaOTTAnalysis.monthlyRevenue,
+          todayRevenue: Math.floor(megaOTTAnalysis.monthlyRevenue / 30),
+          monthRevenue: megaOTTAnalysis.monthlyRevenue,
+          avgRevenue: megaOTTAnalysis.totalSubscriptions ? megaOTTAnalysis.monthlyRevenue / megaOTTAnalysis.totalSubscriptions : 0
+        },
+        users: {
+          growthRate: 15.8,
+          newToday: supabaseData.newToday || 0,
+          newThisWeek: supabaseData.newThisWeek || 0,
+          churnRate: 2.1,
+          activeUsers: megaOTTAnalysis.paidSubscriptions,
+          trialUsers: megaOTTAnalysis.trialSubscriptions,
+          inactiveUsers: megaOTTAnalysis.expiredSubscriptions
+        },
+        subscriptions: {
+          basicCount: megaOTTAnalysis.planBreakdown['1 month'] || 0,
+          premiumCount: megaOTTAnalysis.planBreakdown['3 months'] || megaOTTAnalysis.planBreakdown['6 months'] || 0,
+          recentSubscriptions: megaOTTAnalysis.recentSubscriptions
+        },
         system: {
           apiResponseTime: Math.floor(Math.random() * 200) + 150,
           dbPerformance: Math.floor(Math.random() * 50) + 25,
-          megaottStatus: 'Connected',
+          megaottStatus: megaOTTSubscriptions.length > 0 ? 'Connected' : 'Disconnected',
           stripeStatus: 'Operational'
         }
-      });
+      };
+
+      setDashboardData(combinedData);
+      console.log('✅ Dashboard data updated with real MegaOTT analytics');
+      
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+      console.error('❌ Failed to fetch dashboard data:', error);
       toast({
         title: "Error",
-        description: "Failed to load dashboard data",
+        description: "Failed to load dashboard data. Check console for details.",
         variant: "destructive",
       });
     } finally {
@@ -107,9 +145,9 @@ export const EnhancedAdminDashboard = () => {
     }
   };
 
-  const fetchOverviewData = async () => {
+  const fetchSupabaseData = async () => {
     try {
-      // Get total revenue from payments
+      // Get Supabase data as fallback/supplement
       const { data: payments } = await supabase
         .from('payments')
         .select('amount')
@@ -117,174 +155,79 @@ export const EnhancedAdminDashboard = () => {
       
       const totalRevenue = payments?.reduce((sum, payment) => sum + (payment.amount / 100), 0) || 0;
 
-      // Get active subscriptions count
       const { count: activeSubscriptions } = await supabase
         .from('stripe_subscriptions')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'active');
 
-      // Get total users count
       const { count: totalUsers } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      return {
-        totalRevenue,
-        activeSubscriptions: activeSubscriptions || 0,
-        totalUsers: totalUsers || 0,
-        conversionRate: totalUsers ? ((activeSubscriptions || 0) / totalUsers * 100) : 0,
-        revenueChange: 12.5,
-        subscriptionChange: 8.3,
-        userChange: 15.2,
-        conversionChange: 3.1
-      };
-    } catch (error) {
-      console.error('Error fetching overview data:', error);
-      return {};
-    }
-  };
-
-  const fetchRevenueData = async () => {
-    try {
       const today = new Date();
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      
-      // Get today's revenue
-      const { data: todayPayments } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('status', 'succeeded')
-        .gte('created_at', today.toISOString().split('T')[0]);
-      
-      const todayRevenue = todayPayments?.reduce((sum, payment) => sum + (payment.amount / 100), 0) || 0;
-
-      // Get month revenue
-      const { data: monthPayments } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('status', 'succeeded')
-        .gte('created_at', startOfMonth.toISOString());
-      
-      const monthRevenue = monthPayments?.reduce((sum, payment) => sum + (payment.amount / 100), 0) || 0;
-
-      // Calculate MRR from active subscriptions
-      const { data: subscriptions } = await supabase
-        .from('stripe_subscriptions')
-        .select('amount')
-        .eq('status', 'active');
-      
-      const mrr = subscriptions?.reduce((sum, sub) => sum + (sub.amount / 100), 0) || 0;
-
-      return {
-        mrr,
-        todayRevenue,
-        monthRevenue,
-        avgRevenue: subscriptions?.length ? mrr / subscriptions.length : 0
-      };
-    } catch (error) {
-      console.error('Error fetching revenue data:', error);
-      return {};
-    }
-  };
-
-  const fetchUserData = async () => {
-    try {
-      const today = new Date();
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-      // Get new users today
       const { count: newToday } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', today.toISOString().split('T')[0]);
 
-      // Get new users this week
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
       const { count: newThisWeek } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', weekAgo.toISOString());
 
-      // Get active users (with active subscriptions)
-      const { count: activeUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('subscription_status', 'active');
-
-      // Get trial users
-      const { count: trialUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('subscription_tier', 'free-trial');
-
       return {
-        growthRate: 15.8,
+        totalRevenue,
+        activeSubscriptions: activeSubscriptions || 0,
+        totalUsers: totalUsers || 0,
         newToday: newToday || 0,
-        newThisWeek: newThisWeek || 0,
-        churnRate: 2.1,
-        activeUsers: activeUsers || 0,
-        trialUsers: trialUsers || 0,
-        inactiveUsers: 0
+        newThisWeek: newThisWeek || 0
       };
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('Error fetching Supabase data:', error);
       return {};
     }
   };
 
-  const fetchSubscriptionData = async () => {
+  // Quick action handlers with real functionality
+  const handleExportUserData = async () => {
     try {
-      // Get subscription counts by plan
-      const { data: subscriptions } = await supabase
-        .from('stripe_subscriptions')
-        .select('plan_name')
-        .eq('status', 'active');
+      console.log('📊 Starting user data export...');
+      
+      const subscriptions = await MegaOTTAdminService.fetchSubscriptions();
+      const csvData = subscriptions.map(sub => ({
+        username: sub.username || 'N/A',
+        type: sub.type,
+        package: sub.package.name,
+        status: new Date(sub.expiring_at) > new Date() ? 'Active' : 'Expired',
+        expiring_at: sub.expiring_at,
+        paid: sub.paid ? 'Yes' : 'No'
+      }));
 
-      const basicCount = subscriptions?.filter(s => s.plan_name.toLowerCase().includes('basic')).length || 0;
-      const premiumCount = subscriptions?.filter(s => s.plan_name.toLowerCase().includes('premium')).length || 0;
+      const csvContent = [
+        'Username,Type,Package,Status,Expiring At,Paid',
+        ...csvData.map(row => Object.values(row).join(','))
+      ].join('\n');
 
-      // Get recent subscriptions with user emails
-      const { data: recentSubs } = await supabase
-        .from('stripe_subscriptions')
-        .select('user_id, plan_name, amount, created_at')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      const recentSubscriptions = [];
-      if (recentSubs) {
-        for (const sub of recentSubs) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', sub.user_id)
-            .single();
-
-          recentSubscriptions.push({
-            userEmail: profile?.email || 'Unknown',
-            planName: sub.plan_name,
-            amount: sub.amount / 100,
-            createdAt: new Date(sub.created_at).toLocaleDateString()
-          });
-        }
-      }
-
-      return {
-        basicCount,
-        premiumCount,
-        recentSubscriptions
-      };
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `megaott-users-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      
+      toast({
+        title: "Export Complete",
+        description: `Exported ${csvData.length} user records to CSV`,
+      });
     } catch (error) {
-      console.error('Error fetching subscription data:', error);
-      return {};
+      console.error('Export failed:', error);
+      toast({
+        title: "Export Failed",
+        description: "Unable to export user data",
+        variant: "destructive",
+      });
     }
-  };
-
-  // Quick action handlers
-  const handleExportUserData = () => {
-    toast({
-      title: "Export Started",
-      description: "User data export is being prepared...",
-    });
-    console.log('📊 Exporting user data...');
   };
 
   const handleSendBulkEmail = () => {
@@ -292,23 +235,59 @@ export const EnhancedAdminDashboard = () => {
       title: "Bulk Email",
       description: "Opening bulk email interface...",
     });
-    console.log('📧 Opening bulk email...');
+    console.log('📧 Opening bulk email interface...');
+    // TODO: Implement bulk email modal
   };
 
-  const handleGenerateReports = () => {
-    toast({
-      title: "Reports",
-      description: "Generating analytical reports...",
-    });
-    console.log('📈 Generating reports...');
+  const handleGenerateReports = async () => {
+    try {
+      console.log('📈 Generating MegaOTT analytics report...');
+      
+      const subscriptions = await MegaOTTAdminService.fetchSubscriptions();
+      const analysis = MegaOTTAdminService.analyzeSubscriptions(subscriptions);
+      
+      const report = {
+        generated_at: new Date().toISOString(),
+        summary: {
+          total_subscriptions: analysis.totalSubscriptions,
+          active_subscriptions: analysis.activeSubscriptions,
+          paid_subscriptions: analysis.paidSubscriptions,
+          estimated_revenue: analysis.estimatedRevenue,
+          conversion_rate: analysis.conversionRate
+        },
+        plan_breakdown: analysis.planBreakdown,
+        recent_subscriptions: analysis.recentSubscriptions
+      };
+
+      console.log('📊 Generated report:', report);
+      
+      toast({
+        title: "Report Generated",
+        description: `Analytics report ready with ${analysis.totalSubscriptions} subscriptions`,
+      });
+    } catch (error) {
+      console.error('Report generation failed:', error);
+      toast({
+        title: "Report Failed",
+        description: "Unable to generate analytics report",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewSystemLogs = () => {
+    console.log('🔍 Opening system logs viewer...');
+    console.log('System Status:', {
+      megaott_api: dashboardData.system.megaottStatus,
+      stripe_status: dashboardData.system.stripeStatus,
+      api_response_time: dashboardData.system.apiResponseTime,
+      db_performance: dashboardData.system.dbPerformance
+    });
+    
     toast({
       title: "System Logs",
-      description: "Opening system logs viewer...",
+      description: "System status logged to console",
     });
-    console.log('🔍 Opening system logs...');
   };
 
   if (loading) {
@@ -350,7 +329,7 @@ export const EnhancedAdminDashboard = () => {
       </div>
       
       {/* Recent Activity */}
-      <RecentActivity />
+      <RecentActivity data={dashboardData.subscriptions.recentSubscriptions} />
     </div>
   );
 };
@@ -373,12 +352,11 @@ const DashboardHeader = ({ user, timeRange, setTimeRange, onRefresh }) => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gold">SteadyStream Admin</h1>
-            <p className="text-gray-400 text-sm">Real-time Business Intelligence</p>
+            <p className="text-gray-400 text-sm">Real-time MegaOTT Analytics</p>
           </div>
         </div>
         
         <div className="flex items-center space-x-4">
-          {/* Time Range Selector */}
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-48 bg-dark-300 border-gray-700">
               <SelectValue />
@@ -392,7 +370,6 @@ const DashboardHeader = ({ user, timeRange, setTimeRange, onRefresh }) => {
             </SelectContent>
           </Select>
           
-          {/* Refresh Button */}
           <Button 
             onClick={onRefresh}
             variant="outline" 
@@ -401,7 +378,6 @@ const DashboardHeader = ({ user, timeRange, setTimeRange, onRefresh }) => {
             🔄 Refresh
           </Button>
           
-          {/* User Info */}
           <div className="text-right">
             <p className="text-white font-medium">{user?.email}</p>
             <p className="text-gray-400 text-xs">Administrator</p>
@@ -751,46 +727,26 @@ const SystemHealth = ({ data, onViewLogs }) => {
 };
 
 // Recent Activity Component
-const RecentActivity = () => {
-  const [activities] = useState([
-    {
-      id: 1,
-      type: 'subscription',
-      message: 'New subscription created',
-      details: 'user@example.com subscribed to Premium Plan',
-      timestamp: '2 minutes ago',
-      icon: '💰',
-      color: 'bg-green-600'
-    },
-    {
-      id: 2,
-      type: 'user',
-      message: 'New user registered',
-      details: 'newuser@example.com completed registration',
-      timestamp: '5 minutes ago',
-      icon: '👤',
-      color: 'bg-blue-600'
-    },
-    {
-      id: 3,
-      type: 'payment',
-      message: 'Payment processed',
-      details: '$29.99 payment successful',
-      timestamp: '10 minutes ago',
-      icon: '💳',
-      color: 'bg-purple-600'
-    }
-  ]);
+const RecentActivity = ({ data }) => {
+  const activities = data?.slice(0, 3).map((sub, index) => ({
+    id: index + 1,
+    type: 'subscription',
+    message: `${sub.type} subscription ${sub.status}`,
+    details: `${sub.userEmail} - ${sub.planName}`,
+    timestamp: sub.createdAt,
+    icon: sub.status === 'active' ? '✅' : '⏰',
+    color: sub.status === 'active' ? 'bg-green-600' : 'bg-yellow-600'
+  })) || [];
 
   return (
     <div className="p-6">
       <Card className="bg-dark-200 border-gray-800">
         <CardHeader>
-          <CardTitle className="text-white">Recent Activity</CardTitle>
+          <CardTitle className="text-white">Recent MegaOTT Activity</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {activities.map((activity) => (
+            {activities.length > 0 ? activities.map((activity) => (
               <div key={activity.id} className="flex items-center space-x-4 p-4 bg-dark-300 rounded-lg">
                 <div className={`w-10 h-10 ${activity.color} rounded-full flex items-center justify-center`}>
                   <span className="text-white text-sm">{activity.icon}</span>
@@ -801,7 +757,12 @@ const RecentActivity = () => {
                 </div>
                 <span className="text-gray-400 text-sm">{activity.timestamp}</span>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-8 text-gray-400">
+                <p>No recent activity found</p>
+                <p className="text-sm">MegaOTT data will appear here once available</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
