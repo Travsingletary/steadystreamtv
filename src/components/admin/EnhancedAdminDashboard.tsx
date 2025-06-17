@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MegaOTTAdminService } from '@/services/megaOTTAdminService';
+import { MegaOTTCreditsManager } from './MegaOTTCreditsManager';
 
 interface DashboardData {
   overview: {
@@ -17,6 +18,7 @@ interface DashboardData {
     subscriptionChange?: number;
     userChange?: number;
     conversionChange?: number;
+    megaottCredits?: number;
   };
   revenue: {
     mrr?: number;
@@ -50,6 +52,7 @@ interface DashboardData {
     dbPerformance?: number;
     megaottStatus?: string;
     stripeStatus?: string;
+    megaottCredits?: number;
   };
 }
 
@@ -77,20 +80,24 @@ export const EnhancedAdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Fetching real MegaOTT dashboard data...');
+      console.log('🔄 Fetching comprehensive MegaOTT dashboard data...');
       
       // Fetch data from MegaOTT API and Supabase
-      const [megaOTTSubscriptions, supabaseData] = await Promise.all([
+      const [megaOTTSubscriptions, megaOTTUser, supabaseData] = await Promise.all([
         MegaOTTAdminService.fetchSubscriptions(),
+        MegaOTTAdminService.getUserInfo(),
         fetchSupabaseData()
       ]);
 
       console.log('📊 MegaOTT subscriptions:', megaOTTSubscriptions.length);
+      console.log('💰 MegaOTT user credits:', megaOTTUser?.credit);
       
       // Analyze MegaOTT data
       const megaOTTAnalysis = MegaOTTAdminService.analyzeSubscriptions(megaOTTSubscriptions);
+      const creditsAnalysis = megaOTTUser ? 
+        MegaOTTAdminService.analyzeCreditsUsage(megaOTTSubscriptions, megaOTTUser.credit) : null;
       
-      // Combine with Supabase data
+      // Combine with Supabase data and include credits
       const combinedData = {
         overview: {
           totalRevenue: megaOTTAnalysis.estimatedRevenue + (supabaseData.totalRevenue || 0),
@@ -100,7 +107,8 @@ export const EnhancedAdminDashboard = () => {
           revenueChange: 12.5,
           subscriptionChange: 8.3,
           userChange: 15.2,
-          conversionChange: 3.1
+          conversionChange: 3.1,
+          megaottCredits: megaOTTUser?.credit || 0
         },
         revenue: {
           mrr: megaOTTAnalysis.monthlyRevenue,
@@ -126,12 +134,13 @@ export const EnhancedAdminDashboard = () => {
           apiResponseTime: Math.floor(Math.random() * 200) + 150,
           dbPerformance: Math.floor(Math.random() * 50) + 25,
           megaottStatus: megaOTTSubscriptions.length > 0 ? 'Connected' : 'Disconnected',
-          stripeStatus: 'Operational'
+          stripeStatus: 'Operational',
+          megaottCredits: megaOTTUser?.credit || 0
         }
       };
 
       setDashboardData(combinedData);
-      console.log('✅ Dashboard data updated with real MegaOTT analytics');
+      console.log('✅ Dashboard data updated with comprehensive MegaOTT analytics and credits');
       
     } catch (error) {
       console.error('❌ Failed to fetch dashboard data:', error);
@@ -187,6 +196,14 @@ export const EnhancedAdminDashboard = () => {
       console.error('Error fetching Supabase data:', error);
       return {};
     }
+  };
+
+  const handleCreditsUpdate = (credits: number) => {
+    setDashboardData(prev => ({
+      ...prev,
+      overview: { ...prev.overview, megaottCredits: credits },
+      system: { ...prev.system, megaottCredits: credits }
+    }));
   };
 
   // Quick action handlers with real functionality
@@ -304,8 +321,13 @@ export const EnhancedAdminDashboard = () => {
         onRefresh={fetchDashboardData}
       />
       
-      {/* Overview Cards */}
+      {/* Overview Cards - Updated to include credits */}
       <OverviewCards data={dashboardData.overview} />
+      
+      {/* MegaOTT Credits Manager - New comprehensive component */}
+      <div className="p-6">
+        <MegaOTTCreditsManager onCreditsUpdate={handleCreditsUpdate} />
+      </div>
       
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
@@ -406,18 +428,18 @@ const OverviewCards = ({ data }) => {
       color: 'blue'
     },
     {
-      title: 'Total Users',
-      value: data.totalUsers?.toLocaleString() || '0',
-      change: data.userChange || 0,
-      icon: '👥',
-      color: 'purple'
+      title: 'MegaOTT Credits',
+      value: `${data.megaottCredits?.toFixed(2) || '0.00'}`,
+      change: data.megaottCredits > 50 ? 15 : data.megaottCredits > 10 ? 0 : -10,
+      icon: '🏦',
+      color: 'gold'
     },
     {
       title: 'Conversion Rate',
       value: `${data.conversionRate?.toFixed(1) || 0}%`,
       change: data.conversionChange || 0,
       icon: '📈',
-      color: 'yellow'
+      color: 'purple'
     }
   ];
 

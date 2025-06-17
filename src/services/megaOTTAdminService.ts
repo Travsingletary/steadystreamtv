@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface MegaOTTSubscription {
@@ -17,6 +16,12 @@ interface MegaOTTSubscription {
   paid: boolean;
   expiring_at: string;
   dns_link: string;
+}
+
+interface MegaOTTUser {
+  id: number;
+  username: string;
+  credit: number;
 }
 
 export class MegaOTTAdminService {
@@ -66,7 +71,7 @@ export class MegaOTTAdminService {
     }
   }
 
-  static async getUserInfo() {
+  static async getUserInfo(): Promise<MegaOTTUser | null> {
     try {
       const token = await this.getAPIToken();
       if (!token) {
@@ -85,7 +90,9 @@ export class MegaOTTAdminService {
         throw new Error(`MegaOTT API error: ${response.status}`);
       }
 
-      return await response.json();
+      const userData = await response.json();
+      console.log('📊 MegaOTT User Data:', userData);
+      return userData;
     } catch (error) {
       console.error('Error fetching MegaOTT user info:', error);
       return null;
@@ -161,5 +168,68 @@ export class MegaOTTAdminService {
           status: new Date(sub.expiring_at) > now ? 'active' : 'expired'
         }))
     };
+  }
+
+  static analyzeCreditsUsage(subscriptions: MegaOTTSubscription[], userCredit: number) {
+    const now = new Date();
+    const activeSubscriptions = subscriptions.filter(sub => 
+      new Date(sub.expiring_at) > now
+    );
+    
+    // Estimate credit costs per subscription type
+    const costPerSubscription = {
+      'M3U': 0.50, // Estimated cost per M3U subscription
+      'MAG': 0.75, // Estimated cost per MAG subscription
+      'ENIGMA': 0.60 // Estimated cost per Enigma subscription
+    };
+
+    const totalCostEstimate = subscriptions.reduce((total, sub) => {
+      return total + (costPerSubscription[sub.type] || 0.50);
+    }, 0);
+
+    const monthlyBurn = activeSubscriptions.reduce((total, sub) => {
+      return total + (costPerSubscription[sub.type] || 0.50);
+    }, 0);
+
+    const daysRemaining = monthlyBurn > 0 ? Math.floor(userCredit / (monthlyBurn / 30)) : Infinity;
+    
+    return {
+      currentCredit: userCredit,
+      totalCostEstimate,
+      monthlyBurn,
+      daysRemaining: daysRemaining === Infinity ? 'Unlimited' : daysRemaining,
+      efficiency: subscriptions.length > 0 ? (userCredit / totalCostEstimate * 100) : 100,
+      recommendedActions: this.generateCreditRecommendations(userCredit, monthlyBurn, subscriptions.length)
+    };
+  }
+
+  static generateCreditRecommendations(credit: number, monthlyBurn: number, totalSubs: number) {
+    const recommendations = [];
+    
+    if (credit < 10) {
+      recommendations.push({
+        type: 'warning',
+        message: 'Low credit balance - consider topping up',
+        action: 'Add Credits'
+      });
+    }
+    
+    if (monthlyBurn > credit) {
+      recommendations.push({
+        type: 'critical',
+        message: 'Monthly costs exceed current credit',
+        action: 'Urgent: Add Credits'
+      });
+    }
+    
+    if (totalSubs > 100 && credit > 50) {
+      recommendations.push({
+        type: 'success',
+        message: 'High volume operation with good credit buffer',
+        action: 'Monitor Usage'
+      });
+    }
+    
+    return recommendations;
   }
 }
