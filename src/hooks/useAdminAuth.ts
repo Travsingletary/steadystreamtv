@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema } from "@/components/admin/AdminLoginForm";
 import { resetSchema } from "@/components/admin/PasswordResetForm";
-import { checkRedirectLimit, resetRedirectCount, checkAdminStatusWithCircuitBreaker } from "@/utils/adminCircuitBreaker";
+import { checkRedirectLimit, resetRedirectCount } from "@/utils/adminCircuitBreaker";
 
 export const useAdminAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -76,43 +76,62 @@ export const useAdminAuth = () => {
 
   // Check if user is already logged in and is admin
   useEffect(() => {
+    let isMounted = true;
+    
     const checkAdminStatusAsync = async () => {
       try {
-        if (user) {
-          console.log('Checking admin role for user:', user.id);
-          
-          // Check if circuit breaker is tripped
-          if (checkRedirectLimit()) {
-            console.error('Admin login circuit breaker triggered');
+        if (!user) {
+          if (isMounted) {
+            setIsCheckingAdmin(false);
+          }
+          return;
+        }
+
+        console.log('Checking admin role for user:', user.id);
+        
+        // Check if circuit breaker is tripped BEFORE making any calls
+        if (checkRedirectLimit()) {
+          console.error('Admin login circuit breaker triggered');
+          if (isMounted) {
             toast({
               title: "Login Error",
               description: "Too many admin check attempts. Please wait before trying again.",
               variant: "destructive",
             });
             setIsCheckingAdmin(false);
-            return;
           }
-
-          const adminStatus = await checkAdminStatusWithCircuitBreaker(user.id);
-          
-          if (adminStatus || isAdmin) {
-            console.log('User is admin, redirecting to /admin');
-            resetRedirectCount();
-            navigate('/admin');
-            return;
-          } else {
-            console.log('User is not admin');
-          }
+          return;
         }
+
+        // Use the context's checkAdminStatus method instead of circuit breaker
+        const adminStatus = await checkAdminStatus();
+        
+        if (!isMounted) return;
+        
+        if (adminStatus || isAdmin) {
+          console.log('User is admin, redirecting to /admin');
+          resetRedirectCount();
+          navigate('/admin');
+          return;
+        } else {
+          console.log('User is not admin');
+        }
+        
         setIsCheckingAdmin(false);
       } catch (error) {
         console.error('Error checking admin status:', error);
-        setIsCheckingAdmin(false);
+        if (isMounted) {
+          setIsCheckingAdmin(false);
+        }
       }
     };
 
     checkAdminStatusAsync();
-  }, [user, isAdmin, navigate, toast]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user, isAdmin, navigate, toast, checkAdminStatus]);
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);

@@ -18,60 +18,75 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
   const { user, isAdmin, checkAdminStatus } = useAuth();
 
   useEffect(() => {
-    checkAccess();
-  }, [user, isAdmin]);
+    let isMounted = true;
+    
+    const checkAccess = async () => {
+      try {
+        // Check if circuit breaker is tripped
+        if (checkRedirectLimit()) {
+          console.error('Admin redirect circuit breaker triggered');
+          if (isMounted) {
+            setError(true);
+            setLoading(false);
+          }
+          return;
+        }
 
-  const checkAccess = async () => {
-    try {
-      // Check if circuit breaker is tripped
-      if (checkRedirectLimit()) {
-        console.error('Admin redirect circuit breaker triggered');
-        setError(true);
+        if (!user) {
+          if (isMounted) {
+            toast({
+              title: "Authentication Required",
+              description: "Please sign in to access the admin dashboard",
+              variant: "destructive",
+            });
+            navigate("/admin-login");
+          }
+          return;
+        }
+
+        console.log('Checking admin access for user:', user.id);
+
+        // Use the context's checkAdminStatus method
+        const adminStatus = await checkAdminStatus();
+        
+        if (!isMounted) return;
+        
+        if (!adminStatus && !isAdmin) {
+          toast({
+            title: "Access Denied",
+            description: "You don't have admin privileges",
+            variant: "destructive",
+          });
+          navigate("/dashboard");
+          return;
+        }
+
+        // Success - reset counters
+        resetRedirectCount();
         setLoading(false);
-        return;
+        
+      } catch (error: any) {
+        console.error('Error checking admin access:', error);
+        if (isMounted) {
+          setError(true);
+          setLoading(false);
+        }
       }
+    };
 
-      if (!user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to access the admin dashboard",
-          variant: "destructive",
-        });
-        navigate("/admin-login");
-        return;
-      }
-
-      console.log('Checking admin access for user:', user.id);
-
-      const adminStatus = await checkAdminStatus();
-      
-      if (!adminStatus && !isAdmin) {
-        toast({
-          title: "Access Denied",
-          description: "You don't have admin privileges",
-          variant: "destructive",
-        });
-        navigate("/dashboard");
-        return;
-      }
-
-      // Success - reset counters
-      resetRedirectCount();
-      setLoading(false);
-      
-    } catch (error: any) {
-      console.error('Error checking admin access:', error);
-      setError(true);
-      setLoading(false);
-    }
-  };
+    checkAccess();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user, isAdmin, navigate, toast, checkAdminStatus]);
 
   const handleRetry = () => {
     // Reset all counters and try again
     resetRedirectCount();
     setError(false);
     setLoading(true);
-    checkAccess();
+    // The useEffect will automatically re-run
   };
 
   const handleForceAccess = () => {
