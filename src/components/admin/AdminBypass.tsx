@@ -16,11 +16,11 @@ export const AdminBypass = () => {
   const handleBypassLogin = async () => {
     setLoading(true);
     
-    // Simple hardcoded check for admin access
+    // Updated admin credentials with capital letters and special characters
     const adminCredentials = {
-      'admin@steadystreamtv.com': 'admin123',
-      'trav.singletary@gmail.com': 'password123',
-      'vincent@steadystreamtv.com': 'admin456'
+      'admin@steadystreamtv.com': 'Admin123!',
+      'trav.singletary@gmail.com': 'Password123!',
+      'vincent@steadystreamtv.com': 'Admin456!'
     };
 
     if (adminCredentials[email] === password) {
@@ -111,9 +111,9 @@ export const AdminBypass = () => {
 
           <div className="text-center text-sm text-gray-400">
             <p>Valid credentials:</p>
-            <p>admin@steadystreamtv.com / admin123</p>
-            <p>trav.singletary@gmail.com / password123</p>
-            <p>vincent@steadystreamtv.com / admin456</p>
+            <p>admin@steadystreamtv.com / Admin123!</p>
+            <p>trav.singletary@gmail.com / Password123!</p>
+            <p>vincent@steadystreamtv.com / Admin456!</p>
           </div>
         </CardContent>
       </Card>
