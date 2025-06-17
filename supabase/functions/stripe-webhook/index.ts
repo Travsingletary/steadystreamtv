@@ -5,24 +5,30 @@ import Stripe from "https://esm.sh/stripe@14.21.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
-
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-  apiVersion: "2023-10-16",
-});
-
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL") ?? "",
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    // Use environment variable for Stripe secret key
+    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeSecretKey) {
+      throw new Error("STRIPE_SECRET_KEY environment variable is not set");
+    }
+
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2023-10-16",
+    });
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
     const signature = req.headers.get("stripe-signature");
     if (!signature) {
       throw new Error("No Stripe signature found");
@@ -49,7 +55,7 @@ serve(async (req) => {
       // Get customer email and plan info
       const customerEmail = session.customer_details?.email;
       const customerName = session.customer_details?.name || 'Unknown';
-      const planType = session.metadata?.plan || "basic";
+      const planType = session.metadata?.plan_type || "basic";
       
       if (!customerEmail) {
         console.error("No customer email found in session");
@@ -64,8 +70,8 @@ serve(async (req) => {
             customer_name: customerName,
             plan_type: planType,
             stripe_subscription_id: session.id,
-            customer_country: 'Unknown',
-            customer_phone: ''
+            customer_country: session.metadata?.customer_country || 'Unknown',
+            customer_phone: session.metadata?.customer_phone || ''
           });
 
         if (megaottError) {
