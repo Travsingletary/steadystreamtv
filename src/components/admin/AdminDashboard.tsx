@@ -9,7 +9,7 @@ import { UserManagement } from "./UserManagement";
 import { SubscriptionAnalytics } from "./SubscriptionAnalytics";
 import { RevenueTracking } from "./RevenueTracking";
 import { MegaOTTCredits } from "./MegaOTTCredits";
-import { Users, CreditCard, TrendingUp, DollarSign, Settings } from "lucide-react";
+import { Users, CreditCard, TrendingUp, DollarSign, Settings, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface AdminStats {
@@ -38,10 +38,23 @@ export const AdminDashboard = () => {
     try {
       setLoading(true);
 
-      // Get total users count
-      const { count: usersCount } = await supabase
+      // Get total users count from multiple possible tables
+      let totalUsers = 0;
+      
+      // Try user_profiles first
+      const { count: userProfilesCount } = await supabase
         .from('user_profiles')
         .select('*', { count: 'exact', head: true });
+      
+      if (userProfilesCount) {
+        totalUsers = userProfilesCount;
+      } else {
+        // Fallback to profiles table
+        const { count: profilesCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        totalUsers = profilesCount || 0;
+      }
 
       // Get active subscriptions count
       const { count: activeSubsCount } = await supabase
@@ -49,17 +62,23 @@ export const AdminDashboard = () => {
         .select('*', { count: 'exact', head: true })
         .gte('end_date', new Date().toISOString());
 
-      // Get MegaOTT credits from resellers table
-      const { data: resellersData } = await supabase
+      // Get MegaOTT credits (handle case where no resellers exist)
+      const { data: resellersData, error: resellersError } = await supabase
         .from('resellers')
         .select('credits');
 
-      const totalCredits = resellersData?.reduce((sum, reseller) => sum + (reseller.credits || 0), 0) || 0;
+      let totalCredits = 0;
+      if (!resellersError && resellersData) {
+        totalCredits = resellersData.reduce((sum, reseller) => sum + (reseller.credits || 0), 0);
+      }
+
+      // Calculate estimated revenue
+      const estimatedRevenue = (activeSubsCount || 0) * 30; // $30 average per subscription
 
       setStats({
-        totalUsers: usersCount || 0,
+        totalUsers: totalUsers,
         activeSubscriptions: activeSubsCount || 0,
-        totalRevenue: 0, // Will be calculated in RevenueTracking component
+        totalRevenue: estimatedRevenue,
         megaottCredits: totalCredits
       });
 
@@ -86,13 +105,24 @@ export const AdminDashboard = () => {
           <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
           <p className="text-gray-400">Manage users, subscriptions, and monitor platform performance</p>
         </div>
-        <Button
-          onClick={() => navigate('/custom-dashboard-admin')}
-          className="bg-purple-600 hover:bg-purple-700 text-white"
-        >
-          <Settings className="h-4 w-4 mr-2" />
-          Custom Dashboard Manager
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={fetchAdminStats}
+            disabled={loading}
+            variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+          <Button
+            onClick={() => navigate('/custom-dashboard-admin')}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Custom Dashboard Manager
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}
@@ -106,6 +136,9 @@ export const AdminDashboard = () => {
             <div className="text-2xl font-bold text-white">
               {loading ? "..." : stats.totalUsers.toLocaleString()}
             </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Registered platform users
+            </p>
           </CardContent>
         </Card>
 
@@ -118,18 +151,24 @@ export const AdminDashboard = () => {
             <div className="text-2xl font-bold text-white">
               {loading ? "..." : stats.activeSubscriptions.toLocaleString()}
             </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Currently active plans
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-dark-200 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-300">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-300">Monthly Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-gold" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
               ${loading ? "..." : stats.totalRevenue.toLocaleString()}
             </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Estimated monthly income
+            </p>
           </CardContent>
         </Card>
 
@@ -142,6 +181,9 @@ export const AdminDashboard = () => {
             <div className="text-2xl font-bold text-white">
               {loading ? "..." : stats.megaottCredits.toLocaleString()}
             </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Available API credits
+            </p>
           </CardContent>
         </Card>
       </div>
