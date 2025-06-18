@@ -278,7 +278,7 @@ export const OnboardingDeviceSetup = ({
       </div>
 
       <div className="text-center mb-8">
-        <div className="text-4xl mb-2">{selectedDevice === 'firestick' && deviceInstructions.icon ? deviceInstructions.icon : '📺'}</div>
+        <div className="text-4xl mb-2">{deviceInstructions.icon || '📺'}</div>
         <h2 className="text-2xl font-bold text-white mb-2">
           Setting Up {deviceInstructions.name}
         </h2>
@@ -365,31 +365,14 @@ export const OnboardingDeviceSetup = ({
               <TabsContent value="features" className="mt-4">
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm text-white">What you'll get:</h4>
-                  {selectedDevice === 'firestick' && deviceInstructions.features ? (
-                    <ul className="text-sm text-gray-300 space-y-1">
-                      {deviceInstructions.features.map((feature, index) => (
-                        <li key={index} className="flex items-start space-x-2">
-                          <span className="text-green-400 mt-0.5">•</span>
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <ul className="text-sm text-gray-300 space-y-1">
-                      <li className="flex items-start space-x-2">
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    {deviceInstructions.features?.map((feature, index) => (
+                      <li key={index} className="flex items-start space-x-2">
                         <span className="text-green-400 mt-0.5">•</span>
-                        <span>High-quality streaming</span>
+                        <span>{feature}</span>
                       </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="text-green-400 mt-0.5">•</span>
-                        <span>Easy setup and navigation</span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="text-green-400 mt-0.5">•</span>
-                        <span>Reliable performance</span>
-                      </li>
-                    </ul>
-                  )}
+                    ))}
+                  </ul>
                 </div>
               </TabsContent>
             </Tabs>

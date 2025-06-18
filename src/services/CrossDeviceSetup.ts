@@ -1,6 +1,15 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+interface DeviceInstructions {
+  name: string;
+  description: string;
+  steps: string[];
+  tips?: string[];
+  icon?: string;
+  features?: string[];
+}
+
 export class CrossDeviceSetup {
   static generateActivationCode(): string {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -119,17 +128,23 @@ export class CrossDeviceSetup {
   }
 
   // Enhanced device instructions with app type support
-  static getDeviceInstructions(deviceType: string, appType?: string) {
+  static getDeviceInstructions(deviceType: string, appType?: string): DeviceInstructions | null {
     if (deviceType === 'firestick' && appType) {
       const appOptions = this.getFireTVAppOptions();
       return appOptions[appType as keyof typeof appOptions];
     }
 
     // Standard device instructions for non-Fire TV devices
-    const standardInstructions = {
+    const standardInstructions: Record<string, DeviceInstructions> = {
       apple_tv: {
         name: 'Apple TV',
         description: 'Apple TV 4K, Apple TV HD',
+        icon: '📺',
+        features: [
+          'High-quality streaming',
+          'Easy setup and navigation',
+          'Reliable performance'
+        ],
         steps: [
           'On your Apple TV, open the App Store',
           'Search for "SteadyStream TV"',
@@ -148,6 +163,12 @@ export class CrossDeviceSetup {
       android_tv: {
         name: 'Android TV / Smart TV',
         description: 'Sony, Samsung, LG Smart TVs',
+        icon: '📺',
+        features: [
+          'High-quality streaming',
+          'Easy setup and navigation',
+          'Reliable performance'
+        ],
         steps: [
           'On your Android TV, open Google Play Store',
           'Search for "SteadyStream TV"',
@@ -165,7 +186,7 @@ export class CrossDeviceSetup {
       }
     };
 
-    return standardInstructions[deviceType as keyof typeof standardInstructions];
+    return standardInstructions[deviceType] || null;
   }
 
   // Validation method (for TV app use)
