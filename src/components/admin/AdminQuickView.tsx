@@ -60,9 +60,9 @@ export const AdminQuickView = () => {
         }));
       }
 
-      // Get subscription data
+      // Get subscription data from stripe_subscriptions table
       const { data: subscriptions } = await supabase
-        .from('user_subscriptions')
+        .from('stripe_subscriptions')
         .select('*')
         .eq('status', 'active');
       
