@@ -215,6 +215,45 @@ export type Database = {
         }
         Relationships: []
       }
+      device_pairings: {
+        Row: {
+          app_type: string | null
+          created_at: string | null
+          device_type: string
+          expires_at: string
+          id: string
+          pairing_code: string
+          status: string | null
+          subscription_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          app_type?: string | null
+          created_at?: string | null
+          device_type: string
+          expires_at: string
+          id?: string
+          pairing_code: string
+          status?: string | null
+          subscription_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          app_type?: string | null
+          created_at?: string | null
+          device_type?: string
+          expires_at?: string
+          id?: string
+          pairing_code?: string
+          status?: string | null
+          subscription_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       iptv_accounts: {
         Row: {
           activation_code: string | null
