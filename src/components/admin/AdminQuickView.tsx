@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreditMonitor } from './CreditMonitor';
+import { TrialManager } from './TrialManager';
 import { Badge } from '@/components/ui/badge';
 import { Users, UserPlus, CreditCard, TrendingUp, Activity, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -206,6 +206,9 @@ export const AdminQuickView = () => {
         </Card>
       </div>
 
+      {/* Trial Manager - NEW */}
+      <TrialManager />
+
       {/* Credit Monitor */}
       <CreditMonitor />
 
@@ -259,17 +262,26 @@ export const AdminQuickView = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-left transition-colors">
+            <button 
+              onClick={() => window.open('/testing-dashboard', '_blank')}
+              className="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-left transition-colors"
+            >
               <h4 className="font-medium mb-1">Export User Data</h4>
               <p className="text-sm text-blue-100">Download customer reports</p>
             </button>
             
-            <button className="p-4 bg-green-600 hover:bg-green-700 rounded-lg text-white text-left transition-colors">
-              <h4 className="font-medium mb-1">Add MegaOTT Credits</h4>
-              <p className="text-sm text-green-100">Top up account balance</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="p-4 bg-green-600 hover:bg-green-700 rounded-lg text-white text-left transition-colors"
+            >
+              <h4 className="font-medium mb-1">Refresh Dashboard</h4>
+              <p className="text-sm text-green-100">Update all metrics</p>
             </button>
             
-            <button className="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg text-white text-left transition-colors">
+            <button 
+              onClick={() => console.log('Opening system logs...')}
+              className="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg text-white text-left transition-colors"
+            >
               <h4 className="font-medium mb-1">View System Logs</h4>
               <p className="text-sm text-purple-100">Check error reports</p>
             </button>

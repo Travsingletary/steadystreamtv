@@ -2,36 +2,62 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export const QuickActions: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleViewAnalytics = () => {
-    toast({
-      title: "Analytics",
-      description: "Analytics dashboard is opening...",
-    });
-    // Navigate to analytics section or show analytics modal
-    console.log('📊 Opening analytics dashboard');
+  const handleViewAnalytics = async () => {
+    try {
+      // Get basic analytics data
+      const { data: profiles } = await supabase.from('profiles').select('*');
+      const { data: subscriptions } = await supabase.from('stripe_subscriptions').select('*');
+      
+      toast({
+        title: "Analytics Overview",
+        description: `Total Users: ${profiles?.length || 0}, Active Subscriptions: ${subscriptions?.length || 0}`,
+      });
+      
+      console.log('📊 Analytics Data:', { profiles, subscriptions });
+    } catch (error) {
+      toast({
+        title: "Analytics Error",
+        description: "Failed to load analytics data",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleManageUsers = () => {
     toast({
       title: "User Management",
-      description: "Opening user management interface...",
+      description: "Navigating to user management...",
     });
-    // Navigate to user management section
-    console.log('👥 Opening user management');
+    navigate('/admin');
   };
 
-  const handleSystemSettings = () => {
-    toast({
-      title: "System Settings",
-      description: "Opening system configuration...",
-    });
-    // Navigate to system settings
-    console.log('⚙️ Opening system settings');
+  const handleSystemSettings = async () => {
+    try {
+      // Check system health
+      const { data, error } = await supabase.functions.invoke('megaott-config-check');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "System Status",
+        description: data?.status === 'healthy' ? "All systems operational" : "System issues detected",
+        variant: data?.status === 'healthy' ? "default" : "destructive"
+      });
+      
+      console.log('⚙️ System Status:', data);
+    } catch (error) {
+      toast({
+        title: "System Check Failed",
+        description: "Unable to verify system status",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
