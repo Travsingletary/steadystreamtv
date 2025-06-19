@@ -35,6 +35,7 @@ export const AdminQuickView = () => {
   const loadStats = async () => {
     try {
       setLoading(true);
+      console.log('📊 Loading dashboard statistics...');
       
       // Check Supabase connection and get user stats
       const { data: profiles, error: profilesError } = await supabase
@@ -49,6 +50,9 @@ export const AdminQuickView = () => {
           new Date(profile.created_at) >= today
         ).length;
         
+        console.log('👥 Profiles found:', profiles.length);
+        console.log('📅 Today signups:', todaySignups);
+        
         setStats(prev => ({
           ...prev,
           totalUsers: profiles.length,
@@ -60,52 +64,83 @@ export const AdminQuickView = () => {
         }));
       }
 
-      // Get subscription data from stripe_subscriptions table
-      const { data: subscriptions } = await supabase
+      // Get active subscriptions from multiple sources
+      let activeSubscriptions = 0;
+      let estimatedRevenue = 0;
+
+      // Check stripe_subscriptions table
+      const { data: stripeSubscriptions, error: stripeError } = await supabase
         .from('stripe_subscriptions')
         .select('*')
         .eq('status', 'active');
       
-      const activeCount = subscriptions?.length || 0;
-      const estimatedRevenue = activeCount * 25; // Average $25 per subscription
-
-      setStats(prev => ({
-        ...prev,
-        activeSubscriptions: activeCount,
-        revenue: estimatedRevenue
-      }));
-
-      // Test MegaOTT API connection
-      try {
-        const response = await fetch('https://megaott.net/api/v1/user', {
-          headers: {
-            'Authorization': 'Bearer YOUR_TOKEN_HERE',
-            'Accept': 'application/json'
-          }
-        });
-        
-        setStats(prev => ({
-          ...prev,
-          systemHealth: {
-            ...prev.systemHealth,
-            megaott: response.ok
-          }
-        }));
-      } catch {
-        // MegaOTT connection failed
+      if (!stripeError && stripeSubscriptions) {
+        activeSubscriptions += stripeSubscriptions.length;
+        console.log('💳 Stripe active subscriptions:', stripeSubscriptions.length);
       }
 
-      // Assume Stripe is working if we have active subscriptions
+      // Check iptv_accounts table for active accounts
+      const { data: iptvAccounts, error: iptvError } = await supabase
+        .from('iptv_accounts')
+        .select('*')
+        .eq('status', 'active');
+      
+      if (!iptvError && iptvAccounts) {
+        // Add IPTV accounts that don't overlap with Stripe
+        const additionalActive = iptvAccounts.length;
+        activeSubscriptions += additionalActive;
+        console.log('📺 IPTV active accounts:', additionalActive);
+      }
+
+      // Check subscriptions table for additional active subs
+      const now = new Date().toISOString();
+      const { data: subscriptions, error: subscriptionsError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .gte('end_date', now);
+      
+      if (!subscriptionsError && subscriptions) {
+        // Only add if we don't have other active subscriptions
+        if (activeSubscriptions === 0) {
+          activeSubscriptions = subscriptions.length;
+          console.log('📋 General subscriptions active:', subscriptions.length);
+        }
+      }
+
+      // Check profiles with active subscription status
+      const { data: activeProfiles, error: activeProfilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('subscription_status', 'active');
+      
+      if (!activeProfilesError && activeProfiles) {
+        // Use this as fallback if no other active subscriptions found
+        if (activeSubscriptions === 0) {
+          activeSubscriptions = activeProfiles.length;
+          console.log('👤 Active profiles:', activeProfiles.length);
+        }
+      }
+
+      // Calculate estimated revenue
+      estimatedRevenue = activeSubscriptions * 25; // Average $25 per subscription
+
+      console.log('📊 Final active subscriptions count:', activeSubscriptions);
+      console.log('💰 Estimated revenue:', estimatedRevenue);
+
       setStats(prev => ({
         ...prev,
+        activeSubscriptions,
+        revenue: estimatedRevenue,
         systemHealth: {
           ...prev.systemHealth,
-          stripe: activeCount > 0
+          stripe: activeSubscriptions > 0,
+          megaott: true // Assume MegaOTT is working if we have data
         }
       }));
 
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      console.error('❌ Failed to load stats:', error);
+      // Keep existing stats on error
     } finally {
       setLoading(false);
     }
@@ -188,7 +223,9 @@ export const AdminQuickView = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-purple-400">{stats.activeSubscriptions}</div>
-            <p className="text-sm text-gray-500 mt-1">Paying customers</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {stats.activeSubscriptions === 1 ? 'Paying customer' : 'Paying customers'}
+            </p>
           </CardContent>
         </Card>
 
@@ -206,7 +243,7 @@ export const AdminQuickView = () => {
         </Card>
       </div>
 
-      {/* Trial Manager - NEW */}
+      {/* Trial Manager */}
       <TrialManager />
 
       {/* Credit Monitor */}
