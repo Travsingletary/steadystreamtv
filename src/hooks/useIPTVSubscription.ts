@@ -14,6 +14,15 @@ export const useIPTVSubscription = () => {
 
   const plans: IPTVPlan[] = [
     {
+      id: 'free-trial',
+      name: 'Free Trial',
+      price: 'FREE',
+      priceId: 'free_trial',
+      features: ['24-Hour Full Access', '1000+ Channels', 'HD Quality', '1 Connection'],
+      packageId: 0,
+      isTrial: true
+    },
+    {
       id: 'basic',
       name: 'Basic Plan',
       price: '$9.99',
@@ -104,6 +113,15 @@ export const useIPTVSubscription = () => {
 
     try {
       const selectedPlan = plans.find(p => p.id === formData.planType);
+
+      // Handle free trial differently
+      if (selectedPlan?.isTrial) {
+        // For free trial, redirect to onboarding or create trial account
+        // You might want to implement trial account creation here
+        console.log('Starting free trial...');
+        setCurrentStep(4); // Skip to credentials step for demo
+        return;
+      }
 
       const { data, error: checkoutError } = await supabase.functions.invoke('create-stripe-checkout', {
         body: {
