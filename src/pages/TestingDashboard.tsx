@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +15,8 @@ interface Registration {
   id: string;
   name: string;
   email: string;
-  plan: string;
-  subscription_status: string;
   subscription_tier: string;
+  subscription_status: string;
   xtream_username?: string;
   xtream_password?: string;
   created_at: string;
