@@ -15,3 +15,9 @@ verify_jwt = false
 
 [functions.admin-roles]
 verify_jwt = false
+
+[functions.automated-registration]
+verify_jwt = false
+
+[functions.playlist-generator]
+verify_jwt = false

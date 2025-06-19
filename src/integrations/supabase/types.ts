@@ -465,6 +465,48 @@ export type Database = {
         }
         Relationships: []
       }
+      megaott_transactions: {
+        Row: {
+          created_at: string | null
+          credits_used: number | null
+          error_message: string | null
+          error_type: string | null
+          id: string
+          megaott_response: Json | null
+          plan: string
+          request_payload: Json | null
+          response_time_ms: number | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          credits_used?: number | null
+          error_message?: string | null
+          error_type?: string | null
+          id?: string
+          megaott_response?: Json | null
+          plan: string
+          request_payload?: Json | null
+          response_time_ms?: number | null
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          credits_used?: number | null
+          error_message?: string | null
+          error_type?: string | null
+          id?: string
+          megaott_response?: Json | null
+          plan?: string
+          request_payload?: Json | null
+          response_time_ms?: number | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -800,6 +842,51 @@ export type Database = {
         }
         Relationships: []
       }
+      token_retry_queue: {
+        Row: {
+          activation_code: string
+          completed_at: string | null
+          created_at: string | null
+          failed_at: string | null
+          id: string
+          last_error: string | null
+          max_retries: number | null
+          next_retry_at: string | null
+          plan: string
+          retry_count: number | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activation_code: string
+          completed_at?: string | null
+          created_at?: string | null
+          failed_at?: string | null
+          id?: string
+          last_error?: string | null
+          max_retries?: number | null
+          next_retry_at?: string | null
+          plan: string
+          retry_count?: number | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activation_code?: string
+          completed_at?: string | null
+          created_at?: string | null
+          failed_at?: string | null
+          id?: string
+          last_error?: string | null
+          max_retries?: number | null
+          next_retry_at?: string | null
+          plan?: string
+          retry_count?: number | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_playlists: {
         Row: {
           activation_code: string
@@ -840,25 +927,43 @@ export type Database = {
           activation_code: string | null
           created_at: string | null
           email: string
+          error_type: string | null
           full_name: string
           id: string
+          megaott_error: string | null
+          password: string | null
+          status: string | null
+          stream_url: string | null
           subscription_plan: string | null
+          username: string | null
         }
         Insert: {
           activation_code?: string | null
           created_at?: string | null
           email: string
+          error_type?: string | null
           full_name: string
           id?: string
+          megaott_error?: string | null
+          password?: string | null
+          status?: string | null
+          stream_url?: string | null
           subscription_plan?: string | null
+          username?: string | null
         }
         Update: {
           activation_code?: string | null
           created_at?: string | null
           email?: string
+          error_type?: string | null
           full_name?: string
           id?: string
+          megaott_error?: string | null
+          password?: string | null
+          status?: string | null
+          stream_url?: string | null
           subscription_plan?: string | null
+          username?: string | null
         }
         Relationships: []
       }
