@@ -40,7 +40,7 @@ export const AdminQuickView = () => {
       // Check Supabase connection and get user stats
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, created_at');
+        .select('id, created_at, subscription_status');
       
       if (!profilesError && profiles) {
         const today = new Date();
@@ -64,66 +64,75 @@ export const AdminQuickView = () => {
         }));
       }
 
-      // Get active subscriptions from multiple sources
+      // Count active subscriptions from multiple sources with better logic
       let activeSubscriptions = 0;
-      let estimatedRevenue = 0;
+      const subscriptionSources = [];
 
-      // Check stripe_subscriptions table
+      // 1. Check stripe_subscriptions table for active subscriptions
       const { data: stripeSubscriptions, error: stripeError } = await supabase
         .from('stripe_subscriptions')
         .select('*')
         .eq('status', 'active');
       
-      if (!stripeError && stripeSubscriptions) {
-        activeSubscriptions += stripeSubscriptions.length;
+      if (!stripeError && stripeSubscriptions && stripeSubscriptions.length > 0) {
+        subscriptionSources.push(`${stripeSubscriptions.length} Stripe active`);
+        activeSubscriptions = Math.max(activeSubscriptions, stripeSubscriptions.length);
         console.log('💳 Stripe active subscriptions:', stripeSubscriptions.length);
       }
 
-      // Check iptv_accounts table for active accounts
+      // 2. Check iptv_accounts table for active accounts
       const { data: iptvAccounts, error: iptvError } = await supabase
         .from('iptv_accounts')
         .select('*')
         .eq('status', 'active');
       
-      if (!iptvError && iptvAccounts) {
-        // Add IPTV accounts that don't overlap with Stripe
-        const additionalActive = iptvAccounts.length;
-        activeSubscriptions += additionalActive;
-        console.log('📺 IPTV active accounts:', additionalActive);
+      if (!iptvError && iptvAccounts && iptvAccounts.length > 0) {
+        subscriptionSources.push(`${iptvAccounts.length} IPTV active`);
+        activeSubscriptions = Math.max(activeSubscriptions, iptvAccounts.length);
+        console.log('📺 IPTV active accounts:', iptvAccounts.length);
       }
 
-      // Check subscriptions table for additional active subs
+      // 3. Check profiles with active subscription status
+      const { data: activeProfiles, error: activeProfilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('subscription_status', 'active');
+      
+      if (!activeProfilesError && activeProfiles && activeProfiles.length > 0) {
+        subscriptionSources.push(`${activeProfiles.length} profiles active`);
+        activeSubscriptions = Math.max(activeSubscriptions, activeProfiles.length);
+        console.log('👤 Active profiles:', activeProfiles.length);
+      }
+
+      // 4. Check general subscriptions table for current subscriptions
       const now = new Date().toISOString();
       const { data: subscriptions, error: subscriptionsError } = await supabase
         .from('subscriptions')
         .select('*')
         .gte('end_date', now);
       
-      if (!subscriptionsError && subscriptions) {
-        // Only add if we don't have other active subscriptions
-        if (activeSubscriptions === 0) {
-          activeSubscriptions = subscriptions.length;
-          console.log('📋 General subscriptions active:', subscriptions.length);
-        }
+      if (!subscriptionsError && subscriptions && subscriptions.length > 0) {
+        subscriptionSources.push(`${subscriptions.length} general subs`);
+        activeSubscriptions = Math.max(activeSubscriptions, subscriptions.length);
+        console.log('📋 General subscriptions active:', subscriptions.length);
       }
 
-      // Check profiles with active subscription status
-      const { data: activeProfiles, error: activeProfilesError } = await supabase
-        .from('profiles')
+      // 5. Fallback: Count user_profiles with status 'active'
+      const { data: userProfiles, error: userProfilesError } = await supabase
+        .from('user_profiles')
         .select('*')
-        .eq('subscription_status', 'active');
+        .eq('status', 'active');
       
-      if (!activeProfilesError && activeProfiles) {
-        // Use this as fallback if no other active subscriptions found
-        if (activeSubscriptions === 0) {
-          activeSubscriptions = activeProfiles.length;
-          console.log('👤 Active profiles:', activeProfiles.length);
-        }
+      if (!userProfilesError && userProfiles && userProfiles.length > 0) {
+        subscriptionSources.push(`${userProfiles.length} user_profiles active`);
+        activeSubscriptions = Math.max(activeSubscriptions, userProfiles.length);
+        console.log('📋 Active user_profiles:', userProfiles.length);
       }
 
       // Calculate estimated revenue
-      estimatedRevenue = activeSubscriptions * 25; // Average $25 per subscription
+      const estimatedRevenue = activeSubscriptions * 25; // Average $25 per subscription
 
+      console.log('📊 Subscription sources found:', subscriptionSources);
       console.log('📊 Final active subscriptions count:', activeSubscriptions);
       console.log('💰 Estimated revenue:', estimatedRevenue);
 
@@ -148,8 +157,8 @@ export const AdminQuickView = () => {
 
   useEffect(() => {
     loadStats();
-    // Refresh stats every 5 minutes
-    const interval = setInterval(loadStats, 5 * 60 * 1000);
+    // Refresh stats every 30 seconds for more frequent updates
+    const interval = setInterval(loadStats, 30 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -184,6 +193,12 @@ export const AdminQuickView = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">SteadyStream TV Admin</h1>
         <p className="text-gray-400">Real-time business metrics and system monitoring</p>
+        <button
+          onClick={loadStats}
+          className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+        >
+          🔄 Refresh Data
+        </button>
       </div>
 
       {/* Key Metrics */}
@@ -308,7 +323,7 @@ export const AdminQuickView = () => {
             </button>
             
             <button 
-              onClick={() => window.location.reload()}
+              onClick={() => loadStats()}
               className="p-4 bg-green-600 hover:bg-green-700 rounded-lg text-white text-left transition-colors"
             >
               <h4 className="font-medium mb-1">Refresh Dashboard</h4>
