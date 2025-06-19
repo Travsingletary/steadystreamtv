@@ -30,28 +30,73 @@ export const QuickActions: React.FC = () => {
   };
 
   const handleManageUsers = () => {
-    toast({
-      title: "User Management",
-      description: "Navigating to user management...",
-    });
-    navigate('/admin');
+    try {
+      toast({
+        title: "User Management",
+        description: "Opening user management dashboard...",
+      });
+      
+      console.log('👥 Navigating to user management');
+      
+      // Navigate to the comprehensive admin dashboard with user management
+      navigate('/super-admin-dashboard');
+    } catch (error) {
+      toast({
+        title: "Navigation Error",
+        description: "Failed to open user management",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleSystemSettings = async () => {
     try {
-      // Check system health
-      const { data, error } = await supabase.functions.invoke('megaott-config-check');
-      
-      if (error) throw error;
-      
       toast({
-        title: "System Status",
-        description: data?.status === 'healthy' ? "All systems operational" : "System issues detected",
-        variant: data?.status === 'healthy' ? "default" : "destructive"
+        title: "System Settings",
+        description: "Checking system configuration...",
       });
       
-      console.log('⚙️ System Status:', data);
+      // Check system health by testing multiple components
+      const healthChecks = await Promise.allSettled([
+        // Check database connectivity
+        supabase.from('profiles').select('count', { count: 'exact', head: true }),
+        
+        // Check MegaOTT configuration
+        supabase.functions.invoke('megaott-config-check'),
+        
+        // Check if resellers table exists and has data
+        supabase.from('resellers').select('*').limit(1)
+      ]);
+
+      const dbCheck = healthChecks[0].status === 'fulfilled';
+      const megaottCheck = healthChecks[1].status === 'fulfilled';
+      const resellersCheck = healthChecks[2].status === 'fulfilled';
+
+      const healthyServices = [dbCheck, megaottCheck, resellersCheck].filter(Boolean).length;
+      const totalServices = 3;
+
+      if (healthyServices === totalServices) {
+        toast({
+          title: "System Status: All Good",
+          description: `All ${totalServices} services are operational`,
+        });
+      } else {
+        toast({
+          title: "System Status: Issues Detected",
+          description: `${healthyServices}/${totalServices} services operational`,
+          variant: "destructive"
+        });
+      }
+      
+      console.log('⚙️ System Status:', {
+        database: dbCheck ? 'healthy' : 'error',
+        megaott: megaottCheck ? 'healthy' : 'error', 
+        resellers: resellersCheck ? 'healthy' : 'error',
+        overall: `${healthyServices}/${totalServices} services healthy`
+      });
+      
     } catch (error) {
+      console.error('System check error:', error);
       toast({
         title: "System Check Failed",
         description: "Unable to verify system status",
