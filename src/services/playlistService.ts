@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export class PlaylistService {
@@ -24,11 +23,11 @@ export class PlaylistService {
   }
 
   /**
-   * Generate M3U playlist content with proper logo URLs
+   * Generate M3U playlist content - ALL USERS GET ALL CHANNELS
    */
   static async generateM3UContent(plan: string, activationCode: string): Promise<string> {
     try {
-      // Fetch channels from database
+      // Fetch ALL channels from database - no plan filtering
       const { data: channels, error } = await supabase
         .from('channels_catalog')
         .select('*')
@@ -42,15 +41,12 @@ export class PlaylistService {
         return '#EXTM3U\n#EXTINF:-1,Error Loading Channels\nhttp://error\n';
       }
 
-      // Filter channels based on plan
-      const filteredChannels = this.getChannelsForPlan(channels || [], plan);
-
-      // Build M3U content
+      // Build M3U content with ALL channels for everyone
       let m3uContent = '#EXTM3U\n';
-      m3uContent += `#PLAYLIST:SteadyStream TV - ${plan.toUpperCase()} (${activationCode})\n`;
+      m3uContent += `#PLAYLIST:SteadyStream TV - All Channels (${activationCode})\n`;
       m3uContent += 'url-tvg="https://steadystreamtv.com/epg/guide.xml"\n\n';
 
-      filteredChannels.forEach((channel) => {
+      (channels || []).forEach((channel) => {
         const logoUrl = this.getChannelLogoUrl(channel);
         const epgId = channel.epg_id || channel.name.replace(/[^a-zA-Z0-9]/g, '');
         
@@ -62,46 +58,6 @@ export class PlaylistService {
     } catch (error) {
       console.error('Error generating M3U content:', error);
       return '#EXTM3U\n#EXTINF:-1,Error Loading Playlist\nhttp://error\n';
-    }
-  }
-
-  /**
-   * Filter channels based on subscription plan
-   */
-  private static getChannelsForPlan(allChannels: any[], plan: string): any[] {
-    // Sort channels by category priority
-    const sortedChannels = allChannels.sort((a, b) => {
-      const categoryOrder = {
-        'News': 1,
-        'Sports': 2,
-        'Entertainment': 3,
-        'Movies': 4,
-        'Kids': 5,
-        'Documentary': 6,
-        'Music': 7
-      };
-      
-      const aOrder = categoryOrder[a.category as keyof typeof categoryOrder] || 999;
-      const bOrder = categoryOrder[b.category as keyof typeof categoryOrder] || 999;
-      
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
-      return a.name.localeCompare(b.name);
-    });
-
-    // Return different channel counts based on plan
-    switch (plan.toLowerCase()) {
-      case 'trial':
-        return sortedChannels.slice(0, 10);
-      case 'solo':
-      case 'basic':
-        return sortedChannels.slice(0, 20);
-      case 'duo':
-        return sortedChannels.slice(0, 35);
-      case 'family':
-        return sortedChannels;
-      default:
-        return sortedChannels.slice(0, 5);
     }
   }
 
