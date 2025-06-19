@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Users, CreditCard, Calendar, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Users, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 interface Registration {
   id: string;
@@ -34,7 +35,6 @@ const AccountCreationModal: React.FC<AccountCreationModalProps> = ({ registratio
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    // Generate suggested credentials
     const namePrefix = registration.name.toLowerCase().replace(/[^a-z]/g, '').substring(0, 6);
     const randomSuffix = Math.random().toString(36).substring(2, 5);
     const suggestedUsername = `steady_${namePrefix}_${randomSuffix}`;
@@ -52,6 +52,8 @@ const AccountCreationModal: React.FC<AccountCreationModalProps> = ({ registratio
     setProcessing(true);
     try {
       await onComplete({ ...credentials, playlistUrl });
+    } catch (error) {
+      console.error('Error completing account setup:', error);
     } finally {
       setProcessing(false);
     }
@@ -188,23 +190,46 @@ const AccountCreationModal: React.FC<AccountCreationModalProps> = ({ registratio
   );
 };
 
+const ErrorFallback = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
+  <Card className="bg-red-50 border-red-200 m-4">
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2 text-red-700">
+        <AlertTriangle className="h-5 w-5" />
+        Service Error
+      </CardTitle>
+      <CardDescription className="text-red-600">
+        {error}
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      <Button onClick={onRetry} className="bg-red-600 hover:bg-red-700">
+        Try Again
+      </Button>
+    </CardContent>
+  </Card>
+);
+
 export const CustomDashboardAdmin: React.FC = () => {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadRegistrations = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (fetchError) {
+        throw new Error(`Database error: ${fetchError.message}`);
+      }
       
-      // Map the profiles data to Registration format
       const mappedData: Registration[] = (data || []).map(profile => ({
         id: profile.id,
         name: profile.name || 'Unknown',
@@ -220,9 +245,13 @@ export const CustomDashboardAdmin: React.FC = () => {
       
       setRegistrations(mappedData);
     } catch (error: any) {
+      const errorMessage = error.message || 'Failed to load registrations';
+      setError(errorMessage);
+      console.error('Error loading registrations:', error);
+      
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error Loading Data",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -242,7 +271,9 @@ export const CustomDashboardAdmin: React.FC = () => {
         })
         .eq('id', registration.id);
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(`Update failed: ${error.message}`);
+      }
 
       toast({
         title: "Success",
@@ -250,11 +281,12 @@ export const CustomDashboardAdmin: React.FC = () => {
       });
 
       setSelectedRegistration(null);
-      loadRegistrations();
+      await loadRegistrations();
     } catch (error: any) {
+      console.error('Error completing account:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || 'Failed to complete account setup',
         variant: "destructive"
       });
     }
@@ -263,6 +295,10 @@ export const CustomDashboardAdmin: React.FC = () => {
   useEffect(() => {
     loadRegistrations();
   }, []);
+
+  if (error) {
+    return <ErrorFallback error={error} onRetry={loadRegistrations} />;
+  }
 
   const pendingRegistrations = registrations.filter(reg => 
     !reg.xtream_username && (reg.subscription_status === 'active' || reg.subscription_tier === 'free-trial')
@@ -273,159 +309,172 @@ export const CustomDashboardAdmin: React.FC = () => {
   );
 
   return (
-    <div className="p-6 bg-dark-300 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Custom Dashboard Manager</h1>
-            <p className="text-gray-400">Manage IPTV account creation and activation</p>
+    <ErrorBoundary>
+      <div className="p-6 bg-dark-300 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-white">Custom Dashboard Manager</h1>
+              <p className="text-gray-400">Manage IPTV account creation and activation</p>
+            </div>
+            <Button onClick={loadRegistrations} disabled={loading}>
+              {loading ? 'Loading...' : '🔄 Refresh'}
+            </Button>
           </div>
-          <Button onClick={loadRegistrations} disabled={loading}>
-            {loading ? 'Loading...' : '🔄 Refresh'}
-          </Button>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-dark-200 border-gray-800">
-            <CardHeader className="pb-2">
-              <CardDescription>Pending Activation</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Clock className="text-yellow-500" />
-                {pendingRegistrations.length}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          
-          <Card className="bg-dark-200 border-gray-800">
-            <CardHeader className="pb-2">
-              <CardDescription>Active Accounts</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <CheckCircle className="text-green-500" />
-                {activeAccounts.length}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          
-          <Card className="bg-dark-200 border-gray-800">
-            <CardHeader className="pb-2">
-              <CardDescription>Total Users</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Users className="text-blue-500" />
-                {registrations.length}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+          {error && (
+            <Card className="bg-red-900/20 border-red-600 mb-6">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-red-400">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>{error}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-        <Tabs defaultValue="pending" className="space-y-4">
-          <TabsList className="bg-dark-200">
-            <TabsTrigger value="pending">Pending ({pendingRegistrations.length})</TabsTrigger>
-            <TabsTrigger value="active">Active ({activeAccounts.length})</TabsTrigger>
-          </TabsList>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card className="bg-dark-200 border-gray-800">
+              <CardHeader className="pb-2">
+                <CardDescription>Pending Activation</CardDescription>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <Clock className="text-yellow-500" />
+                  {pendingRegistrations.length}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            
+            <Card className="bg-dark-200 border-gray-800">
+              <CardHeader className="pb-2">
+                <CardDescription>Active Accounts</CardDescription>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <CheckCircle className="text-green-500" />
+                  {activeAccounts.length}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            
+            <Card className="bg-dark-200 border-gray-800">
+              <CardHeader className="pb-2">
+                <CardDescription>Total Users</CardDescription>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <Users className="text-blue-500" />
+                  {registrations.length}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
 
-          <TabsContent value="pending" className="space-y-4">
-            {pendingRegistrations.length === 0 ? (
-              <Card className="bg-dark-200 border-gray-800">
-                <CardContent className="text-center py-12">
-                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                  <p className="text-gray-400">No pending activations</p>
-                </CardContent>
-              </Card>
-            ) : (
-              pendingRegistrations.map(registration => (
-                <Card key={registration.id} className="bg-dark-200 border-gray-800">
+          <Tabs defaultValue="pending" className="space-y-4">
+            <TabsList className="bg-dark-200">
+              <TabsTrigger value="pending">Pending ({pendingRegistrations.length})</TabsTrigger>
+              <TabsTrigger value="active">Active ({activeAccounts.length})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="pending" className="space-y-4">
+              {pendingRegistrations.length === 0 ? (
+                <Card className="bg-dark-200 border-gray-800">
+                  <CardContent className="text-center py-12">
+                    <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                    <p className="text-gray-400">No pending activations</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                pendingRegistrations.map(registration => (
+                  <Card key={registration.id} className="bg-dark-200 border-gray-800">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-bold text-white">{registration.name}</h3>
+                          <p className="text-gray-400">{registration.email}</p>
+                        </div>
+                        <Badge variant={registration.subscription_tier === 'free-trial' ? 'secondary' : 'default'}>
+                          {registration.subscription_tier || registration.plan || 'Unknown'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                        <div>
+                          <p className="text-gray-400">Status:</p>
+                          <p className="text-white">{registration.subscription_status}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400">Created:</p>
+                          <p className="text-white">{new Date(registration.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+
+                      <Button 
+                        onClick={() => setSelectedRegistration(registration)}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        🚀 Create Dashboard Account
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="active" className="space-y-4">
+              {activeAccounts.map(account => (
+                <Card key={account.id} className="bg-dark-200 border-gray-800">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="text-lg font-bold text-white">{registration.name}</h3>
-                        <p className="text-gray-400">{registration.email}</p>
+                        <h3 className="text-lg font-bold text-white">{account.name}</h3>
+                        <p className="text-gray-400">{account.email}</p>
+                        <p className="text-green-400 font-mono text-sm">{account.xtream_username}</p>
                       </div>
-                      <Badge variant={registration.subscription_tier === 'free-trial' ? 'secondary' : 'default'}>
-                        {registration.subscription_tier || registration.plan || 'Unknown'}
+                      <Badge variant="default" className="bg-green-600">
+                        Active
                       </Badge>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                    <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
                       <div>
-                        <p className="text-gray-400">Status:</p>
-                        <p className="text-white">{registration.subscription_status}</p>
+                        <p className="text-gray-400">Plan:</p>
+                        <p className="text-white">{account.subscription_tier}</p>
                       </div>
                       <div>
                         <p className="text-gray-400">Created:</p>
-                        <p className="text-white">{new Date(registration.created_at).toLocaleDateString()}</p>
+                        <p className="text-white">{new Date(account.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Trial Ends:</p>
+                        <p className="text-white">
+                          {account.trial_end_date 
+                            ? new Date(account.trial_end_date).toLocaleDateString()
+                            : 'N/A'
+                          }
+                        </p>
                       </div>
                     </div>
 
-                    <Button 
-                      onClick={() => setSelectedRegistration(registration)}
-                      className="w-full bg-green-600 hover:bg-green-700"
-                    >
-                      🚀 Create Dashboard Account
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm"
+                        onClick={() => navigator.clipboard.writeText(`Username: ${account.xtream_username}\nPassword: ${account.xtream_password}`)}
+                        className="bg-gray-600 hover:bg-gray-500"
+                      >
+                        📋 Copy Credentials
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </TabsContent>
+              ))}
+            </TabsContent>
+          </Tabs>
 
-          <TabsContent value="active" className="space-y-4">
-            {activeAccounts.map(account => (
-              <Card key={account.id} className="bg-dark-200 border-gray-800">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">{account.name}</h3>
-                      <p className="text-gray-400">{account.email}</p>
-                      <p className="text-green-400 font-mono text-sm">{account.xtream_username}</p>
-                    </div>
-                    <Badge variant="default" className="bg-green-600">
-                      Active
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-                    <div>
-                      <p className="text-gray-400">Plan:</p>
-                      <p className="text-white">{account.subscription_tier}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400">Created:</p>
-                      <p className="text-white">{new Date(account.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400">Trial Ends:</p>
-                      <p className="text-white">
-                        {account.trial_end_date 
-                          ? new Date(account.trial_end_date).toLocaleDateString()
-                          : 'N/A'
-                        }
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm"
-                      onClick={() => navigator.clipboard.writeText(`Username: ${account.xtream_username}\nPassword: ${account.xtream_password}`)}
-                      className="bg-gray-600 hover:bg-gray-500"
-                    >
-                      📋 Copy Credentials
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-        </Tabs>
-
-        {selectedRegistration && (
-          <AccountCreationModal
-            registration={selectedRegistration}
-            onClose={() => setSelectedRegistration(null)}
-            onComplete={(credentials) => handleAccountComplete(selectedRegistration, credentials)}
-          />
-        )}
+          {selectedRegistration && (
+            <AccountCreationModal
+              registration={selectedRegistration}
+              onClose={() => setSelectedRegistration(null)}
+              onComplete={(credentials) => handleAccountComplete(selectedRegistration, credentials)}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 };
