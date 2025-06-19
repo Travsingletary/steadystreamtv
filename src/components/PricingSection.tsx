@@ -115,7 +115,7 @@ const PricingSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {pricingPlans.map((plan, index) => (
             <PricingCard 
-              key={index} 
+              key={plan.id} 
               plan={plan}
               delay={0.1 * (index + 1)}
               onSubscribe={plan.isTrial ? handleFreeTrial : handleSubscribe}
@@ -175,7 +175,7 @@ const PricingCard = ({
       plan.isPopular 
         ? "tv-glow bg-dark-200 border-gold" 
         : plan.isTrial
-        ? "bg-gradient-to-br from-gold/10 to-gold/5 border-gold/50"
+        ? "bg-gradient-to-br from-green-500/20 to-green-600/10 border-green-500 shadow-lg shadow-green-500/20"
         : "bg-dark-200 border-gray-800 hover:border-gold/30"
     }`}
     style={{ animationDelay: `${delay}s` }}
@@ -219,7 +219,7 @@ const PricingCard = ({
     <Button 
       className={
         plan.isTrial 
-          ? "bg-green-500 hover:bg-green-600 text-white font-semibold" 
+          ? "bg-green-500 hover:bg-green-600 text-white font-semibold border-0" 
           : plan.isPopular 
             ? "bg-gold hover:bg-gold-dark text-black font-semibold" 
             : "bg-gray-800 hover:bg-gray-700 text-white"
