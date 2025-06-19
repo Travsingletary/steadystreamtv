@@ -38,8 +38,8 @@ export const QuickActions: React.FC = () => {
       
       console.log('👥 Navigating to user management');
       
-      // Navigate to the comprehensive admin dashboard with user management
-      navigate('/super-admin-dashboard');
+      // Navigate to the admin dashboard page that has comprehensive user management
+      navigate('/admin-dashboard');
     } catch (error) {
       toast({
         title: "Navigation Error",

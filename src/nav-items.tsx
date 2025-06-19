@@ -13,6 +13,7 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import TestXtreamAccount from "./pages/TestXtreamAccount";
 import CustomDashboardAdminPage from "./pages/CustomDashboardAdmin";
 import MegaOTTTesterPage from "./pages/MegaOTTTester";
+import TestingDashboard from "./pages/TestingDashboard";
 import NotFound from "./pages/NotFound";
 
 export const navItems = [
@@ -53,7 +54,11 @@ export const navItems = [
     page: <SteadyStreamAdminDashboard />,
   },
   {
-    to: "/super-admin",
+    to: "/admin-dashboard",
+    page: <AdminDashboard />,
+  },
+  {
+    to: "/super-admin-dashboard",
     page: <SuperAdminDashboard />,
   },
   {
@@ -67,6 +72,10 @@ export const navItems = [
   {
     to: "/test-xtream",
     page: <TestXtreamAccount />,
+  },
+  {
+    to: "/testing-dashboard",
+    page: <TestingDashboard />,
   },
   {
     to: "*",
