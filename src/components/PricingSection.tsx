@@ -1,13 +1,28 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
-// Pricing plan data
+// Pricing plan data - now includes free trial
 const pricingPlans = [
+  {
+    id: "free-trial",
+    name: "Free Trial",
+    price: 0,
+    features: [
+      "24-Hour Full Access",
+      "7,000+ Live TV Channels",
+      "HD Quality Streaming",
+      "1 Device Connection",
+      "Basic Support",
+      "No Credit Card Required"
+    ],
+    isPopular: false,
+    isTrial: true
+  },
   {
     id: "standard",
     name: "Standard",
@@ -72,6 +87,19 @@ const PricingSection = () => {
     }
   };
 
+  const handleFreeTrial = async () => {
+    // Check if user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // User is logged in, start trial directly
+      navigate("/dashboard");
+    } else {
+      // User is not logged in, redirect to onboarding
+      navigate("/onboarding");
+    }
+  };
+
   return (
     <section id="pricing" className="py-16 bg-black">
       <div className="container mx-auto px-4">
@@ -80,17 +108,17 @@ const PricingSection = () => {
             Simple, <span className="text-gradient-gold">Affordable</span> Plans
           </h2>
           <p className="text-gray-300 max-w-2xl mx-auto">
-            Choose the perfect subscription plan for your streaming needs with no hidden fees or contracts.
+            Start with a free 24-hour trial, then choose the perfect subscription plan for your streaming needs.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {pricingPlans.map((plan, index) => (
             <PricingCard 
               key={index} 
               plan={plan}
               delay={0.1 * (index + 1)}
-              onSubscribe={handleSubscribe}
+              onSubscribe={plan.isTrial ? handleFreeTrial : handleSubscribe}
               processingPayment={processingPayment}
             />
           ))}
@@ -136,6 +164,7 @@ const PricingCard = ({
     price: number;
     features: string[];
     isPopular: boolean;
+    isTrial?: boolean;
   };
   delay: number;
   onSubscribe: (planId: string, price: number) => void;
@@ -145,6 +174,8 @@ const PricingCard = ({
     className={`rounded-xl p-6 border transition-all duration-300 relative flex flex-col opacity-0 animate-fade-in ${
       plan.isPopular 
         ? "tv-glow bg-dark-200 border-gold" 
+        : plan.isTrial
+        ? "bg-gradient-to-br from-gold/10 to-gold/5 border-gold/50"
         : "bg-dark-200 border-gray-800 hover:border-gold/30"
     }`}
     style={{ animationDelay: `${delay}s` }}
@@ -156,26 +187,55 @@ const PricingCard = ({
         </div>
       </div>
     )}
+    {plan.isTrial && (
+      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className="bg-green-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full shadow-lg">
+          Start Free
+        </div>
+      </div>
+    )}
     <h3 className="text-xl font-bold mb-2 mt-2">{plan.name}</h3>
     <div className="mb-4">
-      <span className="text-4xl font-bold">${plan.price}</span>
-      <span className="text-gray-400">/month</span>
+      {plan.isTrial ? (
+        <div>
+          <span className="text-4xl font-bold text-green-500">FREE</span>
+          <span className="text-gray-400 block text-sm">24-hour trial</span>
+        </div>
+      ) : (
+        <div>
+          <span className="text-4xl font-bold">${plan.price}</span>
+          <span className="text-gray-400">/month</span>
+        </div>
+      )}
     </div>
     <ul className="space-y-3 mb-8 flex-grow">
       {plan.features.map((feature, index) => (
         <li key={index} className="flex items-start gap-2">
-          <CheckCircle className="text-gold h-5 w-5 flex-shrink-0 mt-0.5" />
+          <CheckCircle className={`${plan.isTrial ? 'text-green-500' : 'text-gold'} h-5 w-5 flex-shrink-0 mt-0.5`} />
           <span className="text-gray-300 text-sm">{feature}</span>
         </li>
       ))}
     </ul>
     <Button 
-      className={plan.isPopular ? "bg-gold hover:bg-gold-dark text-black" : "bg-gray-800 hover:bg-gray-700"}
+      className={
+        plan.isTrial 
+          ? "bg-green-500 hover:bg-green-600 text-white font-semibold" 
+          : plan.isPopular 
+            ? "bg-gold hover:bg-gold-dark text-black font-semibold" 
+            : "bg-gray-800 hover:bg-gray-700 text-white"
+      }
       size="lg"
       onClick={() => onSubscribe(plan.id, plan.price)}
       disabled={processingPayment}
     >
-      {processingPayment ? "Processing..." : "Subscribe Now"}
+      {plan.isTrial ? (
+        <>
+          <Clock className="mr-2 h-4 w-4" />
+          {processingPayment ? "Processing..." : "Start Free Trial"}
+        </>
+      ) : (
+        processingPayment ? "Processing..." : "Subscribe Now"
+      )}
     </Button>
   </div>
 );

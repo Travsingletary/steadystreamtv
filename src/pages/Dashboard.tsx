@@ -34,8 +34,24 @@ const Dashboard = () => {
     setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
-  // Plans data
+  // Plans data - now includes free trial
   const plans = [
+    {
+      id: "free-trial",
+      name: "Free Trial",
+      price: 0,
+      description: "Start with our 24-hour free trial to experience all features.",
+      features: [
+        "24-Hour Full Access",
+        "7,000+ Live TV Channels",
+        "HD Quality Streaming",
+        "1 Device Connection",
+        "Basic Support",
+        "No Credit Card Required"
+      ],
+      isPopular: false,
+      isTrial: true
+    },
     {
       id: "standard",
       name: "Standard",
@@ -156,6 +172,49 @@ const Dashboard = () => {
   }, [navigate, toast, paymentSuccess, paymentCanceled, sessionId]);
 
   const handleSubscribe = async (planId: string, isRecurring: boolean = true) => {
+    // Handle free trial separately
+    if (planId === "free-trial") {
+      setProcessingPayment(true);
+      addDebugInfo("Starting free trial process");
+      
+      try {
+        // Create a 24-hour trial
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            subscription_tier: 'free-trial',
+            subscription_status: 'active',
+            trial_end_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          
+        if (error) throw error;
+        
+        addDebugInfo("Free trial activated successfully");
+        toast({
+          title: "Free Trial Started!",
+          description: "Your 24-hour free trial has been activated. Enjoy streaming!",
+          variant: "default",
+        });
+        
+        // Refresh the page to show updated subscription status
+        window.location.reload();
+        
+      } catch (error) {
+        console.error("Free trial error:", error);
+        addDebugInfo(`Free trial error: ${error}`);
+        toast({
+          title: "Trial Activation Failed",
+          description: "Could not start your free trial. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setProcessingPayment(false);
+      }
+      return;
+    }
+
     if (processingPayment || !user) {
       addDebugInfo(`Subscribe blocked: processingPayment=${processingPayment}, user=${!!user}`);
       return;
@@ -456,13 +515,15 @@ const Dashboard = () => {
                       
                       <Separator className="border-gray-700" />
                       
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
                         {plans.map((plan) => (
                           <Card 
                             key={plan.id} 
                             className={`${
                               profile?.subscription_tier === plan.id 
                                 ? 'bg-dark-100 border-gold' 
+                                : plan.isTrial
+                                ? 'bg-gradient-to-br from-green-900/20 to-green-700/10 border-green-500/50 hover:border-green-500'
                                 : 'bg-dark-300 border-gray-700 hover:border-gray-500'
                             } relative transition-all duration-300`}
                           >
@@ -470,6 +531,14 @@ const Dashboard = () => {
                               <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                                 <div className="bg-gold text-black text-xs font-bold uppercase px-3 py-1 rounded-full">
                                   Most Popular
+                                </div>
+                              </div>
+                            )}
+                            
+                            {plan.isTrial && (
+                              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                <div className="bg-green-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full">
+                                  Start Free
                                 </div>
                               </div>
                             )}
@@ -485,8 +554,14 @@ const Dashboard = () => {
                             <CardHeader>
                               <CardTitle className="text-xl">{plan.name}</CardTitle>
                               <div className="text-3xl font-bold mt-2">
-                                ${plan.price}
-                                <span className="text-sm text-gray-400 font-normal">/month</span>
+                                {plan.isTrial ? (
+                                  <span className="text-green-500">FREE</span>
+                                ) : (
+                                  <>
+                                    ${plan.price}
+                                    <span className="text-sm text-gray-400 font-normal">/month</span>
+                                  </>
+                                )}
                               </div>
                               <CardDescription className="mt-2">
                                 {plan.description}
@@ -496,7 +571,7 @@ const Dashboard = () => {
                               <ul className="space-y-2">
                                 {plan.features.map((feature, i) => (
                                   <li key={i} className="flex items-start gap-2 text-sm">
-                                    <CheckCircle className="text-gold h-4 w-4 mt-0.5 flex-shrink-0" />
+                                    <CheckCircle className={`${plan.isTrial ? 'text-green-500' : 'text-gold'} h-4 w-4 mt-0.5 flex-shrink-0`} />
                                     <span>{feature}</span>
                                   </li>
                                 ))}
@@ -507,6 +582,8 @@ const Dashboard = () => {
                                 className={`w-full ${
                                   profile?.subscription_tier === plan.id 
                                     ? 'bg-dark-400 hover:bg-dark-300 text-white' 
+                                    : plan.isTrial
+                                    ? 'bg-green-500 hover:bg-green-600 text-white'
                                     : 'bg-gold hover:bg-gold-dark text-black'
                                 }`}
                                 onClick={() => handleSubscribe(plan.id)}
@@ -516,6 +593,8 @@ const Dashboard = () => {
                                   ? "Processing..." 
                                   : profile?.subscription_tier === plan.id 
                                     ? "Current Plan" 
+                                    : plan.isTrial
+                                    ? "Start Free Trial"
                                     : "Subscribe"}
                               </Button>
                             </CardFooter>
