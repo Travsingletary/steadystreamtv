@@ -5,13 +5,13 @@ export const DEPLOYMENT_CONFIG = {
   production: {
     domain: 'steadystreamtv.com',
     supabaseUrl: 'https://ojueihcytxwcioqtvwez.supabase.co',
-    stripePublishableKey: process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY,
+    stripePublishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
     environment: 'production'
   },
   staging: {
     domain: 'staging.steadystreamtv.com',
     supabaseUrl: 'https://ojueihcytxwcioqtvwez.supabase.co',
-    stripePublishableKey: process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY,
+    stripePublishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
     environment: 'staging'
   }
 };
@@ -36,12 +36,12 @@ export const getDeploymentConfig = () => {
 
 export const validateEnvironmentVariables = () => {
   const required = [
-    'REACT_APP_SUPABASE_URL',
-    'REACT_APP_SUPABASE_ANON_KEY',
-    'REACT_APP_STRIPE_PUBLISHABLE_KEY'
+    'VITE_SUPABASE_URL',
+    'VITE_SUPABASE_ANON_KEY',
+    'VITE_STRIPE_PUBLISHABLE_KEY'
   ];
 
-  const missing = required.filter(key => !process.env[key]);
+  const missing = required.filter(key => !import.meta.env[key]);
   
   if (missing.length > 0) {
     console.warn('Missing environment variables:', missing);
