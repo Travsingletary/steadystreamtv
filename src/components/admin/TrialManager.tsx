@@ -28,34 +28,31 @@ export const TrialManager = () => {
       const trialEndDate = new Date();
       trialEndDate.setHours(trialEndDate.getHours() + 24);
 
-      // First, create or update the profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          email,
-          subscription_tier: 'trial',
-          subscription_status: 'active',
-          subscription_start_date: new Date().toISOString(),
-          subscription_end_date: trialEndDate.toISOString(),
-          trial_end_date: trialEndDate.toISOString()
-        })
-        .select()
-        .single();
-
-      if (profileError) throw profileError;
+      // Generate a UUID for the trial user
+      const trialUserId = crypto.randomUUID();
 
       // Generate temporary credentials
       const username = `trial_${Date.now()}`;
       const password = Math.random().toString(36).substring(2, 15);
 
-      // Update with trial credentials
-      await supabase
+      // Insert the trial profile
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .update({
+        .insert({
+          id: trialUserId,
+          email,
+          subscription_tier: 'trial',
+          subscription_status: 'active',
+          subscription_start_date: new Date().toISOString(),
+          subscription_end_date: trialEndDate.toISOString(),
+          trial_end_date: trialEndDate.toISOString(),
           xtream_username: username,
           xtream_password: password
         })
-        .eq('email', email);
+        .select()
+        .single();
+
+      if (profileError) throw profileError;
 
       toast({
         title: "24-Hour Trial Created",
