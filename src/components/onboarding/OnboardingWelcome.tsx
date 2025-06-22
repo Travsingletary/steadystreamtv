@@ -91,7 +91,7 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
     setTimeout(() => {
       try {
         updateUserData({
-          name: values.name,
+          full_name: values.name,
           email: values.email,
           password: values.password,
         });
