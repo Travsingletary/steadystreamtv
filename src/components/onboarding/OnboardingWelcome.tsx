@@ -13,7 +13,7 @@ import { validatePasswordSecurity } from "@/utils/passwordSecurity";
 
 // SECURITY: Enhanced password validation schema
 const formSchema = z.object({
-  name: z.string().min(2, {
+  full_name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
   email: z.string().email({
@@ -28,7 +28,7 @@ const formSchema = z.object({
 });
 
 interface UserData {
-  name: string;
+  full_name: string;
   email: string;
   password?: string;
   preferredDevice: string;
@@ -51,7 +51,7 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: userData.name || "",
+      full_name: userData.name || "",
       email: userData.email || "",
       password: userData.password || "",
     },
@@ -91,7 +91,7 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
     setTimeout(() => {
       try {
         updateUserData({
-          full_name: values.name,
+          full_full_name: values.name,
           email: values.email,
           password: values.password,
         });
