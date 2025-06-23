@@ -1,17 +1,10 @@
-
 // 🔥 Enhanced SteadyStream Automation Service
 // Integrates with your existing MobileAutomation and EnhancedIPTVSubscription components
 
 import { supabase } from "@/integrations/supabase/client";
+import { UserData } from "./types";
 
 // Types for better TypeScript support
-export interface UserData {
-  name: string;
-  email: string;
-  password?: string;
-  plan: 'trial' | 'solo' | 'duo' | 'family';
-}
-
 export interface IPTVCredentials {
   server: string;
   port: string;
@@ -116,9 +109,12 @@ export const MegaOTTService = {
   getConnectionsByPlan(plan: string): number {
     const connections: Record<string, number> = {
       'trial': 1,
-      'solo': 1,
-      'duo': 2, 
-      'family': 3
+      'basic': 1,
+      'standard': 1,
+      'duo': 2,
+      'premium': 2, 
+      'family': 3,
+      'ultimate': 3
     };
     return connections[plan] || 1;
   },
