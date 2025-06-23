@@ -60,8 +60,8 @@ export class SteadyStreamAutomationService {
         
         iptvCredentials = {
           activationCode: subscription.activationCode || activationCode,
-          username: subscription.username || `megaott_${activationCode.toLowerCase()}`,
-          password: subscription.password || 'auto-generated'
+          username: subscription.credentials?.username || `megaott_${activationCode.toLowerCase()}`,
+          password: subscription.credentials?.password || 'auto-generated'
         };
 
         console.log('✅ MegaOTT subscription created successfully');
