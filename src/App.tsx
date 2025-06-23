@@ -1,3 +1,5 @@
+
+import React, { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,9 +23,20 @@ function App() {
           <Sonner />
           <BrowserRouter>
             <Routes>
-              {navItems.map(({ to, page }) => (
-                <Route key={to} path={to} element={page} />
-              ))}
+              {navItems.map(({ to, page }) => {
+                const PageComponent = React.lazy(() => page());
+                return (
+                  <Route 
+                    key={to} 
+                    path={to} 
+                    element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <PageComponent />
+                      </Suspense>
+                    } 
+                  />
+                );
+              })}
               <Route path="/admin-login" element={<AdminLogin />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/custom-dashboard-admin" element={<CustomDashboardAdmin />} />

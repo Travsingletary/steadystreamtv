@@ -10,6 +10,7 @@ import { Mail, User, Lock, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SignInForm } from "./SignInForm";
 import { validatePasswordSecurity } from "@/utils/passwordSecurity";
+import { OnboardingUserData } from "@/types/onboarding";
 
 // SECURITY: Enhanced password validation schema
 const formSchema = z.object({
@@ -27,18 +28,9 @@ const formSchema = z.object({
   }),
 });
 
-interface UserData {
-  full_name: string;
-  email: string;
-  password?: string;
-  preferredDevice: string;
-  genres: string[];
-  subscription: any;
-}
-
 interface OnboardingWelcomeProps {
-  userData: UserData;
-  updateUserData: (data: Partial<UserData>) => void;
+  userData: OnboardingUserData;
+  updateUserData: (data: Partial<OnboardingUserData>) => void;
   onNext: () => void;
 }
 
@@ -51,7 +43,7 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      full_name: userData.name || "",
+      full_name: userData.full_name || "",
       email: userData.email || "",
       password: userData.password || "",
     },
@@ -91,14 +83,14 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
     setTimeout(() => {
       try {
         updateUserData({
-          full_full_name: values.name,
+          full_name: values.full_name,
           email: values.email,
           password: values.password,
         });
         
         toast({
           title: "Account Created",
-          description: `Welcome ${values.name}! Your secure account has been created.`,
+          description: `Welcome ${values.full_name}! Your secure account has been created.`,
         });
         
         onNext();
@@ -133,7 +125,7 @@ export const OnboardingWelcome = ({ userData, updateUserData, onNext }: Onboardi
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
-            name="name"
+            name="full_name"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Your Name</FormLabel>

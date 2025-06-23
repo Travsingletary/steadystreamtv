@@ -10,7 +10,7 @@ export const useOnboarding = () => {
   const [step, setStep] = useState(1);
   const [isProcessingXtream, setIsProcessingXtream] = useState(false);
   const [userData, setUserData] = useState<OnboardingUserData>({
-    name: "",
+    full_name: "",
     email: "",
     preferredDevice: "",
     genres: [],
@@ -62,7 +62,7 @@ export const useOnboarding = () => {
         password: (userData as any).password,
         options: {
           data: {
-            name: userData.name,
+            name: userData.full_name,
           }
         }
       });
@@ -85,7 +85,7 @@ export const useOnboarding = () => {
         .upsert({
           id: authData.user.id,
           email: userData.email,
-          name: userData.name,
+          name: userData.full_name,
           preferred_device: userData.preferredDevice,
           genres: userData.genres,
           subscription_tier: userData.subscription?.plan || null,
@@ -110,7 +110,7 @@ export const useOnboarding = () => {
           const { data: xtreamData, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
             body: {
               email: userData.email,
-              name: userData.name,
+              name: userData.full_name,
               planId: userData.subscription.plan
             }
           });
@@ -151,7 +151,7 @@ export const useOnboarding = () => {
         await supabase.functions.invoke('send-welcome-email', {
           body: {
             email: userData.email,
-            name: userData.name
+            name: userData.full_name
           }
         });
         console.log("Welcome email sent");
