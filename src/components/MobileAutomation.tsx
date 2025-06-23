@@ -1,68 +1,14 @@
 
 import React, { useState } from 'react';
-import { useCorrectedAutomation } from '@/hooks/useCorrectedAutomation';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { ProductionSteadyStreamAutomation } from '@/services/productionSteadyStreamAutomation';
+import { CheckCircle, Tv, Smartphone, Monitor, Wifi, Copy, Download, ExternalLink } from 'lucide-react';
 
 const MobileAutomation = () => {
-  const [showModal, setShowModal] = useState(false);
-  const [successData, setSuccessData] = useState<any>(null);
-  const { loading, error, result, executeAutomation, reset } = useCorrectedAutomation();
-
-  const handleOpenModal = () => {
-    reset();
-    setShowModal(true);
-  };
-
-  const handleSuccess = (data: any) => {
-    setSuccessData(data);
-    setShowModal(false);
-  };
-
-  return (
-    <div className="w-full">
-      <SignupModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onSuccess={handleSuccess}
-        executeAutomation={executeAutomation}
-        loading={loading}
-        error={error}
-      />
-
-      {successData && (
-        <SuccessModal
-          isOpen={!!successData}
-          onClose={() => setSuccessData(null)}
-          successData={successData}
-        />
-      )}
-
-      <button 
-        onClick={handleOpenModal}
-        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-      >
-        🚀 Start with Real MegaOTT
-      </button>
-    </div>
-  );
-};
-
-interface SignupModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: (data: any) => void;
-  executeAutomation: (userData: any) => Promise<any>;
-  loading: boolean;
-  error: string | null;
-}
-
-const SignupModal: React.FC<SignupModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  executeAutomation, 
-  loading, 
-  error 
-}) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -70,319 +16,355 @@ const SignupModal: React.FC<SignupModalProps> = ({
     plan: 'trial',
     allowAdult: false
   });
-  const [validationError, setValidationError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const { toast } = useToast();
 
-  const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      setValidationError('Please fill in all required fields');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setValidationError('Password must be at least 6 characters');
-      return;
-    }
-
-    setValidationError('');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      const result = await executeAutomation(formData);
-
-      if (result.success) {
-        onSuccess(result);
+      console.log('🚀 Starting production MegaOTT automation...');
+      
+      const automationResult = await ProductionSteadyStreamAutomation.processCompleteSignup(formData);
+      
+      setResult(automationResult);
+      
+      if (automationResult.success) {
+        toast({
+          title: "🎉 Account Created Successfully!",
+          description: `Your ${formData.plan} plan is ready via ${automationResult.apiName}`,
+        });
       } else {
-        setValidationError(result.error || 'Registration failed');
+        toast({
+          title: "Account Created with Fallback",
+          description: automationResult.fallback?.message || "Support will contact you soon",
+          variant: "destructive",
+        });
       }
+      
     } catch (error: any) {
-      setValidationError(error.message || 'Network error - please try again');
+      console.error('❌ Production automation failed:', error);
+      toast({
+        title: "Setup Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateField = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setValidationError('');
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-      <div className="relative max-w-md w-full bg-gray-800 rounded-2xl p-8 shadow-2xl">
-        
-        <button 
-          onClick={onClose}
-          className="absolute -top-4 -right-4 bg-gray-700 hover:bg-gray-600 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold"
-        >
-          ✕
-        </button>
-
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            🚀
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Real MegaOTT Integration</h2>
-          <p className="text-gray-400">Get actual IPTV credentials in seconds</p>
-        </div>
-
-        {(error || validationError) && (
-          <div className="mb-6 bg-red-600 text-white p-4 rounded-lg text-sm">
-            ❌ {error || validationError}
-          </div>
-        )}
-
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-white">Full Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => updateField('name', e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-              placeholder="Enter your full name"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2 text-white">Email Address</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => updateField('email', e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-              placeholder="Enter your email"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2 text-white">Password</label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => updateField('password', e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-              placeholder="Create a password (6+ characters)"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2 text-white">Subscription Plan</label>
-            <select
-              value={formData.plan}
-              onChange={(e) => updateField('plan', e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-              disabled={loading}
-            >
-              <option value="trial">🎉 24-Hour FREE Trial</option>
-              <option value="basic">💰 Basic Plan (1 Device)</option>
-              <option value="duo">💎 Duo Plan (2 Devices)</option>
-              <option value="family">👨‍👩‍👧‍👦 Family Plan (3 Devices)</option>
-              <option value="premium">⭐ Premium Plan (3 Devices)</option>
-              <option value="ultimate">🔥 Ultimate Plan (5 Devices)</option>
-            </select>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="allowAdult"
-              checked={formData.allowAdult}
-              onChange={(e) => updateField('allowAdult', e.target.checked)}
-              className="mr-3 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-              disabled={loading}
-            />
-            <label htmlFor="allowAdult" className="text-sm text-gray-300">
-              Include adult content (18+)
-            </label>
-          </div>
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Creating MegaOTT Account...
-              </div>
-            ) : (
-              '🚀 Create Real IPTV Account'
-            )}
-          </button>
-        </div>
-
-        <div className="mt-6 text-center text-sm text-gray-400">
-          <p>✅ Real MegaOTT API integration</p>
-          <p>✅ Instant IPTV credentials</p>
-          <p>✅ Professional M3U playlists</p>
-          <p>✅ Smart TV compatibility</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-interface SuccessModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  successData: any;
-}
-
-const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, successData }) => {
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
   };
 
-  if (!isOpen || !successData) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-4">
-      <div className="relative max-w-4xl w-full bg-gray-800 rounded-2xl p-8 shadow-2xl max-h-screen overflow-y-auto">
-        
-        <button 
-          onClick={onClose}
-          className="absolute -top-4 -right-4 bg-gray-700 hover:bg-gray-600 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold"
-        >
-          ✕
-        </button>
-
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <h2 className="text-4xl font-bold text-green-400 mb-2">🎉 Real MegaOTT Account Created!</h2>
-          <p className="text-gray-300 text-lg">{successData.message}</p>
-          {successData.source && (
-            <p className="text-blue-400 text-sm mt-2">
-              Source: {successData.source === 'megaott_api' ? 'Live MegaOTT API' : 'Fallback System'}
-            </p>
-          )}
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-8 mb-8">
-          
-          {/* Activation Code */}
-          <div className="bg-gray-700 p-6 rounded-xl">
-            <h3 className="text-xl font-semibold mb-4 text-blue-400 flex items-center">
-              📱 <span className="ml-2">Activation Code</span>
-            </h3>
-            <div className="text-4xl font-mono text-center py-6 bg-gray-900 rounded-lg border border-gray-600 mb-4">
-              <span className="text-green-400 tracking-wider">{successData.activationCode}</span>
+  if (result?.success) {
+    return (
+      <Card className="max-w-4xl mx-auto bg-gradient-to-br from-green-900 to-green-800 border-green-500">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-white" />
             </div>
-            <button 
-              onClick={() => copyToClipboard(successData.activationCode)}
-              className="w-full text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200"
-            >
-              📋 Copy Activation Code
-            </button>
+          </div>
+          <CardTitle className="text-2xl text-white mb-2">
+            🎉 SteadyStream TV Account Ready!
+          </CardTitle>
+          <p className="text-green-200">
+            {result.message}
+          </p>
+          <div className="flex justify-center gap-2 mt-4">
+            <Badge className="bg-green-600 text-white">
+              {result.apiName || 'Production API'}
+            </Badge>
+            <Badge variant="outline" className="border-green-400 text-green-200">
+              Source: {result.source}
+            </Badge>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          {/* Account Details */}
+          <div className="bg-black/20 rounded-lg p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <Tv className="w-5 h-5" />
+              Your IPTV Account Details
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div>
+                  <label className="text-green-200 text-sm">Activation Code</label>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-800 text-green-400 px-3 py-2 rounded flex-1 font-mono">
+                      {result.activationCode}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(result.activationCode, 'Activation Code')}
+                      className="border-green-500 text-green-400"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-green-200 text-sm">Username</label>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-800 text-green-400 px-3 py-2 rounded flex-1 font-mono">
+                      {result.credentials?.username}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(result.credentials?.username, 'Username')}
+                      className="border-green-500 text-green-400"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-green-200 text-sm">Password</label>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-800 text-green-400 px-3 py-2 rounded flex-1 font-mono">
+                      {result.credentials?.password}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(result.credentials?.password, 'Password')}
+                      className="border-green-500 text-green-400"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-green-200 text-sm">Server</label>
+                  <code className="bg-gray-800 text-green-400 px-3 py-2 rounded block font-mono">
+                    {result.credentials?.server}
+                  </code>
+                </div>
+                
+                <div>
+                  <label className="text-green-200 text-sm">Port</label>
+                  <code className="bg-gray-800 text-green-400 px-3 py-2 rounded block font-mono">
+                    {result.credentials?.port}
+                  </code>
+                </div>
+                
+                <div>
+                  <label className="text-green-200 text-sm">Expires</label>
+                  <code className="bg-gray-800 text-green-400 px-3 py-2 rounded block font-mono">
+                    {result.expiryDate ? new Date(result.expiryDate).toLocaleDateString() : 'N/A'}
+                  </code>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* IPTV Credentials */}
-          <div className="bg-gray-700 p-6 rounded-xl">
-            <h3 className="text-xl font-semibold mb-4 text-green-400 flex items-center">
-              🔐 <span className="ml-2">IPTV Credentials</span>
+          {/* Playlist URLs */}
+          <div className="bg-black/20 rounded-lg p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Playlist URLs
             </h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Server:</span>
-                <span className="text-white font-mono">{successData.credentials?.server}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Port:</span>
-                <span className="text-white font-mono">{successData.credentials?.port}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Username:</span>
-                <span className="text-white font-mono">{successData.credentials?.username}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Password:</span>
-                <span className="text-white font-mono">{successData.credentials?.password}</span>
-              </div>
-              {successData.megaottId && (
-                <div className="flex justify-between">
-                  <span className="text-gray-400">MegaOTT ID:</span>
-                  <span className="text-white font-mono">{successData.megaottId}</span>
+            
+            <div className="space-y-3">
+              {result.playlistUrl && (
+                <div>
+                  <label className="text-green-200 text-sm">M3U Playlist</label>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-800 text-green-400 px-3 py-2 rounded flex-1 font-mono text-xs">
+                      {result.playlistUrl}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(result.playlistUrl, 'Playlist URL')}
+                      className="border-green-500 text-green-400"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {result.smartTvUrl && (
+                <div>
+                  <label className="text-green-200 text-sm">Smart TV URL</label>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-800 text-green-400 px-3 py-2 rounded flex-1 font-mono text-xs">
+                      {result.smartTvUrl}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(result.smartTvUrl, 'Smart TV URL')}
+                      className="border-green-500 text-green-400"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-        </div>
-
-        {/* M3U Playlist URL */}
-        <div className="bg-gray-700 p-6 rounded-xl mb-6">
-          <h3 className="text-xl font-semibold mb-4 text-purple-400 flex items-center">
-            🔗 <span className="ml-2">M3U Playlist URL</span>
-          </h3>
-          <div className="bg-gray-900 p-4 rounded-lg border border-gray-600 mb-4">
-            <code className="text-sm text-green-400 break-all">{successData.playlistUrl}</code>
-          </div>
-          <div className="flex gap-4">
-            <button 
-              onClick={() => copyToClipboard(successData.playlistUrl)}
-              className="flex-1 text-sm bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200"
-            >
-              📋 Copy M3U URL
-            </button>
-            <button 
-              onClick={() => window.open(successData.playlistUrl, '_blank')}
-              className="flex-1 text-sm bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200"
-            >
-              🎬 Test Playlist
-            </button>
-          </div>
-        </div>
-
-        {/* Smart TV URL */}
-        {successData.smartTvUrl && (
-          <div className="bg-gray-700 p-6 rounded-xl mb-6">
-            <h3 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
-              📺 <span className="ml-2">Smart TV URL</span>
+          {/* Device Setup Instructions */}
+          <div className="bg-black/20 rounded-lg p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <Monitor className="w-5 h-5" />
+              Quick Setup Guide
             </h3>
-            <div className="bg-gray-900 p-4 rounded-lg border border-gray-600 mb-4">
-              <code className="text-sm text-green-400 break-all">{successData.smartTvUrl}</code>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <Tv className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                <h4 className="text-green-200 font-semibold">Smart TV</h4>
+                <p className="text-green-300 text-sm">
+                  Install TiviMate or IPTV Smarters, add playlist URL
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <Smartphone className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                <h4 className="text-green-200 font-semibold">Mobile</h4>
+                <p className="text-green-300 text-sm">
+                  Download IPTV app, enter server details
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <Monitor className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                <h4 className="text-green-200 font-semibold">Computer</h4>
+                <p className="text-green-300 text-sm">
+                  Use VLC Media Player or IPTV software
+                </p>
+              </div>
             </div>
-            <button 
-              onClick={() => copyToClipboard(successData.smartTvUrl)}
-              className="w-full text-sm bg-yellow-600 hover:bg-yellow-700 text-black font-medium py-3 px-4 rounded-lg transition-all duration-200"
-            >
-              📋 Copy Smart TV URL
-            </button>
           </div>
-        )}
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 text-center">
-          <button 
-            onClick={() => window.open('/dashboard', '_blank')}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200"
-          >
-            📊 Access Dashboard
-          </button>
-          <button 
-            onClick={onClose}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200"
-          >
-            ✅ Complete Setup
-          </button>
-        </div>
+          {/* Success Actions */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button 
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => window.open('mailto:support@steadystreamtv.com?subject=Setup Help&body=I need help setting up my SteadyStream TV account')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Get Setup Help
+            </Button>
+            <Button 
+              variant="outline" 
+              className="flex-1 border-green-500 text-green-400"
+              onClick={() => setResult(null)}
+            >
+              Create Another Account
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-        {/* Success Notice */}
-        <div className="mt-6 p-4 bg-gradient-to-r from-green-600 to-blue-600 rounded-lg text-center">
-          <p className="text-white font-medium">
-            🎉 Real MegaOTT integration active! Your IPTV credentials are live and ready to use.
-            {successData.expiryDate && ` Expires: ${new Date(successData.expiryDate).toLocaleDateString()}`}
-          </p>
-        </div>
-      </div>
-    </div>
+  return (
+    <Card className="max-w-2xl mx-auto bg-gray-900 border-gray-700">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl text-white mb-2">
+          🚀 Production SteadyStream Signup
+        </CardTitle>
+        <p className="text-gray-400">
+          Create your IPTV account with full MegaOTT integration
+        </p>
+        <Badge className="mx-auto bg-blue-600 text-white">
+          Production API System
+        </Badge>
+      </CardHeader>
+      
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-gray-300 text-sm">Full Name</label>
+            <Input
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Enter your full name"
+              className="bg-gray-800 border-gray-600 text-white"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="text-gray-300 text-sm">Email Address</label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="Enter your email"
+              className="bg-gray-800 border-gray-600 text-white"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="text-gray-300 text-sm">Password</label>
+            <Input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+              placeholder="Create a password"
+              className="bg-gray-800 border-gray-600 text-white"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="text-gray-300 text-sm">Subscription Plan</label>
+            <select
+              value={formData.plan}
+              onChange={(e) => setFormData(prev => ({ ...prev, plan: e.target.value }))}
+              className="w-full bg-gray-800 border border-gray-600 text-white p-2 rounded"
+            >
+              <option value="trial">24-Hour Free Trial</option>
+              <option value="basic">Basic Plan ($20/month)</option>
+              <option value="duo">Duo Plan ($35/month)</option>
+              <option value="family">Family Plan ($45/month)</option>
+            </select>
+          </div>
+          
+          <Button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+          >
+            {loading ? (
+              <>
+                <Wifi className="w-4 h-4 mr-2 animate-spin" />
+                Creating Account with Production API...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Create SteadyStream Account
+              </>
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 
