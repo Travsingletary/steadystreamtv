@@ -27,7 +27,7 @@ const Index = () => {
           </div>
           
           {/* Mobile Automation Component */}
-          <MobileAutomation onClose={() => setShowMobileSignup(false)} />
+          <MobileAutomation />
         </div>
       </div>;
   }
