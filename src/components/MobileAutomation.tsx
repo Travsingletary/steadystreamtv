@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Smartphone, Globe, Plane, Car, Home, MapPin, CheckCircle, Wifi, X } from 'lucide-react';
-import { useAutomation } from '@/hooks/useAutomation';
+import { SteadyStreamAutomation } from '../services/SteadyStreamAutomation';
 import { UserData } from '@/services/types';
 
 interface MobileAutomationProps {
@@ -25,8 +25,8 @@ const MobileAutomation: React.FC<MobileAutomationProps> = ({ onClose }) => {
   });
   const [showSuccess, setShowSuccess] = useState(false);
   const [successResult, setSuccessResult] = useState<any>(null);
-
-  const { executeAutomation, loading, error } = useAutomation();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: any) => {
     setUserData(prev => ({ ...prev, [field]: value }));
@@ -49,28 +49,39 @@ const MobileAutomation: React.FC<MobileAutomationProps> = ({ onClose }) => {
       return;
     }
 
-    // Generate secure password
-    const password = Math.random().toString(36).slice(-12) + 'A1!';
-    
-    const completeUserData: UserData = {
-      name: userData.name,
-      email: userData.email,
-      password: password,
-      plan: userData.plan || 'trial',
-      deviceType: 'mobile',
-      preferences: userData.preferences || {
-        favoriteGenres: [],
-        parentalControls: false,
-        autoOptimization: true,
-        videoQuality: 'HD'
-      }
-    };
+    setLoading(true);
+    setError(null);
 
-    const result = await executeAutomation(completeUserData);
-    
-    if (result.success) {
-      setSuccessResult(result);
-      setShowSuccess(true);
+    try {
+      // Generate secure password
+      const password = Math.random().toString(36).slice(-12) + 'A1!';
+      
+      const completeUserData: UserData = {
+        name: userData.name,
+        email: userData.email,
+        password: password,
+        plan: userData.plan || 'trial',
+        deviceType: 'mobile',
+        preferences: userData.preferences || {
+          favoriteGenres: [],
+          parentalControls: false,
+          autoOptimization: true,
+          videoQuality: 'HD'
+        }
+      };
+
+      const automationResult = await SteadyStreamAutomation.processCompleteSignup(completeUserData);
+      
+      if (automationResult.success) {
+        setSuccessResult(automationResult);
+        setShowSuccess(true);
+      } else {
+        setError(automationResult.error || 'Automation failed');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during signup');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,15 +109,68 @@ const MobileAutomation: React.FC<MobileAutomationProps> = ({ onClose }) => {
             <div className="bg-gray-700 p-6 rounded-lg text-center">
               <h3 className="text-lg font-semibold mb-3 text-yellow-400">📱 Your Mobile Activation Code</h3>
               <div className="text-4xl font-mono bg-gray-900 p-4 rounded border border-gray-600 mb-4">
-                <span className="text-green-400 tracking-wider">{successResult.assets?.activationCode}</span>
+                <span className="text-green-400 tracking-wider">{successResult.activationCode}</span>
               </div>
               <Button 
-                onClick={() => copyToClipboard(successResult.assets?.activationCode)}
+                onClick={() => copyToClipboard(successResult.activationCode)}
                 className="bg-yellow-600 hover:bg-yellow-700 text-black font-medium"
               >
                 📋 Copy Code
               </Button>
             </div>
+
+            {/* Playlist URL */}
+            <div className="bg-gray-700 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-3 text-blue-400">🔗 Your Playlist URL</h3>
+              <div className="bg-gray-900 p-3 rounded border border-gray-600 mb-3">
+                <code className="text-sm text-green-400 break-all">{successResult.playlistUrl}</code>
+              </div>
+              <Button 
+                onClick={() => copyToClipboard(successResult.playlistUrl)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
+              >
+                📋 Copy Playlist URL
+              </Button>
+            </div>
+
+            {/* Xtream Codes */}
+            {successResult.credentials && (
+              <div className="bg-gray-700 p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-3 text-purple-400">🔐 Your Xtream Codes</h3>
+                <div className="space-y-3">
+                  <div className="bg-gray-900 p-3 rounded border border-gray-600">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Server:</span>
+                      <span className="text-green-400 font-mono">{successResult.credentials.server}</span>
+                    </div>
+                  </div>
+                  <div className="bg-gray-900 p-3 rounded border border-gray-600">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Port:</span>
+                      <span className="text-green-400 font-mono">{successResult.credentials.port}</span>
+                    </div>
+                  </div>
+                  <div className="bg-gray-900 p-3 rounded border border-gray-600">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Username:</span>
+                      <span className="text-green-400 font-mono">{successResult.credentials.username}</span>
+                    </div>
+                  </div>
+                  <div className="bg-gray-900 p-3 rounded border border-gray-600">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Password:</span>
+                      <span className="text-green-400 font-mono">{successResult.credentials.password}</span>
+                    </div>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => copyToClipboard(`Server: ${successResult.credentials.server}\nPort: ${successResult.credentials.port}\nUsername: ${successResult.credentials.username}\nPassword: ${successResult.credentials.password}`)}
+                  className="w-full mt-3 bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                >
+                  📋 Copy All Credentials
+                </Button>
+              </div>
+            )}
 
             {/* Mobile Setup Instructions */}
             <div className="bg-gray-700 p-6 rounded-lg">
@@ -117,7 +181,7 @@ const MobileAutomation: React.FC<MobileAutomationProps> = ({ onClose }) => {
                   <ol className="list-decimal list-inside space-y-2 text-sm text-gray-300">
                     <li>Download TiviMate app</li>
                     <li>Open app → "Add Playlist"</li>
-                    <li>Enter your activation code: <span className="text-green-400 font-mono">{successResult.assets?.activationCode}</span></li>
+                    <li>Enter your activation code: <span className="text-green-400 font-mono">{successResult.activationCode}</span></li>
                     <li>Start streaming anywhere! 🌍</li>
                   </ol>
                 </div>
@@ -161,7 +225,7 @@ const MobileAutomation: React.FC<MobileAutomationProps> = ({ onClose }) => {
               <h3 className="text-lg font-semibold mb-3 text-yellow-400">📲 Quick Mobile Setup</h3>
               <div className="bg-white p-4 rounded-lg inline-block mb-4">
                 <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(successResult.assets?.playlistUrl || '')}`} 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(successResult.playlistUrl || '')}`} 
                   alt="Mobile Setup QR Code" 
                   className="w-48 h-48"
                 />
