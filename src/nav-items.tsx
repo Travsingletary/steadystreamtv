@@ -1,84 +1,54 @@
+import { FunctionComponent, lazy } from "react";
+import { LucideIcon } from "lucide-react";
 
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Onboarding from "./pages/Onboarding";
-import Player from "./pages/Player";
-import Favorites from "./pages/Favorites";
-import Account from "./pages/Account";
-import ConnectApps from "./pages/ConnectApps";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminLogin from "./pages/AdminLogin";
-import SteadyStreamAdminDashboard from "./pages/SteadyStreamAdminDashboard";
-import SuperAdminDashboard from "./pages/SuperAdminDashboard";
-import TestXtreamAccount from "./pages/TestXtreamAccount";
-import CustomDashboardAdminPage from "./pages/CustomDashboardAdmin";
-import MegaOTTTesterPage from "./pages/MegaOTTTester";
-import TestingDashboard from "./pages/TestingDashboard";
-import NotFound from "./pages/NotFound";
+interface NavItem {
+  title: string;
+  to: string;
+  icon: string;
+  page: () => Promise<{ default: FunctionComponent }>;
+}
 
-export const navItems = [
+export const navItems: NavItem[] = [
   {
+    title: "Home",
     to: "/",
-    page: <Index />,
+    icon: "home",
+    page: () => import("./pages/Index").then((module) => ({ default: module.default })),
   },
   {
-    to: "/onboarding",
-    page: <Onboarding />,
-  },
-  {
+    title: "Dashboard", 
     to: "/dashboard",
-    page: <Dashboard />,
+    icon: "dashboard",
+    page: () => import("./pages/Dashboard").then((module) => ({ default: module.default })),
   },
   {
+    title: "Onboarding",
+    to: "/onboarding", 
+    icon: "settings",
+    page: () => import("./pages/Onboarding").then((module) => ({ default: module.default })),
+  },
+  {
+    title: "Player",
     to: "/player",
-    page: <Player />,
+    icon: "play",
+    page: () => import("./pages/Player").then((module) => ({ default: module.default })),
   },
   {
-    to: "/favorites",
-    page: <Favorites />,
-  },
-  {
+    title: "Account",
     to: "/account",
-    page: <Account />,
+    icon: "user",
+    page: () => import("./pages/Account").then((module) => ({ default: module.default })),
   },
   {
-    to: "/connect-apps",
-    page: <ConnectApps />,
-  },
-  {
-    to: "/admin-login",
-    page: <AdminLogin />,
-  },
-  {
+    title: "Admin",
     to: "/admin",
-    page: <SteadyStreamAdminDashboard />,
+    icon: "settings",
+    page: () => import("./pages/Admin").then((module) => ({ default: module.default })),
   },
   {
-    to: "/admin-dashboard",
-    page: <AdminDashboard />,
-  },
-  {
-    to: "/super-admin-dashboard",
-    page: <SuperAdminDashboard />,
-  },
-  {
-    to: "/custom-dashboard-admin",
-    page: <CustomDashboardAdminPage />,
-  },
-  {
-    to: "/megaott-tester",
-    page: <MegaOTTTesterPage />,
-  },
-  {
-    to: "/test-xtream",
-    page: <TestXtreamAccount />,
-  },
-  {
-    to: "/testing-dashboard",
-    page: <TestingDashboard />,
-  },
-  {
-    to: "*",
-    page: <NotFound />,
+    title: "Purchase Success",
+    to: "/purchase-success",
+    icon: "check",
+    page: () => import("./pages/PurchaseSuccess").then((module) => ({ default: module.default })),
   },
 ];

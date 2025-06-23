@@ -1,325 +1,175 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "npm:resend@2.0.0";
 
-// Configure CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Helper function for consistent logging
-const log = (message: string, data?: any) => {
-  console.log(`[SEND-WELCOME-EMAIL] ${message}`, data ? JSON.stringify(data) : '');
-};
-
-// Define payload type for welcome email
-interface WelcomeEmailPayload {
-  userId: string;
-  email: string;
-  name: string;
-  iptv: {
-    username: string;
-    password: string;
-    playlistUrls: {
-      m3u: string;
-      m3u_plus: string;
-      xspf: string;
-    }
-  }
-}
-
-serve(async (req: Request) => {
-  // Handle CORS preflight requests
+serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders, status: 204 });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get Resend API key from environment
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendApiKey) {
-      log("❌ Missing Resend API key in Supabase secrets");
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Email service not configured",
-        message: "Resend API key not found. Please configure RESEND_API_KEY in Supabase secrets." 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+    const { to, subject, name, credentials, planType } = await req.json();
 
-    log("✅ Resend API key found - initializing email service");
-    const resend = new Resend(resendApiKey);
-    
-    // Parse request body
-    const payload: WelcomeEmailPayload = await req.json();
-    log("📧 Processing email request", { userId: payload.userId, email: payload.email });
+    const htmlContent = generateWelcomeEmailHTML(name, credentials, planType);
 
-    if (!payload.email || !payload.iptv) {
-      log("❌ Missing required fields in payload");
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+    const emailResponse = await resend.emails.send({
+      from: "SteadyStream TV <welcome@steadystreamtv.com>",
+      to: [to],
+      subject: subject,
+      html: htmlContent,
+    });
 
-    // Format customer name
-    const customerName = payload.name || payload.email.split('@')[0];
-    
-    // Create professional HTML email template
-    const htmlContent = `
+    console.log("Welcome email sent successfully:", emailResponse);
+
+    return new Response(JSON.stringify({ success: true, emailResponse }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
+  } catch (error) {
+    console.error("Error sending welcome email:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
+
+function generateWelcomeEmailHTML(name: string, credentials: any, planType: string) {
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(credentials.playlist_url)}`;
+  
+  return `
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome to SteadyStream TV</title>
   <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background-color: #000000;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #1a1a1a;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(255, 215, 0, 0.1);
-    }
-    .header {
-      background: linear-gradient(135deg, #FFD700, #FFA500);
-      padding: 30px 20px;
-      text-align: center;
-    }
-    .header h1 {
-      color: #000000;
-      margin: 0;
-      font-size: 28px;
-      font-weight: bold;
-    }
-    .content {
-      padding: 30px;
-      color: #ffffff;
-    }
-    .credentials {
-      background-color: #2a2a2a;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 20px 0;
-      border-left: 4px solid #FFD700;
-    }
-    .credentials h3 {
-      color: #FFD700;
-      margin-top: 0;
-    }
-    .credentials p {
-      margin: 10px 0;
-      font-family: 'Courier New', monospace;
-      background-color: #333;
-      padding: 8px 12px;
-      border-radius: 4px;
-      display: inline-block;
-      min-width: 200px;
-    }
-    .button {
-      display: inline-block;
-      background: linear-gradient(135deg, #FFD700, #FFA500);
-      color: #000000 !important;
-      padding: 15px 30px;
-      text-decoration: none;
-      border-radius: 8px;
-      font-weight: bold;
-      margin: 20px 0;
-      transition: transform 0.2s;
-    }
-    .button:hover {
-      transform: translateY(-2px);
-    }
-    .footer {
-      background-color: #0a0a0a;
-      text-align: center;
-      padding: 20px;
-      color: #888;
-      font-size: 12px;
-    }
-    .playlist-section {
-      margin-top: 30px;
-      background-color: #2a2a2a;
-      border-radius: 8px;
-      padding: 20px;
-    }
-    .playlist-section h3 {
-      color: #FFD700;
-      margin-bottom: 15px;
-    }
-    .playlist-link {
-      display: block;
-      margin-bottom: 10px;
-      padding: 10px;
-      background-color: #333;
-      border-radius: 4px;
-      word-break: break-all;
-      font-family: monospace;
-      font-size: 12px;
-      color: #ccc;
-    }
-    .setup-steps {
-      background-color: #2a2a2a;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 20px 0;
-    }
-    .setup-steps h3 {
-      color: #FFD700;
-      margin-top: 0;
-    }
-    .setup-steps ol {
-      padding-left: 20px;
-    }
-    .setup-steps li {
-      margin-bottom: 8px;
-      color: #ddd;
-    }
-    .highlight {
-      background-color: #FFD700;
-      color: #000;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-weight: bold;
-    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .header { background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); color: white; padding: 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: bold; }
+    .content { padding: 30px; }
+    .plan-badge { background: #f59e0b; color: white; padding: 8px 16px; border-radius: 20px; display: inline-block; font-weight: bold; margin: 10px 0; }
+    .credentials { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .credential-item { margin: 10px 0; }
+    .credential-label { font-weight: bold; color: #374151; }
+    .credential-value { background: #1f2937; color: #f9fafb; padding: 8px 12px; border-radius: 4px; font-family: monospace; margin-top: 4px; word-break: break-all; }
+    .qr-section { text-align: center; margin: 30px 0; }
+    .setup-steps { background: #ecfdf5; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; }
+    .step { margin: 10px 0; padding-left: 20px; }
+    .footer { background: #1f2937; color: #9ca3af; padding: 20px; text-align: center; font-size: 14px; }
+    .button { background: #1e40af; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 10px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <h1>🎉 Welcome to SteadyStream TV!</h1>
+      <p>Your IPTV service is now active</p>
+      <div class="plan-badge">${planType.toUpperCase()} PLAN</div>
     </div>
     
     <div class="content">
-      <h2>Hello ${customerName}!</h2>
-      
-      <p>Your premium IPTV account has been successfully created and is ready to stream. Below are your login credentials and complete setup instructions.</p>
+      <h2>Hello ${name}!</h2>
+      <p>Congratulations! Your SteadyStream TV subscription is now active. Below are your IPTV credentials and setup instructions.</p>
       
       <div class="credentials">
         <h3>🔐 Your IPTV Credentials</h3>
-        <p><strong>Username:</strong> <span class="highlight">${payload.iptv.username}</span></p>
-        <p><strong>Password:</strong> <span class="highlight">${payload.iptv.password}</span></p>
+        
+        <div class="credential-item">
+          <div class="credential-label">Username:</div>
+          <div class="credential-value">${credentials.username}</div>
+        </div>
+        
+        <div class="credential-item">
+          <div class="credential-label">Password:</div>
+          <div class="credential-value">${credentials.password}</div>
+        </div>
+        
+        <div class="credential-item">
+          <div class="credential-label">Server URL:</div>
+          <div class="credential-value">${credentials.server_url}</div>
+        </div>
+        
+        <div class="credential-item">
+          <div class="credential-label">Playlist URL (M3U):</div>
+          <div class="credential-value">${credentials.playlist_url}</div>
+        </div>
+        
+        <div class="credential-item">
+          <div class="credential-label">Activation Code:</div>
+          <div class="credential-value">${credentials.activationCode}</div>
+        </div>
+        
+        <div class="credential-item">
+          <div class="credential-label">Max Connections:</div>
+          <div class="credential-value">${credentials.maxConnections}</div>
+        </div>
       </div>
-
+      
+      <div class="qr-section">
+        <h3>📱 Quick Setup QR Code</h3>
+        <p>Scan this QR code with your IPTV app to automatically configure your playlist:</p>
+        <img src="${qrCodeUrl}" alt="Playlist QR Code" style="border: 2px solid #e2e8f0; border-radius: 8px;">
+      </div>
+      
       <div class="setup-steps">
-        <h3>⚡ Quick Setup (60 seconds)</h3>
-        <ol>
-          <li><strong>Download TiviMate:</strong> Use code <span class="highlight">1592817</span> at aftv.news/1592817</li>
-          <li><strong>Open TiviMate:</strong> Select "Add Playlist" → "M3U Playlist"</li>
-          <li><strong>Enter your credentials:</strong> Use username <span class="highlight">${payload.iptv.username}</span></li>
-          <li><strong>Add playlist URL:</strong> Copy the URL from below</li>
-          <li><strong>Start streaming:</strong> Enjoy thousands of channels! 🎬</li>
-        </ol>
+        <h3>🚀 Quick Setup Guide</h3>
+        
+        <div class="step">
+          <strong>1. Download an IPTV App:</strong>
+          <ul>
+            <li><strong>Android/Fire TV:</strong> TiviMate, IPTV Smarters Pro</li>
+            <li><strong>iOS/Apple TV:</strong> GSE Smart IPTV, IPTV Smarters Pro</li>
+            <li><strong>Windows/Mac:</strong> VLC Media Player, Kodi</li>
+          </ul>
+        </div>
+        
+        <div class="step">
+          <strong>2. Add Playlist:</strong>
+          <ul>
+            <li>Open your IPTV app</li>
+            <li>Select "Add Playlist" or "Xtream Codes API"</li>
+            <li>Enter your credentials above</li>
+            <li>Or scan the QR code for instant setup</li>
+          </ul>
+        </div>
+        
+        <div class="step">
+          <strong>3. Start Watching:</strong>
+          <ul>
+            <li>Your channels will load automatically</li>
+            <li>Enjoy 5000+ channels in HD/4K quality</li>
+            <li>Access premium sports, movies, and international content</li>
+          </ul>
+        </div>
       </div>
       
-      <div class="playlist-section">
-        <h3>📺 Your Playlist URLs</h3>
-        <p>Use these URLs to set up your IPTV service on various devices:</p>
-        
-        <p><strong>M3U Playlist (Recommended):</strong></p>
-        <div class="playlist-link">${payload.iptv.playlistUrls.m3u}</div>
-        
-        <p><strong>M3U Plus Playlist:</strong></p>
-        <div class="playlist-link">${payload.iptv.playlistUrls.m3u_plus}</div>
-        
-        <p><strong>XSPF Playlist:</strong></p>
-        <div class="playlist-link">${payload.iptv.playlistUrls.xspf}</div>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://steadystreamtv.com/setup-guide" class="button">📖 Detailed Setup Guide</a>
+        <a href="https://steadystreamtv.com/support" class="button">💬 Get Support</a>
       </div>
       
-      <p style="text-align: center;">
-        <a href="https://steadystream-tv.lovable.app/dashboard" class="button">
-          📱 Open Your Dashboard
-        </a>
-      </p>
-      
-      <div style="background-color: #1a4c96; padding: 15px; border-radius: 8px; margin: 20px 0;">
-        <h4 style="color: #FFD700; margin-top: 0;">📞 Need Help?</h4>
-        <p style="margin-bottom: 0; color: #fff;">
-          • Setup Guide: <a href="https://steadystream-tv.lovable.app/setup-guide" style="color: #FFD700;">Complete Instructions</a><br>
-          • Support Email: <a href="mailto:support@steadystream.tv" style="color: #FFD700;">support@steadystream.tv</a><br>
-          • Live Chat: Available 24/7 in your dashboard
-        </p>
+      <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <strong>⚠️ Important:</strong> Save these credentials securely. You'll need them to access your IPTV service. Your subscription expires on ${new Date(credentials.expiration).toLocaleDateString()}.
       </div>
-      
-      <p style="color: #FFD700; font-weight: bold;">Happy streaming!</p>
-      <p>The SteadyStream TV Team</p>
     </div>
     
     <div class="footer">
-      <p>© ${new Date().getFullYear()} SteadyStream TV. All rights reserved.</p>
-      <p>If you did not sign up for this service, please contact support@steadystream.tv</p>
+      <p><strong>SteadyStream TV</strong> - Premium IPTV Service</p>
+      <p>Need help? Contact us at <a href="mailto:support@steadystreamtv.com" style="color: #60a5fa;">support@steadystreamtv.com</a></p>
+      <p>Visit our website: <a href="https://steadystreamtv.com" style="color: #60a5fa;">steadystreamtv.com</a></p>
     </div>
   </div>
 </body>
 </html>
-`;
-
-    // Send the email using Resend API
-    log("📤 Sending welcome email via Resend API");
-    const emailResponse = await resend.emails.send({
-      from: 'SteadyStream TV <welcome@steadystream.tv>',
-      to: [payload.email],
-      subject: '🎉 Welcome to SteadyStream TV - Your Account is Ready!',
-      html: htmlContent,
-    });
-
-    if (emailResponse.error) {
-      log("❌ Resend API error", emailResponse.error);
-      throw new Error(`Email sending failed: ${emailResponse.error.message}`);
-    }
-
-    log("✅ Email sent successfully", { emailId: emailResponse.data?.id, to: payload.email });
-
-    // Update the user profile to record that welcome email was sent
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    
-    if (supabaseUrl && supabaseKey) {
-      const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-      
-      await supabaseAdmin
-        .from('profiles')
-        .update({
-          welcome_email_sent: true,
-          welcome_email_sent_at: new Date().toISOString()
-        })
-        .eq('id', payload.userId);
-      
-      log("✅ User profile updated with email delivery status");
-    }
-
-    return new Response(JSON.stringify({ 
-      success: true, 
-      emailId: emailResponse.data?.id,
-      message: "Welcome email sent successfully to " + payload.email
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-
-  } catch (err: any) {
-    log("❌ Error sending welcome email", { error: err.message, stack: err.stack });
-    
-    // Return error response for debugging
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: err.message,
-      message: "Email sending failed - check function logs for details"
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-  }
-});
+  `;
+}

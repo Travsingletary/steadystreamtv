@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { IPTVCredentials, IPTVFormData } from '@/types/iptv';
 import { iptvPlans } from '@/utils/iptvPlans';
+import { EnhancedIPTVService } from '@/services/enhancedIPTVService';
 
 export const useIPTVSubscriptionAPI = () => {
   const [loading, setLoading] = useState(false);
@@ -12,21 +13,15 @@ export const useIPTVSubscriptionAPI = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: iptvAccount } = await supabase
-          .from('iptv_accounts')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .single();
-
-        if (iptvAccount) {
+        const existingCredentials = await EnhancedIPTVService.getUserCredentials(user.id);
+        if (existingCredentials) {
           setCredentials({
-            username: iptvAccount.username,
-            password: iptvAccount.password,
-            server_url: iptvAccount.server_url,
-            playlist_url: iptvAccount.playlist_url,
-            max_connections: iptvAccount.package_id,
-            expiration_date: iptvAccount.expires_at
+            username: existingCredentials.username,
+            password: existingCredentials.password,
+            server_url: existingCredentials.server_url,
+            playlist_url: existingCredentials.playlist_url,
+            max_connections: existingCredentials.max_connections,
+            expiration_date: existingCredentials.expires_at
           });
           return true;
         }
@@ -49,24 +44,12 @@ export const useIPTVSubscriptionAPI = () => {
         return { success: true, isTrial: true };
       }
 
-      const { data, error: checkoutError } = await supabase.functions.invoke('create-stripe-checkout', {
-        body: {
-          priceId: selectedPlan?.priceId,
-          customerEmail: formData.email,
-          customerName: formData.name,
-          planType: formData.planType,
-          metadata: {
-            customer_country: formData.country,
-            customer_phone: formData.phone
-          }
-        }
-      });
+      const result = await EnhancedIPTVService.createStripeCheckout(formData);
 
-      if (checkoutError) throw new Error(checkoutError.message);
-
-      if (data?.url) {
-        window.location.href = data.url;
-        return { success: true, url: data.url };
+      if (result.url) {
+        // Open checkout in new tab
+        window.open(result.url, '_blank');
+        return { success: true, url: result.url };
       }
 
       throw new Error('No checkout URL returned');
