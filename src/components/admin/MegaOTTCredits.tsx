@@ -25,10 +25,10 @@ export const MegaOTTCredits: React.FC<MegaOTTCreditsProps> = ({ onStatsUpdate })
     try {
       console.log('🔄 Fetching MegaOTT data with direct API token...');
       
-      // Fetch user info
+      // Fetch user info using the updated method
       const userResponse = await MegaOTTAdminService.getUserInfo();
       
-      if (userResponse) {
+      if (userResponse.success) {
         setUserInfo(userResponse);
         setConnected(true);
         console.log('✅ MegaOTT API connected successfully');
@@ -57,7 +57,7 @@ export const MegaOTTCredits: React.FC<MegaOTTCreditsProps> = ({ onStatsUpdate })
         
       } else {
         setConnected(false);
-        setError('Failed to connect to MegaOTT API');
+        setError(userResponse.error || 'Failed to connect to MegaOTT API');
         console.warn('⚠️ MegaOTT API unavailable, using fallback');
         
         // Use fallback data

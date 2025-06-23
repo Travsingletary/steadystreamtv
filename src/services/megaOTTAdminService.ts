@@ -28,6 +28,11 @@ export class MegaOTTAdminService {
   private static API_BASE = 'https://megaott.net/api/v1';
   private static API_TOKEN = '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d';
 
+  // Direct API token method - no token generation needed
+  static async getAPIToken(): Promise<string> {
+    return this.API_TOKEN;
+  }
+
   static async fetchSubscriptions(): Promise<MegaOTTSubscription[]> {
     try {
       const response = await fetch(`${this.API_BASE}/subscriptions`, {
@@ -50,7 +55,7 @@ export class MegaOTTAdminService {
     }
   }
 
-  static async getUserInfo(): Promise<MegaOTTUser | null> {
+  static async getUserInfo(): Promise<{ success: boolean; id?: number; username?: string; credit?: number; error?: string }> {
     try {
       const response = await fetch(`${this.API_BASE}/user`, {
         method: 'GET',
@@ -60,17 +65,35 @@ export class MegaOTTAdminService {
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`MegaOTT API error: ${response.status}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 MegaOTT User Data:', data);
+        return {
+          success: true,
+          id: data.id,
+          username: data.username,
+          credit: data.credit
+        };
+      } else {
+        throw new Error(`API returned ${response.status}`);
       }
-
-      const userData = await response.json();
-      console.log('📊 MegaOTT User Data:', userData);
-      return userData;
     } catch (error) {
-      console.error('Error fetching MegaOTT user info:', error);
-      return null;
+      console.error('MegaOTT API error:', error);
+      return { success: false, error: error.message };
     }
+  }
+
+  // Legacy method for backward compatibility - returns the user data directly
+  static async getUserInfoLegacy(): Promise<MegaOTTUser | null> {
+    const result = await this.getUserInfo();
+    if (result.success) {
+      return {
+        id: result.id!,
+        username: result.username!,
+        credit: result.credit!
+      };
+    }
+    return null;
   }
 
   static async getSubscriptionById(id: number): Promise<MegaOTTSubscription | null> {
