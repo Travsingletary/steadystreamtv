@@ -3,12 +3,18 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Wifi, WifiOff, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ConfigStatus {
   megaOTT: 'connected' | 'disconnected' | 'checking';
   supabase: 'connected' | 'disconnected' | 'checking';
   fallbackMode: boolean;
+  errorDetails?: {
+    code?: string;
+    message?: string;
+    endpoint?: string;
+  };
 }
 
 export const ConfigurationCheck: React.FC = () => {
@@ -32,12 +38,13 @@ export const ConfigurationCheck: React.FC = () => {
     
     // Check MegaOTT
     setStatus(prev => ({ ...prev, megaOTT: 'checking' }));
-    const megaOTTStatus = await checkMegaOTT();
+    const { status: megaOTTStatus, errorDetails } = await checkMegaOTT();
     
     setStatus({
       supabase: supabaseStatus,
       megaOTT: megaOTTStatus,
-      fallbackMode: megaOTTStatus === 'disconnected'
+      fallbackMode: megaOTTStatus === 'disconnected',
+      errorDetails
     });
     
     setLoading(false);
@@ -45,41 +52,56 @@ export const ConfigurationCheck: React.FC = () => {
 
   const checkSupabase = async (): Promise<'connected' | 'disconnected'> => {
     try {
-      // Simple check by trying to count a table
-      const response = await fetch('/api/health/supabase', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (response.ok) {
-        return 'connected';
-      }
-      return 'disconnected';
+      const { data, error } = await supabase.from('profiles').select('count').limit(1);
+      return error ? 'disconnected' : 'connected';
     } catch (error) {
       console.warn('Supabase check failed:', error);
       return 'connected'; // Assume connected since we're likely using it
     }
   };
 
-  const checkMegaOTT = async (): Promise<'connected' | 'disconnected'> => {
+  const checkMegaOTT = async (): Promise<{ status: 'connected' | 'disconnected'; errorDetails?: any }> => {
     try {
-      const response = await Promise.race([
-        fetch('https://megaott.net/api/v1/user', {
-          method: 'GET',
-          headers: {
-            'Authorization': 'Bearer 338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d',
-            'Accept': 'application/json'
-          }
-        }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 4000)
-        )
-      ]);
+      console.log('🔍 Testing MegaOTT connection via proxy...');
+      
+      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+        body: { action: 'user_info' }
+      });
 
-      return response.ok ? 'connected' : 'disconnected';
-    } catch (error) {
-      console.warn('MegaOTT check failed:', error);
-      return 'disconnected';
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        return { 
+          status: 'disconnected', 
+          errorDetails: { 
+            code: 'SUPABASE_ERROR', 
+            message: error.message 
+          } 
+        };
+      }
+
+      if (!data.success) {
+        console.error('❌ MegaOTT API error:', data);
+        return { 
+          status: 'disconnected', 
+          errorDetails: {
+            code: data.code,
+            message: data.error,
+            endpoint: data.endpoint
+          }
+        };
+      }
+
+      console.log('✅ MegaOTT connection successful');
+      return { status: 'connected' };
+    } catch (error: any) {
+      console.error('❌ MegaOTT check failed:', error);
+      return { 
+        status: 'disconnected', 
+        errorDetails: { 
+          code: 'CONNECTION_ERROR', 
+          message: error.message 
+        } 
+      };
     }
   };
 
@@ -106,6 +128,29 @@ export const ConfigurationCheck: React.FC = () => {
         return 'bg-yellow-900/30 text-yellow-400 border-yellow-600';
       default:
         return 'bg-gray-900/30 text-gray-400 border-gray-600';
+    }
+  };
+
+  const getErrorMessage = (errorDetails?: any) => {
+    if (!errorDetails) return null;
+    
+    switch (errorDetails.code) {
+      case 'HTTP_403':
+        return 'Access denied - credentials may be invalid or expired';
+      case 'HTTP_404':
+        return 'API endpoint not found - service may be down';
+      case 'HTTP_429':
+        return 'Rate limit exceeded - too many requests';
+      case 'MISSING_CREDENTIALS':
+        return 'MegaOTT credentials not configured';
+      case 'INVALID_JSON':
+        return 'Invalid response format from MegaOTT';
+      case 'CONNECTION_ERROR':
+        return 'Network connection failed';
+      case 'SUPABASE_ERROR':
+        return 'Supabase function error';
+      default:
+        return errorDetails.message || 'Unknown error';
     }
   };
 
@@ -164,6 +209,20 @@ export const ConfigurationCheck: React.FC = () => {
                   {status.megaOTT}
                 </Badge>
               </div>
+              {status.errorDetails && (
+                <div className="mt-3 p-2 bg-red-900/20 border border-red-600 rounded">
+                  <div className="flex items-start space-x-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-red-400">Error Details:</p>
+                      <p className="text-red-200">{getErrorMessage(status.errorDetails)}</p>
+                      {status.errorDetails.code && (
+                        <p className="text-red-300 text-xs mt-1">Code: {status.errorDetails.code}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -177,8 +236,8 @@ export const ConfigurationCheck: React.FC = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-blue-400">Fallback Mode Active</h3>
                   <p className="text-sm text-blue-200">
-                    System is operating with local credential generation. 
-                    New signups will continue to work normally.
+                    MegaOTT integration is currently unavailable. 
+                    New signups will use local credential generation.
                   </p>
                 </div>
                 <Badge className="bg-blue-600 text-white">

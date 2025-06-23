@@ -24,10 +24,18 @@ interface MegaOTTUser {
   credit: number;
 }
 
+interface MegaOTTError {
+  success: false;
+  error: string;
+  code?: string;
+  details?: any;
+  endpoint?: string;
+}
+
 export class MegaOTTAdminService {
 
   // Updated getUserInfo to use Supabase Edge Function
-  static async getUserInfo(): Promise<{ success: boolean; id?: number; username?: string; credit?: number; error?: string }> {
+  static async getUserInfo(): Promise<{ success: boolean; id?: number; username?: string; credit?: number; error?: string; errorCode?: string }> {
     try {
       console.log('🔍 Getting MegaOTT user info via proxy...');
       
@@ -36,10 +44,46 @@ export class MegaOTTAdminService {
       });
 
       if (error) {
-        throw new Error(error.message);
+        console.error('❌ Supabase function error:', error);
+        return { 
+          success: false, 
+          error: `Supabase function error: ${error.message}`,
+          errorCode: 'SUPABASE_ERROR'
+        };
       }
 
-      if (data.success && data.data) {
+      if (!data.success) {
+        const megaError = data as MegaOTTError;
+        console.error('❌ MegaOTT API error:', megaError);
+        
+        // Provide user-friendly error messages based on error codes
+        let friendlyError = megaError.error;
+        switch (megaError.code) {
+          case 'HTTP_403':
+            friendlyError = 'MegaOTT access denied. Please check credentials and account status.';
+            break;
+          case 'HTTP_404':
+            friendlyError = 'MegaOTT API endpoint not found. Service may be temporarily unavailable.';
+            break;
+          case 'HTTP_429':
+            friendlyError = 'Too many requests to MegaOTT. Please wait before trying again.';
+            break;
+          case 'MISSING_CREDENTIALS':
+            friendlyError = 'MegaOTT credentials not configured. Please contact administrator.';
+            break;
+          case 'INVALID_JSON':
+            friendlyError = 'MegaOTT returned invalid response format.';
+            break;
+        }
+        
+        return { 
+          success: false, 
+          error: friendlyError,
+          errorCode: megaError.code
+        };
+      }
+
+      if (data.data) {
         const userData = data.data;
         console.log('📊 MegaOTT User Data:', userData);
         return {
@@ -49,11 +93,19 @@ export class MegaOTTAdminService {
           credit: userData.credits || userData.available_credits || 0
         };
       } else {
-        throw new Error(data.error || 'Failed to get user info');
+        return { 
+          success: false, 
+          error: 'No user data received from MegaOTT',
+          errorCode: 'NO_DATA'
+        };
       }
-    } catch (error) {
-      console.error('MegaOTT API error:', error);
-      return { success: false, error: error.message };
+    } catch (error: any) {
+      console.error('❌ MegaOTT service error:', error);
+      return { 
+        success: false, 
+        error: `Service error: ${error.message}`,
+        errorCode: 'SERVICE_ERROR'
+      };
     }
   }
 
@@ -77,16 +129,18 @@ export class MegaOTTAdminService {
       });
 
       if (error) {
-        throw new Error(error.message);
+        console.error('❌ Supabase function error:', error);
+        return [];
       }
 
-      if (data.success) {
-        return Array.isArray(data.data) ? data.data : data.data?.data || [];
+      if (!data.success) {
+        console.error('❌ MegaOTT API error:', data.error);
+        return [];
       }
-      
-      throw new Error(data.error || 'Failed to fetch subscriptions');
+
+      return Array.isArray(data.data) ? data.data : data.data?.data || [];
     } catch (error) {
-      console.error('Error fetching MegaOTT subscriptions:', error);
+      console.error('❌ Error fetching MegaOTT subscriptions:', error);
       return [];
     }
   }
@@ -100,17 +154,14 @@ export class MegaOTTAdminService {
         }
       });
 
-      if (error) {
-        throw new Error(error.message);
+      if (error || !data.success) {
+        console.error('❌ Error fetching MegaOTT subscription:', error || data.error);
+        return null;
       }
 
-      if (data.success) {
-        return data.data;
-      }
-      
-      throw new Error(data.error || 'Failed to get subscription');
+      return data.data;
     } catch (error) {
-      console.error('Error fetching MegaOTT subscription:', error);
+      console.error('❌ Error fetching MegaOTT subscription:', error);
       return null;
     }
   }
@@ -125,10 +176,16 @@ export class MegaOTTAdminService {
           percentage: 0 // Cannot calculate without used credits
         };
       }
-      throw new Error(info.error || 'Failed to get credit info');
-    } catch (error) {
-      console.error('Credit check failed:', error);
-      throw new Error('No credit data received');
+      
+      // Enhanced error handling for credit check
+      const errorMessage = info.errorCode === 'HTTP_403' 
+        ? 'MegaOTT access denied - please verify credentials'
+        : info.error || 'Failed to get credit info';
+        
+      throw new Error(errorMessage);
+    } catch (error: any) {
+      console.error('❌ Credit check failed:', error);
+      throw new Error(error.message || 'No credit data received');
     }
   }
 
@@ -160,11 +217,11 @@ export class MegaOTTAdminService {
         }
       });
 
-      if (error) {
-        throw new Error(error.message);
+      if (error || !data.success) {
+        throw new Error(data?.error || error?.message || 'Failed to create user');
       }
 
-      if (data.success && (data.data?.result === true || data.data?.success === true)) {
+      if (data.data?.result === true || data.data?.success === true) {
         const baseUrl = 'https://megaott.net';
         const playlistUrl = `${baseUrl}/get.php?username=${userUsername}&password=${userPassword}&type=m3u_plus&output=ts`;
         
@@ -185,9 +242,9 @@ export class MegaOTTAdminService {
         };
       }
       
-      throw new Error(data.data?.message || data.error || 'Failed to create user');
-    } catch (error) {
-      console.error('Failed to create user:', error);
+      throw new Error(data.data?.message || 'Failed to create user');
+    } catch (error: any) {
+      console.error('❌ Failed to create user:', error);
       throw error;
     }
   }
