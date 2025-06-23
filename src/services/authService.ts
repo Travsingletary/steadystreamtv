@@ -18,7 +18,7 @@ export const createUserAccount = async (userData: OnboardingUserData) => {
     password: password,
     options: {
       data: {
-        name: userData.name,
+        name: userData.full_name,
         preferred_device: userData.preferredDevice
       }
     }
@@ -43,7 +43,7 @@ export const createUserProfile = async (userId: string, userData: OnboardingUser
     .from('profiles')
     .insert({
       id: userId,
-      name: userData.name,
+      name: userData.full_name,
       preferred_device: userData.preferredDevice,
       genres: userData.genres,
       subscription_status: 'trial',
@@ -66,7 +66,7 @@ export const createXtreamAccount = async (userId: string, userData: OnboardingUs
       userId: userId,
       planType: (userData.subscription?.plan || 'standard').toLowerCase(), 
       email: userData.email,
-      name: userData.name
+      name: userData.full_name
     }
   });
 

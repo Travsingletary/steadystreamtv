@@ -65,7 +65,14 @@ export const OnboardingSteps = ({
     case 5:
       return (
         <OnboardingComplete 
-          userData={userData}
+          userData={{
+            name: userData.full_name,
+            email: userData.email,
+            preferredDevice: userData.preferredDevice,
+            genres: userData.genres,
+            subscription: userData.subscription,
+            xtreamCredentials: userData.xtreamCredentials
+          }}
         />
       );
     default:
