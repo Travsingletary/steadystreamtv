@@ -25,44 +25,23 @@ interface MegaOTTUser {
 }
 
 export class MegaOTTAdminService {
-  private static API_BASE = 'https://megaott.net/api/v1';
-  private static API_TOKEN = '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d';
+  private static username = 'IX5E3YZZ';
+  private static password = '2N1xXXid';
+  private static baseUrl = 'https://megaott.net';
 
-  // Direct API token method - no token generation needed
-  static async getAPIToken(): Promise<string> {
-    return this.API_TOKEN;
-  }
-
-  static async fetchSubscriptions(): Promise<MegaOTTSubscription[]> {
-    try {
-      const response = await fetch(`${this.API_BASE}/subscriptions`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.API_TOKEN}`,
-          'Accept': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`MegaOTT API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return Array.isArray(data) ? data : data.data || [];
-    } catch (error) {
-      console.error('Error fetching MegaOTT subscriptions:', error);
-      return [];
-    }
-  }
-
+  // Updated getUserInfo to use username/password authentication
   static async getUserInfo(): Promise<{ success: boolean; id?: number; username?: string; credit?: number; error?: string }> {
     try {
-      const response = await fetch(`${this.API_BASE}/user`, {
-        method: 'GET',
+      const response = await fetch(`${this.baseUrl}/player_api.php`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.API_TOKEN}`,
-          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
+        body: new URLSearchParams({
+          username: this.username,
+          password: this.password,
+          action: 'user_info'
+        }).toString()
       });
 
       if (response.ok) {
@@ -71,8 +50,8 @@ export class MegaOTTAdminService {
         return {
           success: true,
           id: data.id,
-          username: data.username,
-          credit: data.credit
+          username: data.username || this.username,
+          credit: data.credits || data.available_credits || 0
         };
       } else {
         throw new Error(`API returned ${response.status}`);
@@ -96,14 +75,45 @@ export class MegaOTTAdminService {
     return null;
   }
 
+  static async fetchSubscriptions(): Promise<MegaOTTSubscription[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/player_api.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          username: this.username,
+          password: this.password,
+          action: 'get_users'
+        }).toString()
+      });
+
+      if (!response.ok) {
+        throw new Error(`MegaOTT API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data : data.data || [];
+    } catch (error) {
+      console.error('Error fetching MegaOTT subscriptions:', error);
+      return [];
+    }
+  }
+
   static async getSubscriptionById(id: number): Promise<MegaOTTSubscription | null> {
     try {
-      const response = await fetch(`${this.API_BASE}/subscriptions/${id}`, {
-        method: 'GET',
+      const response = await fetch(`${this.baseUrl}/player_api.php`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.API_TOKEN}`,
-          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
+        body: new URLSearchParams({
+          username: this.username,
+          password: this.password,
+          action: 'get_user_info',
+          user_id: id.toString()
+        }).toString()
       });
 
       if (!response.ok) {
@@ -114,6 +124,23 @@ export class MegaOTTAdminService {
     } catch (error) {
       console.error('Error fetching MegaOTT subscription:', error);
       return null;
+    }
+  }
+
+  static async checkCredits() {
+    try {
+      const info = await this.getUserInfo();
+      if (info.success) {
+        return {
+          available: info.credit || 0,
+          used: 0, // Not available in this API response
+          percentage: 0 // Cannot calculate without used credits
+        };
+      }
+      throw new Error(info.error || 'Failed to get credit info');
+    } catch (error) {
+      console.error('Credit check failed:', error);
+      throw new Error('No credit data received');
     }
   }
 
