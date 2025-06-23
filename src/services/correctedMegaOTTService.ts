@@ -1,5 +1,5 @@
 
-// 🚀 CORRECTED MEGAOTT SERVICE - Now uses ProductionSteadyStreamAutomation
+// 🚀 CORRECTED MEGAOTT SERVICE - Now uses proper reseller API
 import { ProductionSteadyStreamAutomation } from './productionSteadyStreamAutomation';
 
 interface UserData {
@@ -12,7 +12,7 @@ interface UserData {
 
 export const CorrectedSteadyStreamAutomation = {
   async processCompleteSignup(userData: UserData) {
-    console.log('🔄 Using corrected MegaOTT service with production APIs...');
+    console.log('🔄 Using corrected MegaOTT service with reseller API...');
     return await ProductionSteadyStreamAutomation.processCompleteSignup(userData);
   }
 };

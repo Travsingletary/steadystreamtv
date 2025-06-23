@@ -1,8 +1,8 @@
 
 // 🚀 PRODUCTION STEADYSTREAM AUTOMATION SERVICE
-// Uses MegaOTTAPIManager with proper fallback logic
+// Uses corrected MegaOTT reseller API with proper fallback logic
 
-import { MegaOTTAPIManager } from './megaOTTAPIManager';
+import { MegaOTTService } from './megaOTTService';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UserData {
@@ -38,13 +38,13 @@ export const ProductionSteadyStreamAutomation = {
       console.log('🚀 Starting production MegaOTT signup automation...');
       console.log(`📋 User: ${userData.email}, Plan: ${userData.plan}`);
 
-      // Step 1: Create MegaOTT subscription using production APIs
-      const megaOTTResult = await MegaOTTAPIManager.createSubscription(userData, userData.plan);
+      // Step 1: Create MegaOTT subscription using corrected reseller API
+      const megaOTTResult = await MegaOTTService.createUserLine(userData.email, userData.plan);
       
       // Step 2: Store user profile in Supabase
       await this.storeUserProfile(userData, megaOTTResult);
       
-      console.log(`✅ Production automation completed using ${megaOTTResult.apiName}`);
+      console.log(`✅ Production automation completed using ${megaOTTResult.apiName || 'MegaOTT API'}`);
 
       return {
         success: true,
@@ -107,7 +107,6 @@ export const ProductionSteadyStreamAutomation = {
 
     } catch (error) {
       console.warn('⚠️ Profile storage failed:', error);
-      // Don't fail the entire process for storage issues
       throw error;
     }
   },
@@ -115,7 +114,7 @@ export const ProductionSteadyStreamAutomation = {
   generateSuccessMessage(userData: UserData, result: any): string {
     const planName = userData.plan.charAt(0).toUpperCase() + userData.plan.slice(1);
     const connections = this.getConnectionsByPlan(userData.plan);
-    const apiSource = result.apiName || 'MegaOTT API';
+    const apiSource = result.apiName || 'MegaOTT Reseller API';
     
     return `🎉 Your SteadyStream TV ${planName} account is ready via ${apiSource}! Stream on ${connections} device${connections > 1 ? 's' : ''}.`;
   },
