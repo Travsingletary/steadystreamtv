@@ -1,86 +1,64 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, CreditCard } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-
-interface UserData {
-  name: string;
-  email: string;
-  preferredDevice: string;
-  genres: string[];
-  subscription: any;
-}
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, Star } from "lucide-react";
+import { OnboardingUserData } from "@/types/onboarding";
 
 interface OnboardingSubscriptionProps {
-  userData: UserData;
-  updateUserData: (data: Partial<UserData>) => void;
-  onNext: () => void;
+  userData: OnboardingUserData;
+  updateUserData: (data: Partial<OnboardingUserData>) => void;
+  onNext: () => Promise<void>;
   onBack: () => void;
-  isProcessing?: boolean;
+  isProcessing: boolean;
 }
 
-// Pricing plan data - now includes free trial as first option
-const pricingPlans = [
+const subscriptionPlans = [
   {
     id: "free-trial",
     name: "Free Trial",
     price: 0,
+    trialDays: 7,
+    description: "Perfect for trying out our service",
     features: [
-      "24-Hour Full Access",
-      "7,000+ Live TV Channels",
-      "HD Quality Streaming",
-      "1 Device Connection",
-      "Basic Support",
-      "No Credit Card Required"
+      "7-day free trial",
+      "Access to basic channels",
+      "1 device connection",
+      "Standard video quality"
     ],
-    isPopular: false,
-    isTrial: true
+    recommended: false
   },
   {
     id: "standard",
     name: "Standard",
-    price: 20,
+    price: 9.99,
+    trialDays: 3,
+    description: "Great for individuals",
     features: [
-      "7,000+ Live TV Channels",
-      "Standard VOD Library",
-      "HD Quality Streaming",
-      "2 Devices Simultaneously",
-      "24/7 Basic Support",
-      "3 Connection Types"
+      "3-day free trial",
+      "Full channel lineup",
+      "2 device connections",
+      "HD video quality",
+      "Mobile apps included"
     ],
-    isPopular: false
+    recommended: true
   },
   {
     id: "premium",
     name: "Premium",
-    price: 35,
+    price: 19.99,
+    trialDays: 3,
+    description: "Best for families",
     features: [
-      "10,000+ Live TV Channels",
-      "Extended VOD Library",
-      "Full HD Streaming",
-      "4 Devices Simultaneously",
-      "24/7 Premium Support",
-      "All Connection Types",
-      "DVR Functionality"
+      "3-day free trial",
+      "Full channel lineup + premium channels",
+      "5 device connections",
+      "4K video quality",
+      "All apps included",
+      "Priority support"
     ],
-    isPopular: true
-  },
-  {
-    id: "ultimate",
-    name: "Ultimate",
-    price: 45,
-    features: [
-      "10,000+ Live TV Channels",
-      "Complete VOD Library",
-      "4K Ultra HD Streaming",
-      "6 Devices Simultaneously",
-      "24/7 Priority Support",
-      "All Connection Types",
-      "Advanced DVR Functionality",
-      "Premium Sports Packages"
-    ],
-    isPopular: false
+    recommended: false
   }
 ];
 
@@ -89,196 +67,85 @@ export const OnboardingSubscription = ({
   updateUserData, 
   onNext, 
   onBack,
-  isProcessing = false
+  isProcessing 
 }: OnboardingSubscriptionProps) => {
-  const [selectedPlan, setSelectedPlan] = useState<string>(
-    userData.subscription?.plan || ""
-  );
-  const [isLocalProcessing, setIsLocalProcessing] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(userData.subscription?.plan || "");
 
-  const handleSelectPlan = (planId: string) => {
-    setSelectedPlan(planId);
-  };
-
-  const handleSubscribe = async () => {
+  const handleContinue = async () => {
     if (!selectedPlan) {
-      toast.error("Please select a subscription plan");
       return;
     }
 
-    if (isProcessing || isLocalProcessing) return;
-    
-    setIsLocalProcessing(true);
-    
-    try {
-      // First create user account before payment
-      console.log("Creating user account before payment...");
+    const plan = subscriptionPlans.find(p => p.id === selectedPlan);
+    if (plan) {
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + plan.trialDays);
       
-      // Generate a secure password for the user
-      const generateSecurePassword = () => {
-        const length = 16;
-        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-        let password = "";
-        for (let i = 0; i < length; i++) {
-          password += charset.charAt(Math.floor(Math.random() * charset.length));
-        }
-        return password;
-      };
-
-      const password = generateSecurePassword();
-      
-      // Sign up the user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email,
-        password: password,
-        options: {
-          data: {
-            name: userData.name,
-          }
-        }
-      });
-
-      if (authError) {
-        console.error("Auth error:", authError);
-        throw new Error(`Authentication failed: ${authError.message}`);
-      }
-
-      if (!authData.user) {
-        throw new Error("User creation failed");
-      }
-
-      console.log("User created successfully:", authData.user.id);
-      
-      // Store onboarding data in localStorage for after payment - with more persistent storage
-      const onboardingData = {
-        ...userData,
+      updateUserData({ 
         subscription: {
-          plan: selectedPlan,
-          name: pricingPlans.find(p => p.id === selectedPlan)?.name,
-          price: pricingPlans.find(p => p.id === selectedPlan)?.price,
-          trialDays: 1
-        },
-        userId: authData.user.id,
-        password: password
-      };
-      
-      // Store in multiple ways to ensure persistence
-      localStorage.setItem('onboarding-data', JSON.stringify(onboardingData));
-      sessionStorage.setItem('onboarding-data', JSON.stringify(onboardingData));
-      
-      console.log("Stored onboarding data:", onboardingData);
-      
-      // Get the selected plan details
-      const plan = pricingPlans.find(p => p.id === selectedPlan);
-      
-      // Call the create-payment function with the real user ID and onboarding data
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          userId: authData.user.id, // Use the actual user ID, not "onboarding"
-          planId: selectedPlan,
-          customerEmail: userData.email,
-          customerName: userData.name,
-          isRecurring: true,
-          onboardingData: onboardingData
+          plan: plan.id,
+          price: plan.price,
+          trialDays: plan.trialDays,
+          trialEndDate: trialEndDate.toISOString()
         }
       });
-      
-      if (error) throw error;
-      
-      if (data?.url) {
-        console.log("Redirecting to payment URL:", data.url);
-        // Redirect to Stripe checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
-    } catch (error: any) {
-      console.error("Payment error:", error);
-      toast.error("Could not process your payment. Please try again.");
-      setIsLocalProcessing(false);
     }
-  };
 
-  const handleFreeTrial = () => {
-    handleSubscribe();
+    await onNext();
   };
-
-  const isButtonDisabled = isProcessing || isLocalProcessing;
 
   return (
     <div className="bg-dark-200 rounded-xl border border-gray-800 p-8 animate-fade-in">
       <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
-      <p className="text-gray-400 mb-6">
-        Start with a free 24-hour trial or select a subscription plan that fits your streaming needs.
+      <p className="text-gray-400 mb-8">
+        Select the subscription plan that works best for you. All plans include a free trial period.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {pricingPlans.map((plan) => (
-          <div
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {subscriptionPlans.map((plan) => (
+          <Card 
             key={plan.id}
-            className={`rounded-lg p-6 border transition-all duration-300 cursor-pointer relative ${
+            className={`cursor-pointer transition-all ${
               selectedPlan === plan.id
-                ? "border-gold shadow-gold/30 shadow-lg"
-                : plan.isTrial
-                ? "border-green-500/50 hover:border-green-500 bg-gradient-to-br from-green-900/20 to-green-700/10"
-                : "border-gray-700 hover:border-gray-500"
-            } ${plan.isPopular ? "bg-dark-100" : plan.isTrial ? "" : "bg-dark-300"}`}
-            onClick={() => handleSelectPlan(plan.id)}
+                ? "border-gold bg-dark-300"
+                : "border-gray-700 bg-dark-300 hover:border-gray-500"
+            } ${plan.recommended ? "ring-2 ring-gold/50" : ""}`}
+            onClick={() => setSelectedPlan(plan.id)}
           >
-            {plan.isPopular && (
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <div className="bg-gold text-black text-xs font-bold uppercase px-3 py-1 rounded-full">
-                  Most Popular
-                </div>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">
+                  {plan.name}
+                  {plan.recommended && (
+                    <Badge className="ml-2 bg-gold text-black">
+                      <Star className="h-3 w-3 mr-1" />
+                      Recommended
+                    </Badge>
+                  )}
+                </CardTitle>
+                {selectedPlan === plan.id && (
+                  <CheckCircle className="h-6 w-6 text-gold" />
+                )}
               </div>
-            )}
-
-            {plan.isTrial && (
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <div className="bg-green-500 text-white text-xs font-bold uppercase px-3 py-1 rounded-full">
-                  Start Free
-                </div>
+              <CardDescription className="text-gray-400">
+                {plan.description}
+              </CardDescription>
+              <div className="text-3xl font-bold text-gold">
+                ${plan.price}
+                <span className="text-sm text-gray-400">/month</span>
               </div>
-            )}
-            
-            <h3 className="text-xl font-bold mb-2 mt-2">{plan.name}</h3>
-            <div className="mb-4">
-              {plan.isTrial ? (
-                <div>
-                  <span className="text-3xl font-bold text-green-500">FREE</span>
-                  <span className="text-gray-400 block text-sm">24-hour trial</span>
-                </div>
-              ) : (
-                <div>
-                  <span className="text-3xl font-bold">${plan.price}</span>
-                  <span className="text-gray-400">/month</span>
-                </div>
-              )}
-            </div>
-            <ul className="space-y-3 mb-4">
-              {plan.features.slice(0, 4).map((feature, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <CheckCircle className={`${plan.isTrial ? 'text-green-500' : 'text-gold'} h-4 w-4 flex-shrink-0 mt-0.5`} />
-                  <span className="text-gray-300 text-sm">{feature}</span>
-                </li>
-              ))}
-              {plan.features.length > 4 && (
-                <li className="text-sm text-gray-400">
-                  +{plan.features.length - 4} more features
-                </li>
-              )}
-            </ul>
-            
-            <div className={`h-4 w-4 absolute top-4 right-4 rounded-full border-2 ${
-              selectedPlan === plan.id 
-                ? plan.isTrial ? "border-green-500 bg-green-500" : "border-gold bg-gold"
-                : "border-gray-500"
-            }`}>
-              {selectedPlan === plan.id && (
-                <div className="h-2 w-2 rounded-full bg-black absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-              )}
-            </div>
-          </div>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {plan.features.map((feature, index) => (
+                  <li key={index} className="flex items-center text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -287,30 +154,16 @@ export const OnboardingSubscription = ({
           variant="outline"
           className="border-gray-700 text-gray-300"
           onClick={onBack}
-          disabled={isButtonDisabled}
+          disabled={isProcessing}
         >
           Back
         </Button>
         <Button 
-          className={`font-semibold flex-1 ${
-            selectedPlan === "free-trial"
-              ? "bg-green-500 hover:bg-green-600 text-white"
-              : "bg-gray-600 hover:bg-gray-500 text-white"
-          }`}
-          onClick={handleSubscribe}
-          disabled={isButtonDisabled || !selectedPlan}
+          className="bg-gold hover:bg-gold-dark text-black font-semibold flex-1"
+          onClick={handleContinue}
+          disabled={!selectedPlan || isProcessing}
         >
-          {selectedPlan === "free-trial" ? (
-            <>
-              <Clock className="mr-2 h-5 w-5" />
-              {isButtonDisabled ? "Processing..." : "Start Free Trial"}
-            </>
-          ) : (
-            <>
-              <CreditCard className="mr-2 h-5 w-5" />
-              {isButtonDisabled ? "Processing..." : "Subscribe to Selected Plan"}
-            </>
-          )}
+          {isProcessing ? "Setting up your account..." : "Complete Setup"}
         </Button>
       </div>
     </div>
