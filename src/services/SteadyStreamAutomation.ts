@@ -154,7 +154,7 @@ export const EnhancedSupabaseService = {
         console.warn('Auth error:', authError);
       }
       
-      // Store user profile with IPTV credentials
+      // Store user profile with IPTV credentials using the new table structure
       if (authData.user) {
         await this.storeUserProfile({
           supabase_user_id: authData.user.id,
@@ -165,6 +165,7 @@ export const EnhancedSupabaseService = {
           iptv_credentials: megaOTTResult.credentials,
           playlist_url: megaOTTResult.m3uUrl,
           subscription_expires: megaOTTResult.expiryDate.toISOString(),
+          subscription_active: true,
           onboarding_completed: true
         });
       }
@@ -189,6 +190,26 @@ export const EnhancedSupabaseService = {
       }
     } catch (error) {
       console.warn('Profile storage will retry later:', error);
+    }
+  },
+
+  async logPlaylistAccess(userId: string, activationCode: string, ipAddress?: string, userAgent?: string) {
+    try {
+      const { error } = await supabase
+        .from('playlist_access_logs')
+        .insert({
+          user_id: userId,
+          activation_code: activationCode,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          success: true
+        });
+      
+      if (error) {
+        console.warn('Playlist access logging error:', error);
+      }
+    } catch (error) {
+      console.warn('Playlist access logging failed:', error);
     }
   }
 };

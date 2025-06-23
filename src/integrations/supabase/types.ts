@@ -540,6 +540,39 @@ export type Database = {
         }
         Relationships: []
       }
+      playlist_access_logs: {
+        Row: {
+          accessed_at: string | null
+          activation_code: string | null
+          id: string
+          ip_address: unknown | null
+          playlist_url: string | null
+          success: boolean | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accessed_at?: string | null
+          activation_code?: string | null
+          id?: string
+          ip_address?: unknown | null
+          playlist_url?: string | null
+          success?: boolean | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accessed_at?: string | null
+          activation_code?: string | null
+          id?: string
+          ip_address?: unknown | null
+          playlist_url?: string | null
+          success?: boolean | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -930,11 +963,18 @@ export type Database = {
           error_type: string | null
           full_name: string
           id: string
+          iptv_credentials: Json | null
           megaott_error: string | null
+          onboarding_completed: boolean | null
           password: string | null
+          playlist_url: string | null
           status: string | null
           stream_url: string | null
+          subscription_active: boolean | null
+          subscription_expires: string | null
           subscription_plan: string | null
+          supabase_user_id: string | null
+          updated_at: string | null
           username: string | null
         }
         Insert: {
@@ -944,11 +984,18 @@ export type Database = {
           error_type?: string | null
           full_name: string
           id?: string
+          iptv_credentials?: Json | null
           megaott_error?: string | null
+          onboarding_completed?: boolean | null
           password?: string | null
+          playlist_url?: string | null
           status?: string | null
           stream_url?: string | null
+          subscription_active?: boolean | null
+          subscription_expires?: string | null
           subscription_plan?: string | null
+          supabase_user_id?: string | null
+          updated_at?: string | null
           username?: string | null
         }
         Update: {
@@ -958,11 +1005,18 @@ export type Database = {
           error_type?: string | null
           full_name?: string
           id?: string
+          iptv_credentials?: Json | null
           megaott_error?: string | null
+          onboarding_completed?: boolean | null
           password?: string | null
+          playlist_url?: string | null
           status?: string | null
           stream_url?: string | null
+          subscription_active?: boolean | null
+          subscription_expires?: string | null
           subscription_plan?: string | null
+          supabase_user_id?: string | null
+          updated_at?: string | null
           username?: string | null
         }
         Relationships: []
