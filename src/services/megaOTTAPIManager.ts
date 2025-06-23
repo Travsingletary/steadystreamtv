@@ -267,6 +267,7 @@ export class MegaOTTAPIManager {
       success: true,
       source: 'local_fallback',
       activationCode: fallbackCode,
+      megaottId: `fallback-${fallbackCode}`,
       credentials: {
         server: 'demo.steadystreamtv.com',
         port: '80',
@@ -274,7 +275,10 @@ export class MegaOTTAPIManager {
         password: fallbackCode.replace('FB-', '')
       },
       m3uUrl: `${window.location.origin}/api/playlist/${fallbackCode}.m3u8`,
+      smartTvUrl: `${window.location.origin}/api/playlist/${fallbackCode}.m3u8`,
       expiryDate: this.calculateExpiryDate(plan),
+      apiUsed: 'local_fallback',
+      apiName: 'Local Fallback System',
       fallbackMode: true
     };
   }
