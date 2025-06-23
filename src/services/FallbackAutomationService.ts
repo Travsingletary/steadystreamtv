@@ -16,6 +16,8 @@ export interface FallbackResult {
   message: string;
   source: 'fallback_local';
   error?: string;
+  userProfileId?: string;
+  subscriptionId?: string;
 }
 
 export class FallbackAutomationService {
@@ -38,26 +40,59 @@ export class FallbackAutomationService {
       const playlistUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://steadystreamtv.com'}/api/playlist/${activationCode}.m3u8`;
       const expiryDate = this.calculateExpiryDate(userData.plan);
 
-      // Store in Supabase for tracking
-      try {
-        await this.storeUserProfile({
+      // Step 1: Create user profile record
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
           full_name: userData.name,
           email: userData.email,
-          subscription_plan: userData.plan,
           activation_code: activationCode,
           username: username,
           password: password,
+          iptv_credentials: credentials,
           playlist_url: playlistUrl,
-          subscription_expires: expiryDate.toISOString(),
           status: 'active',
           stream_url: playlistUrl,
           megaott_error: 'API unavailable - using fallback',
           error_type: 'api_fallback'
-        });
-        console.log('✅ User profile stored in fallback mode');
-      } catch (storageError) {
-        console.warn('⚠️ Profile storage failed, but credentials still generated:', storageError);
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        throw new Error(`User profile creation failed: ${profileError.message}`);
       }
+
+      // Step 2: Create subscription record
+      const { data: subscription, error: subscriptionError } = await supabase
+        .from('user_subscriptions')
+        .insert({
+          user_profile_id: userProfile.id,
+          plan_type: userData.plan,
+          billing_status: userData.plan === 'trial' ? 'trial' : 'active',
+          start_date: new Date().toISOString(),
+          end_date: expiryDate.toISOString(),
+          auto_renew: userData.plan !== 'trial'
+        })
+        .select()
+        .single();
+
+      if (subscriptionError) {
+        console.warn('⚠️ Subscription creation failed, but user profile exists:', subscriptionError);
+      } else {
+        // Step 3: Link subscription to user profile
+        await supabase
+          .from('user_profiles')
+          .update({ 
+            current_subscription_id: subscription.id,
+            subscription_plan: userData.plan,
+            subscription_expires: expiryDate.toISOString(),
+            subscription_active: true
+          })
+          .eq('id', userProfile.id);
+      }
+
+      console.log('✅ User profile and subscription created in fallback mode');
 
       const planName = userData.plan.charAt(0).toUpperCase() + userData.plan.slice(1);
       const connections = this.getConnectionsByPlan(userData.plan);
@@ -69,6 +104,8 @@ export class FallbackAutomationService {
         playlistUrl,
         expiryDate,
         source: 'fallback_local',
+        userProfileId: userProfile.id,
+        subscriptionId: subscription?.id,
         message: `🎉 Your SteadyStream TV ${planName} account is ready! You can stream on ${connections} device${connections > 1 ? 's' : ''}. (Fallback mode active)`
       };
 
@@ -123,18 +160,5 @@ export class FallbackAutomationService {
       'ultimate': 5
     };
     return connections[plan] || 1;
-  }
-
-  private static async storeUserProfile(profileData: any) {
-    const { error } = await supabase
-      .from('user_profiles')
-      .insert({
-        ...profileData,
-        created_at: new Date().toISOString()
-      });
-
-    if (error) {
-      throw new Error(`Profile storage failed: ${error.message}`);
-    }
   }
 }

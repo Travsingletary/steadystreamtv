@@ -1,7 +1,4 @@
 
-// 🔧 ENHANCED VERSION WITH RELIABLE FALLBACK
-// Replace your SteadyStreamAutomation service with this version
-
 import { supabase } from "@/integrations/supabase/client";
 import { FallbackAutomationService } from "./FallbackAutomationService";
 import { UserData } from "./types";
@@ -22,6 +19,8 @@ export interface MegaOTTResult {
   expiryDate: Date;
   source?: string;
   message?: string;
+  userProfileId?: string;
+  subscriptionId?: string;
 }
 
 export interface AutomationResult {
@@ -34,6 +33,8 @@ export interface AutomationResult {
   source?: string;
   user?: any;
   error?: string;
+  userProfileId?: string;
+  subscriptionId?: string;
   fallback?: {
     activationCode: string;
     message: string;
@@ -89,6 +90,20 @@ const MegaOTTService = {
         console.log('✅ MegaOTT API connected successfully');
         const result = await response.json();
         
+        // Create user profile and subscription with MegaOTT data
+        const { userProfileId, subscriptionId } = await this.createUserAndSubscription(userData, {
+          activationCode,
+          credentials: {
+            server: result.server || fallbackCredentials.server,
+            port: result.port || fallbackCredentials.port,
+            username: result.username || fallbackCredentials.username,
+            password: result.password || fallbackCredentials.password
+          },
+          m3uUrl: result.m3u_url || fallbackCredentials.m3uUrl,
+          expiryDate: result.expiry_date ? new Date(result.expiry_date) : this.calculateExpiryDate(plan),
+          plan
+        });
+        
         return {
           success: true,
           source: 'megaott_api',
@@ -100,7 +115,9 @@ const MegaOTTService = {
           },
           activationCode,
           m3uUrl: result.m3u_url || fallbackCredentials.m3uUrl,
-          expiryDate: result.expiry_date ? new Date(result.expiry_date) : this.calculateExpiryDate(plan)
+          expiryDate: result.expiry_date ? new Date(result.expiry_date) : this.calculateExpiryDate(plan),
+          userProfileId,
+          subscriptionId
         };
       }
     } catch (error) {
@@ -110,6 +127,20 @@ const MegaOTTService = {
     // FALLBACK SYSTEM - Always works
     console.log('🔄 Using reliable fallback system...');
     
+    // Create user profile and subscription with fallback data
+    const { userProfileId, subscriptionId } = await this.createUserAndSubscription(userData, {
+      activationCode,
+      credentials: {
+        server: fallbackCredentials.server,
+        port: fallbackCredentials.port,
+        username: fallbackCredentials.username,
+        password: fallbackCredentials.password
+      },
+      m3uUrl: fallbackCredentials.m3uUrl,
+      expiryDate: this.calculateExpiryDate(plan),
+      plan
+    });
+
     return {
       success: true,
       source: 'fallback_system',
@@ -122,8 +153,65 @@ const MegaOTTService = {
       activationCode,
       m3uUrl: fallbackCredentials.m3uUrl,
       expiryDate: this.calculateExpiryDate(plan),
-      message: '✅ Account created successfully! Your credentials are ready to use.'
+      message: '✅ Account created successfully! Your credentials are ready to use.',
+      userProfileId,
+      subscriptionId
     };
+  },
+
+  async createUserAndSubscription(userData: UserData, iptvData: any) {
+    // Step 1: Create user profile record
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        full_name: userData.name,
+        email: userData.email,
+        activation_code: iptvData.activationCode,
+        username: iptvData.credentials.username,
+        password: iptvData.credentials.password,
+        iptv_credentials: iptvData.credentials,
+        playlist_url: iptvData.m3uUrl,
+        status: 'active',
+        stream_url: iptvData.m3uUrl
+      })
+      .select()
+      .single();
+
+    if (profileError) {
+      throw new Error(`User profile creation failed: ${profileError.message}`);
+    }
+
+    // Step 2: Create subscription record
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('user_subscriptions')
+      .insert({
+        user_profile_id: userProfile.id,
+        plan_type: iptvData.plan,
+        billing_status: iptvData.plan === 'trial' ? 'trial' : 'active',
+        start_date: new Date().toISOString(),
+        end_date: iptvData.expiryDate.toISOString(),
+        auto_renew: iptvData.plan !== 'trial'
+      })
+      .select()
+      .single();
+
+    if (subscriptionError) {
+      console.warn('⚠️ Subscription creation failed:', subscriptionError);
+      return { userProfileId: userProfile.id, subscriptionId: null };
+    }
+
+    // Step 3: Link subscription to user profile
+    await supabase
+      .from('user_profiles')
+      .update({ 
+        current_subscription_id: subscription.id,
+        subscription_plan: iptvData.plan,
+        subscription_expires: iptvData.expiryDate.toISOString(),
+        subscription_active: true
+      })
+      .eq('id', userProfile.id);
+
+    return { userProfileId: userProfile.id, subscriptionId: subscription.id };
   },
 
   getConnectionsByPlan(plan: string): number {
@@ -148,54 +236,6 @@ const MegaOTTService = {
   }
 };
 
-// Enhanced Supabase Service
-const EnhancedSupabaseService = {
-  async enhanceUserRegistration(userData: UserData, megaOTTResult: MegaOTTResult) {
-    try {
-      console.log('💾 Storing user profile...');
-      
-      // Store user profile with IPTV credentials
-      await this.storeUserProfile({
-        full_name: userData.name,
-        email: userData.email,
-        subscription_plan: userData.plan,
-        activation_code: megaOTTResult.activationCode,
-        iptv_credentials: megaOTTResult.credentials,
-        playlist_url: megaOTTResult.m3uUrl,
-        subscription_expires: megaOTTResult.expiryDate.toISOString(),
-        subscription_active: true,
-        onboarding_completed: true
-      });
-
-      console.log('✅ User profile stored successfully');
-      return { success: true };
-
-    } catch (error) {
-      console.warn('⚠️ Profile storage will retry later:', error);
-      // Don't fail the whole process if storage fails
-      return { success: true, warning: 'Profile storage pending' };
-    }
-  },
-
-  async storeUserProfile(profileData: any) {
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .insert({
-          ...profileData,
-          created_at: new Date().toISOString()
-        });
-
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      console.warn('Profile storage error:', error);
-      throw error;
-    }
-  }
-};
-
 // Main automation orchestrator with enhanced error handling and fallback
 const SteadyStreamAutomation = {
   async processCompleteSignup(userData: UserData): Promise<AutomationResult> {
@@ -208,13 +248,6 @@ const SteadyStreamAutomation = {
       try {
         const megaOTTResult = await MegaOTTService.createSubscription(userData, userData.plan);
         
-        // Step 2: Store user data (non-blocking)
-        try {
-          await EnhancedSupabaseService.enhanceUserRegistration(userData, megaOTTResult);
-        } catch (storageError) {
-          console.warn('Storage will retry:', storageError);
-        }
-        
         automationResult = {
           success: true,
           activationCode: megaOTTResult.activationCode,
@@ -222,7 +255,9 @@ const SteadyStreamAutomation = {
           playlistUrl: megaOTTResult.m3uUrl,
           expiryDate: megaOTTResult.expiryDate,
           message: megaOTTResult.message || this.generateSuccessMessage(userData, megaOTTResult),
-          source: megaOTTResult.source
+          source: megaOTTResult.source,
+          userProfileId: megaOTTResult.userProfileId,
+          subscriptionId: megaOTTResult.subscriptionId
         };
         
         console.log('✅ MegaOTT automation completed successfully');
@@ -241,7 +276,9 @@ const SteadyStreamAutomation = {
           expiryDate: fallbackResult.expiryDate,
           message: fallbackResult.message,
           source: fallbackResult.source,
-          error: fallbackResult.error
+          error: fallbackResult.error,
+          userProfileId: fallbackResult.userProfileId,
+          subscriptionId: fallbackResult.subscriptionId
         };
         
         console.log('✅ Fallback automation completed');

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthProvider';
@@ -7,7 +8,7 @@ import { DataBreakdown } from './DataBreakdown';
 import { QuickActions } from './QuickActions';
 import { ConfigurationCheck } from './ConfigurationCheck';
 
-// 📊 ADMIN DASHBOARD - Protected content with REAL DATA and better explanations
+// 📊 ADMIN DASHBOARD - Protected content with REAL DATA and hybrid subscription model
 export const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const [stats, setStats] = useState({
@@ -26,12 +27,12 @@ export const AdminDashboard = () => {
     iptvAccountsCount: 0
   });
 
-  // Fetch real data from Supabase with detailed breakdown
+  // Fetch real data from Supabase with hybrid subscription model
   useEffect(() => {
     const fetchRealData = async () => {
       try {
         setLoading(true);
-        console.log('📊 Fetching detailed admin statistics...');
+        console.log('📊 Fetching detailed admin statistics with subscription model...');
 
         // Get total users from user_profiles
         const { count: userProfilesCount } = await supabase
@@ -43,16 +44,22 @@ export const AdminDashboard = () => {
           .from('profiles')
           .select('*', { count: 'exact', head: true });
 
-        // Get total subscriptions
+        // Get total subscriptions from new user_subscriptions table
         const { count: subscriptionsTotal } = await supabase
-          .from('subscriptions')
+          .from('user_subscriptions')
           .select('*', { count: 'exact', head: true });
 
-        // Get active subscriptions
+        // Get active subscriptions (not expired and billing_status = 'active' or 'trial')
         const { count: activeSubsCount } = await supabase
-          .from('subscriptions')
+          .from('user_subscriptions')
           .select('*', { count: 'exact', head: true })
+          .in('billing_status', ['active', 'trial'])
           .gte('end_date', new Date().toISOString());
+
+        // Get old subscriptions count (for backward compatibility)
+        const { count: oldSubscriptionsCount } = await supabase
+          .from('subscriptions')
+          .select('*', { count: 'exact', head: true });
 
         // Get resellers count
         const { count: resellersCount } = await supabase
@@ -64,7 +71,7 @@ export const AdminDashboard = () => {
           .from('iptv_accounts')
           .select('*', { count: 'exact', head: true });
 
-        // Get MegaOTT credits - try different approaches
+        // Get MegaOTT credits
         let totalCredits = 8; // Default to actual value from your panel
         
         try {
@@ -74,7 +81,6 @@ export const AdminDashboard = () => {
             .limit(1);
 
           if (!resellersError && resellersData && resellersData.length > 0) {
-            // If we have reseller data, use the first one's credits
             totalCredits = resellersData[0].credits || 8;
             console.log('📊 Found reseller credits:', totalCredits);
           } else {
@@ -104,12 +110,15 @@ export const AdminDashboard = () => {
         // Calculate total users (prioritize user_profiles, fallback to profiles)
         const totalUsers = userProfilesCount || profilesCount || 0;
 
+        // Calculate active subscriptions (combine new and old for backward compatibility)
+        const totalActiveSubscriptions = (activeSubsCount || 0) + (oldSubscriptionsCount || 0);
+
         // Calculate estimated revenue
-        const estimatedRevenue = (activeSubsCount || 0) * 30; // $30 average per subscription
+        const estimatedRevenue = totalActiveSubscriptions * 30; // $30 average per subscription
 
         setStats({
           totalUsers: totalUsers,
-          activeSubscriptions: activeSubsCount || 0,
+          activeSubscriptions: totalActiveSubscriptions,
           revenue: estimatedRevenue,
           megaottCredits: totalCredits
         });
@@ -117,18 +126,19 @@ export const AdminDashboard = () => {
         setDataBreakdown({
           userProfilesCount: userProfilesCount || 0,
           profilesCount: profilesCount || 0,
-          subscriptionsTotal: subscriptionsTotal || 0,
-          subscriptionsActive: activeSubsCount || 0,
+          subscriptionsTotal: (subscriptionsTotal || 0) + (oldSubscriptionsCount || 0),
+          subscriptionsActive: totalActiveSubscriptions,
           resellersCount: resellersCount || 0,
           iptvAccountsCount: iptvAccountsCount || 0
         });
 
-        console.log('✅ Detailed data loaded:', {
+        console.log('✅ Detailed data loaded with subscription model:', {
           totalUsers,
           userProfilesCount,
           profilesCount,
-          subscriptionsTotal,
-          activeSubscriptions: activeSubsCount,
+          newSubscriptionsTotal: subscriptionsTotal,
+          oldSubscriptionsTotal: oldSubscriptionsCount,
+          activeSubscriptions: totalActiveSubscriptions,
           resellersCount,
           iptvAccountsCount,
           megaottCredits: totalCredits

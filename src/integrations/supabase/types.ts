@@ -953,12 +953,20 @@ export type Database = {
             referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_playlists_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_active_subscriptions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_profiles: {
         Row: {
           activation_code: string | null
           created_at: string | null
+          current_subscription_id: string | null
           email: string
           error_type: string | null
           full_name: string
@@ -980,6 +988,7 @@ export type Database = {
         Insert: {
           activation_code?: string | null
           created_at?: string | null
+          current_subscription_id?: string | null
           email: string
           error_type?: string | null
           full_name: string
@@ -1001,6 +1010,7 @@ export type Database = {
         Update: {
           activation_code?: string | null
           created_at?: string | null
+          current_subscription_id?: string | null
           email?: string
           error_type?: string | null
           full_name?: string
@@ -1019,7 +1029,15 @@ export type Database = {
           updated_at?: string | null
           username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_current_subscription_id_fkey"
+            columns: ["current_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -1047,6 +1065,67 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_active_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_subscriptions: {
+        Row: {
+          auto_renew: boolean | null
+          billing_status: string
+          created_at: string
+          end_date: string
+          id: string
+          plan_type: string
+          start_date: string
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_profile_id: string
+        }
+        Insert: {
+          auto_renew?: boolean | null
+          billing_status?: string
+          created_at?: string
+          end_date: string
+          id?: string
+          plan_type: string
+          start_date?: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_profile_id: string
+        }
+        Update: {
+          auto_renew?: boolean | null
+          billing_status?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          plan_type?: string
+          start_date?: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_active_subscriptions"
             referencedColumns: ["id"]
           },
         ]
@@ -1098,7 +1177,43 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      users_with_active_subscriptions: {
+        Row: {
+          activation_code: string | null
+          active_plan: string | null
+          auto_renew: boolean | null
+          billing_status: string | null
+          created_at: string | null
+          current_subscription_id: string | null
+          email: string | null
+          error_type: string | null
+          full_name: string | null
+          id: string | null
+          iptv_credentials: Json | null
+          megaott_error: string | null
+          onboarding_completed: boolean | null
+          password: string | null
+          playlist_url: string | null
+          status: string | null
+          stream_url: string | null
+          subscription_active: boolean | null
+          subscription_end_date: string | null
+          subscription_expires: string | null
+          subscription_plan: string | null
+          supabase_user_id: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_current_subscription_id_fkey"
+            columns: ["current_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       bytea_to_text: {
