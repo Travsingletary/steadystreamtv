@@ -25,36 +25,31 @@ interface MegaOTTUser {
 }
 
 export class MegaOTTAdminService {
-  private static username = 'IX5E3YZZ';
-  private static password = '2N1xXXid';
-  private static baseUrl = 'https://megaott.net';
 
-  // Updated getUserInfo to use username/password authentication
+  // Updated getUserInfo to use Supabase Edge Function
   static async getUserInfo(): Promise<{ success: boolean; id?: number; username?: string; credit?: number; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/player_api.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          username: this.username,
-          password: this.password,
-          action: 'user_info'
-        }).toString()
+      console.log('🔍 Getting MegaOTT user info via proxy...');
+      
+      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+        body: { action: 'user_info' }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📊 MegaOTT User Data:', data);
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.success && data.data) {
+        const userData = data.data;
+        console.log('📊 MegaOTT User Data:', userData);
         return {
           success: true,
-          id: data.id,
-          username: data.username || this.username,
-          credit: data.credits || data.available_credits || 0
+          id: userData.id,
+          username: userData.username,
+          credit: userData.credits || userData.available_credits || 0
         };
       } else {
-        throw new Error(`API returned ${response.status}`);
+        throw new Error(data.error || 'Failed to get user info');
       }
     } catch (error) {
       console.error('MegaOTT API error:', error);
@@ -62,7 +57,7 @@ export class MegaOTTAdminService {
     }
   }
 
-  // Legacy method for backward compatibility - returns the user data directly
+  // Legacy method for backward compatibility
   static async getUserInfoLegacy(): Promise<MegaOTTUser | null> {
     const result = await this.getUserInfo();
     if (result.success) {
@@ -77,24 +72,19 @@ export class MegaOTTAdminService {
 
   static async fetchSubscriptions(): Promise<MegaOTTSubscription[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/player_api.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          username: this.username,
-          password: this.password,
-          action: 'get_users'
-        }).toString()
+      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+        body: { action: 'get_users' }
       });
 
-      if (!response.ok) {
-        throw new Error(`MegaOTT API error: ${response.status}`);
+      if (error) {
+        throw new Error(error.message);
       }
 
-      const data = await response.json();
-      return Array.isArray(data) ? data : data.data || [];
+      if (data.success) {
+        return Array.isArray(data.data) ? data.data : data.data?.data || [];
+      }
+      
+      throw new Error(data.error || 'Failed to fetch subscriptions');
     } catch (error) {
       console.error('Error fetching MegaOTT subscriptions:', error);
       return [];
@@ -103,24 +93,22 @@ export class MegaOTTAdminService {
 
   static async getSubscriptionById(id: number): Promise<MegaOTTSubscription | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/player_api.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          username: this.username,
-          password: this.password,
+      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+        body: { 
           action: 'get_user_info',
           user_id: id.toString()
-        }).toString()
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`MegaOTT API error: ${response.status}`);
+      if (error) {
+        throw new Error(error.message);
       }
 
-      return await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      
+      throw new Error(data.error || 'Failed to get subscription');
     } catch (error) {
       console.error('Error fetching MegaOTT subscription:', error);
       return null;
@@ -142,6 +130,77 @@ export class MegaOTTAdminService {
       console.error('Credit check failed:', error);
       throw new Error('No credit data received');
     }
+  }
+
+  static async createUserLine(email: string, plan: string) {
+    try {
+      const packages = {
+        trial: { credits: 1, connections: 1, days: 1 },
+        basic: { credits: 30, connections: 1, days: 30 },
+        duo: { credits: 60, connections: 2, days: 30 },
+        family: { credits: 90, connections: 3, days: 30 },
+        standard: { credits: 60, connections: 2, days: 30 },
+        premium: { credits: 90, connections: 3, days: 30 },
+        ultimate: { credits: 150, connections: 5, days: 30 }
+      };
+
+      const pkg = packages[plan] || packages.basic;
+      const userUsername = `steady_${Date.now()}`;
+      const userPassword = this.generatePassword();
+      const expireDate = this.getExpireDate(pkg.days);
+
+      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+        body: {
+          action: 'create_user',
+          user_username: userUsername,
+          user_password: userPassword,
+          credits: pkg.credits.toString(),
+          max_connections: pkg.connections.toString(),
+          expire_date: expireDate
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.success && (data.data?.result === true || data.data?.success === true)) {
+        const baseUrl = 'https://megaott.net';
+        const playlistUrl = `${baseUrl}/get.php?username=${userUsername}&password=${userPassword}&type=m3u_plus&output=ts`;
+        
+        return {
+          success: true,
+          activationCode: `SS-${userUsername.split('_')[1]}`,
+          megaottId: data.data.user_id || userUsername,
+          credentials: {
+            server: baseUrl.replace('https://', '').replace('http://', ''),
+            port: '80',
+            username: userUsername,
+            password: userPassword
+          },
+          m3uUrl: playlistUrl,
+          smartTvUrl: playlistUrl,
+          expiryDate: new Date(parseInt(expireDate) * 1000),
+          source: 'megaott-proxy'
+        };
+      }
+      
+      throw new Error(data.data?.message || data.error || 'Failed to create user');
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      throw error;
+    }
+  }
+
+  private static generatePassword(): string {
+    return Math.random().toString(36).substring(2, 10) + 
+           Math.random().toString(36).substring(2, 10).toUpperCase();
+  }
+
+  private static getExpireDate(days: number): string {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return Math.floor(date.getTime() / 1000).toString(); // Unix timestamp
   }
 
   static analyzeSubscriptions(subscriptions: MegaOTTSubscription[]) {

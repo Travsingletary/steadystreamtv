@@ -1,23 +1,21 @@
-
-// 📊 ADMIN MEGAOTT SERVICE
-// Uses username/password authentication instead of tokens
-
+// 📊 ADMIN MEGAOTT SERVICE - Using Supabase Edge Function proxy
+import { supabase } from '@/integrations/supabase/client';
 import { MegaOTTService } from './megaOTTService';
 
 export class AdminMegaOTTService {
   
   static async fetchAdminDashboardData() {
     try {
-      console.log('📊 Fetching admin dashboard data...');
+      console.log('📊 Fetching admin dashboard data via proxy...');
       
-      // Use the corrected MegaOTT service with username/password auth
+      // Use the proxy-enabled MegaOTT service
       const userInfo = await MegaOTTService.checkCredits();
       const subscriptions = await this.getSubscriptionsList();
 
-      if (!userInfo) {
+      if (!userInfo || userInfo.error) {
         return {
           success: false,
-          error: 'Failed to get MegaOTT user info',
+          error: userInfo?.error || 'Failed to get MegaOTT user info',
           fallbackMode: true
         };
       }
@@ -37,8 +35,8 @@ export class AdminMegaOTTService {
           ...analysis,
           creditsAnalysis
         },
-        apiUsed: 'production',
-        apiName: 'MegaOTT Reseller API'
+        apiUsed: userInfo.apiUsed || 'proxy',
+        apiName: userInfo.apiName || 'MegaOTT Proxy Service'
       };
 
     } catch (error: any) {
@@ -52,15 +50,15 @@ export class AdminMegaOTTService {
   }
 
   static async checkAPIHealth() {
-    console.log('🔍 Running comprehensive API health check...');
+    console.log('🔍 Running comprehensive API health check via proxy...');
     
     try {
-      // Test the main MegaOTT service
+      // Test the proxy-enabled MegaOTT service
       const testResult = await MegaOTTService.testConnection();
       
       const apiStatuses = [{
-        id: 'production',
-        name: 'Production MegaOTT API',
+        id: 'proxy',
+        name: 'MegaOTT Proxy Service',
         status: testResult.success ? 'online' : 'offline',
         responseTime: 'Unknown',
         lastCheck: new Date().toISOString(),
@@ -81,8 +79,8 @@ export class AdminMegaOTTService {
         success: false,
         error: error.message,
         apiStatuses: [{
-          id: 'production',
-          name: 'Production MegaOTT API',
+          id: 'proxy',
+          name: 'MegaOTT Proxy Service',
           status: 'offline',
           responseTime: 'Unknown',
           lastCheck: new Date().toISOString(),
@@ -99,8 +97,19 @@ export class AdminMegaOTTService {
 
   private static async getSubscriptionsList() {
     try {
-      // This would need to be implemented in MegaOTTService
-      // For now, return empty array
+      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+        body: { action: 'get_users' }
+      });
+
+      if (error) {
+        console.error('Error getting subscriptions:', error);
+        return [];
+      }
+
+      if (data.success) {
+        return Array.isArray(data.data) ? data.data : data.data?.data || [];
+      }
+      
       return [];
     } catch (error) {
       console.error('Error getting subscriptions:', error);

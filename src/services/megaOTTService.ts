@@ -1,170 +1,118 @@
 
-// 🚀 CORRECTED MEGAOTT SERVICE - Using proper reseller API
+// 🚀 CORRECTED MEGAOTT SERVICE - Using Supabase Edge Function proxy
+import { supabase } from '@/integrations/supabase/client';
+
 export class MegaOTTService {
-  // Reseller credentials for different APIs
-  private static readonly API_CONFIGS = [
-    {
-      id: 'production',
-      name: 'Production Reseller API',
-      username: 'IX5E3YZZ',
-      password: '2N1xXXid',
-      baseUrl: 'https://megaott.net',
-      priority: 1
-    },
-    {
-      id: 'backup',
-      name: 'Backup Reseller API', 
-      username: 'IX5E3YZZ', // Same for now, can be different
-      password: '2N1xXXid',
-      baseUrl: 'https://megaott.net',
-      priority: 2
-    }
-  ];
 
-  // Get reseller info and credits using specific API
-  static async getResellerInfo(apiId: string = 'production') {
-    const api = this.API_CONFIGS.find(config => config.id === apiId);
-    if (!api) throw new Error(`API ${apiId} not found`);
-
+  // Get reseller info and credits using Supabase Edge Function
+  static async getResellerInfo() {
     try {
-      console.log(`🔍 Getting reseller info from ${api.name}...`);
+      console.log('🔍 Getting reseller info via proxy...');
       
-      const response = await fetch(`${api.baseUrl}/player_api.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          username: api.username,
-          password: api.password,
-          action: 'get_credits'
-        }).toString()
+      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+        body: { action: 'get_credits' }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (error) {
+        throw new Error(error.message);
       }
 
-      const data = await response.json();
-      console.log(`✅ ${api.name} info retrieved:`, data);
+      if (data.success) {
+        console.log('✅ Reseller info retrieved:', data.data);
+        return {
+          success: true,
+          data: data.data,
+          apiUsed: 'proxy',
+          apiName: 'MegaOTT Proxy Service'
+        };
+      }
       
-      return {
-        success: true,
-        data,
-        apiUsed: apiId,
-        apiName: api.name
-      };
+      throw new Error(data.error || 'Failed to get reseller info');
     } catch (error) {
-      console.error(`❌ ${api.name} failed:`, error);
+      console.error('❌ Reseller info failed:', error);
       throw error;
     }
   }
 
-  // Create user line with fallback logic
+  // Create user line using Supabase Edge Function
   static async createUserLine(email: string, plan: string) {
-    const sortedAPIs = this.API_CONFIGS.sort((a, b) => a.priority - b.priority);
-    
-    for (const api of sortedAPIs) {
-      try {
-        console.log(`🔄 Attempting user creation with ${api.name}...`);
-        
-        const result = await this.makeCreateUserRequest(api, email, plan);
-        
-        console.log(`✅ User created successfully with ${api.name}`);
-        return {
-          ...result,
-          apiUsed: api.id,
-          apiName: api.name
-        };
-
-      } catch (error) {
-        console.warn(`⚠️ ${api.name} failed:`, error.message);
-        
-        if (api.id === sortedAPIs[sortedAPIs.length - 1].id) {
-          // Last API failed, generate fallback
-          console.log('🔄 All APIs failed, using local fallback...');
-          return this.generateLocalFallback(email, plan);
-        }
-        
-        continue; // Try next API
-      }
-    }
-
-    throw new Error('All MegaOTT APIs failed');
-  }
-
-  // Make the actual user creation request
-  private static async makeCreateUserRequest(api: any, email: string, plan: string) {
-    // Calculate package based on plan
-    const packages = {
-      trial: { credits: 1, connections: 1, days: 1 },
-      basic: { credits: 30, connections: 1, days: 30 },
-      duo: { credits: 60, connections: 2, days: 30 },
-      family: { credits: 90, connections: 3, days: 30 },
-      standard: { credits: 60, connections: 2, days: 30 },
-      premium: { credits: 90, connections: 3, days: 30 },
-      ultimate: { credits: 150, connections: 5, days: 30 }
-    };
-
-    const pkg = packages[plan] || packages.basic;
-    
-    // Generate unique credentials
-    const userUsername = `steady_${Date.now()}`;
-    const userPassword = this.generatePassword();
-    const activationCode = `SS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-    const response = await fetch(`${api.baseUrl}/player_api.php`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        username: api.username,
-        password: api.password,
-        action: 'create_user',
-        user_username: userUsername,
-        user_password: userPassword,
-        credits: pkg.credits.toString(),
-        max_connections: pkg.connections.toString(),
-        expire_date: this.getExpireDate(pkg.days)
-      }).toString()
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    
-    if (result.result !== true && result.success !== true) {
-      throw new Error(result.message || 'Failed to create user');
-    }
-
-    // Generate playlist URL
-    const playlistUrl = `${api.baseUrl}/get.php?username=${userUsername}&password=${userPassword}&type=m3u_plus&output=ts`;
-    const smartTvUrl = `${api.baseUrl}/get.php?username=${userUsername}&password=${userPassword}&type=m3u`;
-    
-    return {
-      success: true,
-      activationCode,
-      megaottId: result.user_id || userUsername,
-      credentials: {
-        server: api.baseUrl.replace('https://', '').replace('http://', ''),
-        port: '80',
-        username: userUsername,
-        password: userPassword
-      },
-      m3uUrl: playlistUrl,
-      smartTvUrl: smartTvUrl,
-      expiryDate: new Date(parseInt(this.getExpireDate(pkg.days)) * 1000),
-      source: api.id
-    };
-  }
-
-  // Check available credits
-  static async checkCredits(apiId: string = 'production') {
     try {
-      const info = await this.getResellerInfo(apiId);
+      console.log('🔄 Creating user line via proxy...', { email, plan });
+      
+      // Calculate package based on plan
+      const packages = {
+        trial: { credits: 1, connections: 1, days: 1 },
+        basic: { credits: 30, connections: 1, days: 30 },
+        duo: { credits: 60, connections: 2, days: 30 },
+        family: { credits: 90, connections: 3, days: 30 },
+        standard: { credits: 60, connections: 2, days: 30 },
+        premium: { credits: 90, connections: 3, days: 30 },
+        ultimate: { credits: 150, connections: 5, days: 30 }
+      };
+
+      const pkg = packages[plan] || packages.basic;
+      
+      // Generate unique credentials
+      const userUsername = `steady_${Date.now()}`;
+      const userPassword = this.generatePassword();
+      const activationCode = `SS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const expireDate = this.getExpireDate(pkg.days);
+
+      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+        body: {
+          action: 'create_user',
+          user_username: userUsername,
+          user_password: userPassword,
+          credits: pkg.credits.toString(),
+          max_connections: pkg.connections.toString(),
+          expire_date: expireDate
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.success && (data.data?.result === true || data.data?.success === true)) {
+        // Generate playlist URLs
+        const baseUrl = 'https://megaott.net';
+        const playlistUrl = `${baseUrl}/get.php?username=${userUsername}&password=${userPassword}&type=m3u_plus&output=ts`;
+        const smartTvUrl = `${baseUrl}/get.php?username=${userUsername}&password=${userPassword}&type=m3u`;
+        
+        console.log('✅ User created successfully via proxy');
+        return {
+          success: true,
+          activationCode,
+          megaottId: data.data.user_id || userUsername,
+          credentials: {
+            server: baseUrl.replace('https://', '').replace('http://', ''),
+            port: '80',
+            username: userUsername,
+            password: userPassword
+          },
+          m3uUrl: playlistUrl,
+          smartTvUrl: smartTvUrl,
+          expiryDate: new Date(parseInt(expireDate) * 1000),
+          source: 'proxy',
+          apiUsed: 'proxy',
+          apiName: 'MegaOTT Proxy Service'
+        };
+      }
+
+      throw new Error(data.data?.message || data.error || 'Failed to create user');
+
+    } catch (error) {
+      console.error('❌ User creation failed:', error);
+      
+      // Generate local fallback
+      return this.generateLocalFallback(email, plan);
+    }
+  }
+
+  // Check available credits using proxy
+  static async checkCredits() {
+    try {
+      const info = await this.getResellerInfo();
       return {
         available: info.data.credits || info.data.available_credits || 0,
         used: info.data.used_credits || 0,
@@ -177,12 +125,12 @@ export class MegaOTTService {
         available: 0, 
         used: 0, 
         error: error.message,
-        apiUsed: apiId
+        apiUsed: 'proxy'
       };
     }
   }
 
-  // Generate local fallback when all APIs fail
+  // Generate local fallback when proxy fails
   private static generateLocalFallback(email: string, plan: string) {
     const fallbackCode = `FB-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const fallbackUsername = `fallback_${fallbackCode.toLowerCase()}`;
@@ -230,12 +178,12 @@ export class MegaOTTService {
   // Test connection method
   static async testConnection() {
     try {
-      console.log('🔍 Testing MegaOTT connection...');
+      console.log('🔍 Testing MegaOTT proxy connection...');
       
-      const info = await this.getResellerInfo('production');
+      const info = await this.getResellerInfo();
       console.log('✅ Connection successful!', info);
       
-      const credits = await this.checkCredits('production');
+      const credits = await this.checkCredits();
       console.log('💰 Available credits:', credits);
       
       return {
@@ -250,10 +198,5 @@ export class MegaOTTService {
         error: error.message
       };
     }
-  }
-
-  // Get all API configurations
-  static getAPIConfigs() {
-    return [...this.API_CONFIGS];
   }
 }
