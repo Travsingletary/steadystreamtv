@@ -67,7 +67,8 @@ export const ConfigurationCheck: React.FC = () => {
         fetch('https://megaott.net/api/v1/user', {
           method: 'GET',
           headers: {
-            'Authorization': 'Bearer 338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
+            'Authorization': 'Bearer 338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d',
+            'Accept': 'application/json'
           }
         }),
         new Promise<never>((_, reject) => 

@@ -26,35 +26,14 @@ interface MegaOTTUser {
 
 export class MegaOTTAdminService {
   private static API_BASE = 'https://megaott.net/api/v1';
-  
-  static async getAPIToken(): Promise<string | null> {
-    try {
-      // Get the MegaOTT API token from Supabase secrets or environment
-      const { data, error } = await supabase.functions.invoke('megaott-config-check');
-      
-      if (error || !data?.token) {
-        console.error('Failed to get MegaOTT API token:', error);
-        return null;
-      }
-      
-      return data.token;
-    } catch (error) {
-      console.error('Error getting MegaOTT API token:', error);
-      return null;
-    }
-  }
+  private static API_TOKEN = '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d';
 
   static async fetchSubscriptions(): Promise<MegaOTTSubscription[]> {
     try {
-      const token = await this.getAPIToken();
-      if (!token) {
-        throw new Error('No MegaOTT API token available');
-      }
-
       const response = await fetch(`${this.API_BASE}/subscriptions`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${this.API_TOKEN}`,
           'Accept': 'application/json',
         },
       });
@@ -73,15 +52,10 @@ export class MegaOTTAdminService {
 
   static async getUserInfo(): Promise<MegaOTTUser | null> {
     try {
-      const token = await this.getAPIToken();
-      if (!token) {
-        throw new Error('No MegaOTT API token available');
-      }
-
       const response = await fetch(`${this.API_BASE}/user`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${this.API_TOKEN}`,
           'Accept': 'application/json',
         },
       });
@@ -101,15 +75,10 @@ export class MegaOTTAdminService {
 
   static async getSubscriptionById(id: number): Promise<MegaOTTSubscription | null> {
     try {
-      const token = await this.getAPIToken();
-      if (!token) {
-        throw new Error('No MegaOTT API token available');
-      }
-
       const response = await fetch(`${this.API_BASE}/subscriptions/${id}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${this.API_TOKEN}`,
           'Accept': 'application/json',
         },
       });
