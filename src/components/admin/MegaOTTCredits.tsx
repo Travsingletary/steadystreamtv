@@ -1,180 +1,258 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { RefreshCw, CreditCard, AlertCircle } from "lucide-react";
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, CheckCircle, Clock, CreditCard, Users, Wifi, WifiOff } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MegaOTTCreditsProps {
-  onStatsUpdate: (stats: any) => void;
+  onStatsUpdate?: (stats: any) => void;
 }
 
-export const MegaOTTCredits = ({ onStatsUpdate }: MegaOTTCreditsProps) => {
-  const [credits, setCredits] = useState(8); // Set to actual value
+export const MegaOTTCredits: React.FC<MegaOTTCreditsProps> = ({ onStatsUpdate }) => {
   const [loading, setLoading] = useState(true);
+  const [megaOTTStatus, setMegaOTTStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [fallbackStats, setFallbackStats] = useState({
+    totalUsers: 0,
+    activeSubscriptions: 0,
+    totalCredits: 8, // Static fallback value
+    revenue: 0
+  });
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
-    fetchCredits();
+    loadFallbackData();
   }, []);
 
-  const fetchCredits = async () => {
+  const loadFallbackData = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
-      // Try to get credits from resellers table
-      const { data, error: fetchError } = await supabase
-        .from('resellers')
-        .select('credits')
-        .limit(1);
+      console.log('📊 Loading fallback data from Supabase...');
 
-      if (fetchError || !data || data.length === 0) {
-        console.log('Using actual MegaOTT credits value: 8');
-        setCredits(8);
-        onStatsUpdate({ megaottCredits: 8 });
-      } else {
-        const actualCredits = data[0]?.credits || 8;
-        setCredits(actualCredits);
-        onStatsUpdate({ megaottCredits: actualCredits });
+      // Get user counts from multiple sources
+      const { count: userProfilesCount } = await supabase
+        .from('user_profiles')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: profilesCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      // Get active subscriptions
+      const { count: activeSubsCount } = await supabase
+        .from('iptv_accounts')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active');
+
+      // Calculate stats
+      const totalUsers = Math.max(userProfilesCount || 0, profilesCount || 0);
+      const activeSubscriptions = activeSubsCount || 0;
+      const estimatedRevenue = activeSubscriptions * 25;
+
+      const stats = {
+        totalUsers,
+        activeSubscriptions,
+        totalCredits: 8, // Static fallback
+        revenue: estimatedRevenue
+      };
+
+      setFallbackStats(stats);
+      
+      // Try to check MegaOTT status
+      await checkMegaOTTStatus();
+
+      if (onStatsUpdate) {
+        onStatsUpdate(stats);
       }
-      
-    } catch (error: any) {
-      console.error('Error fetching credits:', error);
-      setError('Using cached MegaOTT credits value');
-      setCredits(8); // Use actual value as fallback
-      onStatsUpdate({ megaottCredits: 8 });
+
+      console.log('✅ Fallback data loaded:', stats);
+    } catch (error) {
+      console.error('❌ Error loading fallback data:', error);
+      setError('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshCredits = async () => {
+  const checkMegaOTTStatus = async () => {
     try {
-      setLoading(true);
+      setMegaOTTStatus('checking');
       
-      // Simulate syncing with MegaOTT API
-      // In production, this would call your MegaOTT API to get latest credits
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For now, keep the actual value
-      setCredits(8);
-      onStatsUpdate({ megaottCredits: 8 });
-      
-      toast({
-        title: "Credits Refreshed",
-        description: "MegaOTT credits have been updated (Balance: 8.00)"
-      });
-      
-    } catch (error: any) {
-      console.error('Error refreshing credits:', error);
-      toast({
-        title: "Refresh Failed",
-        description: "Unable to refresh MegaOTT credits",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+      // Try to ping MegaOTT API with timeout
+      const response = await Promise.race([
+        fetch('https://megaott.net/api/v1/user', {
+          method: 'GET',
+          headers: {
+            'Authorization': 'Bearer 338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
+          }
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 3000)
+        )
+      ]);
+
+      if (response.ok) {
+        setMegaOTTStatus('connected');
+        console.log('✅ MegaOTT API is accessible');
+      } else {
+        setMegaOTTStatus('disconnected');
+        console.warn('⚠️ MegaOTT API returned error status');
+      }
+    } catch (error) {
+      setMegaOTTStatus('disconnected');
+      console.warn('⚠️ MegaOTT API is not accessible:', error.message);
     }
   };
 
-  if (loading && credits === 0) {
+  if (loading) {
     return (
-      <Card className="bg-dark-200 border-gray-800">
-        <CardContent className="flex items-center justify-center h-64">
-          <div className="text-white">Loading MegaOTT credits...</div>
+      <Card className="bg-gray-800 border-gray-700">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <Clock className="w-6 h-6 animate-spin text-yellow-400 mr-2" />
+            <span className="text-gray-300">Loading dashboard data...</span>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="bg-dark-200 border-gray-800">
-      <CardHeader>
-        <CardTitle className="text-white flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          MegaOTT Credits Management
-        </CardTitle>
-        <CardDescription className="text-gray-400">
-          Monitor and manage your MegaOTT API credits (Panel Username: IX5E3YZZ)
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {error && (
-          <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4 flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-yellow-400" />
-            <div>
-              <h3 className="text-yellow-400 font-semibold">Using Cached Data</h3>
-              <p className="text-gray-300 text-sm">{error}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-dark-300 rounded-lg p-4">
-            <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* MegaOTT Status Banner */}
+      <Card className={`border-2 ${
+        megaOTTStatus === 'connected' 
+          ? 'bg-green-900/20 border-green-600' 
+          : 'bg-orange-900/20 border-orange-600'
+      }`}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              {megaOTTStatus === 'connected' ? (
+                <Wifi className="w-5 h-5 text-green-400" />
+              ) : (
+                <WifiOff className="w-5 h-5 text-orange-400" />
+              )}
               <div>
-                <p className="text-gray-400 text-sm">Available Credits</p>
-                <p className="text-2xl font-bold text-white">{credits.toLocaleString()}</p>
-                <p className="text-xs text-gray-500 mt-1">Balance: {credits.toFixed(2)}</p>
+                <h3 className="font-semibold text-white">
+                  MegaOTT Status: {megaOTTStatus === 'connected' ? 'Connected' : 'Disconnected'}
+                </h3>
+                <p className="text-sm text-gray-300">
+                  {megaOTTStatus === 'connected' 
+                    ? 'API integration is working normally'
+                    : 'Using fallback mode with local data'
+                  }
+                </p>
               </div>
-              <Badge className="bg-green-500 text-white">
-                Active
-              </Badge>
             </div>
+            <Button 
+              onClick={checkMegaOTTStatus}
+              disabled={megaOTTStatus === 'checking'}
+              size="sm"
+              variant="outline"
+              className="border-gray-600"
+            >
+              {megaOTTStatus === 'checking' ? 'Checking...' : 'Retry'}
+            </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="bg-dark-300 rounded-lg p-4">
+      {/* Fallback Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-400">Total Users</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Free Demos Remaining</p>
-                <p className="text-2xl font-bold text-white">19</p>
-                <p className="text-xs text-gray-500 mt-1">Expire: 2025-06-17</p>
-              </div>
-              <Badge className="bg-blue-500 text-white">
-                Available
-              </Badge>
+              <div className="text-2xl font-bold text-white">{fallbackStats.totalUsers}</div>
+              <Users className="w-8 h-8 text-blue-400" />
             </div>
-          </div>
+            <Badge variant="secondary" className="mt-2">
+              From Supabase
+            </Badge>
+          </CardContent>
+        </Card>
 
-          <div className="bg-dark-300 rounded-lg p-4">
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-400">Active Subscriptions</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Active Subscribers</p>
-                <p className="text-2xl font-bold text-white">4</p>
-                <p className="text-xs text-gray-500 mt-1">4 Hours packages</p>
-              </div>
-              <Badge className="bg-gold text-black">
-                Live
-              </Badge>
+              <div className="text-2xl font-bold text-white">{fallbackStats.activeSubscriptions}</div>
+              <CheckCircle className="w-8 h-8 text-green-400" />
             </div>
-          </div>
-        </div>
+            <Badge variant="secondary" className="mt-2">
+              IPTV Accounts
+            </Badge>
+          </CardContent>
+        </Card>
 
-        <div className="flex gap-4">
-          <Button
-            onClick={refreshCredits}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Sync with MegaOTT Panel
-          </Button>
-        </div>
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-400">Available Credits</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="text-2xl font-bold text-white">{fallbackStats.totalCredits}</div>
+              <CreditCard className="w-8 h-8 text-yellow-400" />
+            </div>
+            <Badge variant="secondary" className="mt-2">
+              Fallback Mode
+            </Badge>
+          </CardContent>
+        </Card>
 
-        <div className="bg-dark-300 rounded-lg p-4">
-          <h3 className="text-white font-semibold mb-2">MegaOTT Panel Status</h3>
-          <ul className="text-gray-300 text-sm space-y-1">
-            <li>• Panel Username: IX5E3YZZ</li>
-            <li>• Balance: 8.00 credits</li>
-            <li>• Free Demo: 19 remaining</li>
-            <li>• Paid Demo: 0 remaining</li>
-            <li>• Active subscribers: 4 (4-hour packages)</li>
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-400">Est. Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="text-2xl font-bold text-white">${fallbackStats.revenue}</div>
+              <CreditCard className="w-8 h-8 text-green-400" />
+            </div>
+            <Badge variant="secondary" className="mt-2">
+              Calculated
+            </Badge>
+          </CardContent>
+        </Card>
+      </div>
+
+      {error && (
+        <Card className="bg-red-900/20 border-red-600">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2 text-red-400">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Fallback Mode Info */}
+      {megaOTTStatus === 'disconnected' && (
+        <Card className="bg-blue-900/20 border-blue-600">
+          <CardContent className="p-4">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-blue-400">🔄 Fallback Mode Active</h3>
+              <p className="text-sm text-blue-200">
+                The system is operating in fallback mode using local data sources. 
+                New signups will still work with locally generated credentials.
+              </p>
+              <ul className="text-xs text-blue-300 space-y-1 mt-2">
+                <li>• User statistics from Supabase database</li>
+                <li>• Local credential generation for new accounts</li>
+                <li>• Signup automation continues to function</li>
+                <li>• MegaOTT integration will resume when API is available</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };

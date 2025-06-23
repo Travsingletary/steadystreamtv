@@ -3,6 +3,7 @@
 // Replace your SteadyStreamAutomation service with this version
 
 import { supabase } from "@/integrations/supabase/client";
+import { FallbackAutomationService } from "./FallbackAutomationService";
 import { UserData } from "./types";
 
 // Types for better TypeScript support
@@ -195,48 +196,70 @@ const EnhancedSupabaseService = {
   }
 };
 
-// Main automation orchestrator with enhanced error handling
+// Main automation orchestrator with enhanced error handling and fallback
 const SteadyStreamAutomation = {
   async processCompleteSignup(userData: UserData): Promise<AutomationResult> {
     try {
       console.log('🚀 Starting automated signup for:', userData.email);
 
-      // Step 1: Create IPTV subscription (with fallback)
-      const megaOTTResult = await MegaOTTService.createSubscription(userData, userData.plan);
+      // Step 1: Try MegaOTT first, then fallback
+      let automationResult;
       
-      // Step 2: Store user data (non-blocking)
       try {
-        await EnhancedSupabaseService.enhanceUserRegistration(userData, megaOTTResult);
-      } catch (storageError) {
-        console.warn('Storage will retry:', storageError);
+        const megaOTTResult = await MegaOTTService.createSubscription(userData, userData.plan);
+        
+        // Step 2: Store user data (non-blocking)
+        try {
+          await EnhancedSupabaseService.enhanceUserRegistration(userData, megaOTTResult);
+        } catch (storageError) {
+          console.warn('Storage will retry:', storageError);
+        }
+        
+        automationResult = {
+          success: true,
+          activationCode: megaOTTResult.activationCode,
+          credentials: megaOTTResult.credentials,
+          playlistUrl: megaOTTResult.m3uUrl,
+          expiryDate: megaOTTResult.expiryDate,
+          message: megaOTTResult.message || this.generateSuccessMessage(userData, megaOTTResult),
+          source: megaOTTResult.source
+        };
+        
+        console.log('✅ MegaOTT automation completed successfully');
+        
+      } catch (megaOTTError) {
+        console.warn('⚠️ MegaOTT failed, using local fallback:', megaOTTError);
+        
+        // Use local fallback service
+        const fallbackResult = await FallbackAutomationService.processSignupFallback(userData);
+        
+        automationResult = {
+          success: fallbackResult.success,
+          activationCode: fallbackResult.activationCode,
+          credentials: fallbackResult.credentials,
+          playlistUrl: fallbackResult.playlistUrl,
+          expiryDate: fallbackResult.expiryDate,
+          message: fallbackResult.message,
+          source: fallbackResult.source,
+          error: fallbackResult.error
+        };
+        
+        console.log('✅ Fallback automation completed');
       }
-      
-      // Step 3: Generate success message
-      const successMessage = this.generateSuccessMessage(userData, megaOTTResult);
-      
-      console.log('✅ Automated signup completed successfully');
 
-      return {
-        success: true,
-        activationCode: megaOTTResult.activationCode,
-        credentials: megaOTTResult.credentials,
-        playlistUrl: megaOTTResult.m3uUrl,
-        expiryDate: megaOTTResult.expiryDate,
-        message: megaOTTResult.message || successMessage,
-        source: megaOTTResult.source
-      };
+      return automationResult;
 
     } catch (error: any) {
-      console.error('❌ Automation error:', error);
+      console.error('❌ Complete automation failure:', error);
       
-      // Even if everything fails, provide basic functionality
-      const fallbackCode = `SS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      // Emergency fallback
+      const emergencyCode = `EM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       return {
         success: false,
         error: error.message,
         fallback: {
-          activationCode: fallbackCode,
-          message: 'Account created! Please contact support if you need assistance: support@steadystreamtv.com'
+          activationCode: emergencyCode,
+          message: 'Account created! Please contact support for activation: support@steadystreamtv.com'
         }
       };
     }
