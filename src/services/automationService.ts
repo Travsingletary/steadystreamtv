@@ -1,3 +1,4 @@
+
 // src/services/automationService.ts
 // Enhanced automation service with better error handling
 
@@ -46,38 +47,20 @@ export class SimpleAutomationService {
       // 3. Create IPTV subscription with enhanced error handling
       let megaottSubscription;
       try {
-        // Create complete userData object for MegaOTTService
-        const completeUserData: UserData = {
-          ...userData,
-          deviceType: userData.deviceType || 'mobile',
-          preferences: userData.preferences || {
-            favoriteGenres: ['sports', 'movies', 'news', 'documentary', 'kids', 'entertainment'],
-            parentalControls: false,
-            autoOptimization: true,
-            videoQuality: 'Auto'
-          }
-        };
-
-        megaottSubscription = await MegaOTTService.createSubscription(
-          authData.user.id,
-          userData.plan,
-          completeUserData
-        );
-        console.log('✅ IPTV subscription created:', megaottSubscription.message);
+        // Use the correct method name from MegaOTTService
+        megaottSubscription = await MegaOTTService.createUserLine(userData.email, userData.plan);
+        console.log('✅ IPTV subscription created:', megaottSubscription);
       } catch (megaottError) {
         console.warn('⚠️ IPTV subscription creation failed, continuing with basic account:', megaottError.message);
         
         // Create a basic subscription record anyway
         megaottSubscription = {
           success: false,
-          plan: userData.plan,
           message: 'Account created (IPTV setup pending)',
           error: megaottError.message,
-          credentials: {
-            activationCode,
-            username: `pending_${authData.user.id.substring(0, 8)}`,
-            password: 'pending'
-          }
+          username: `pending_${authData.user.id.substring(0, 8)}`,
+          password: 'pending',
+          activationCode: activationCode
         };
       }
 
@@ -107,10 +90,10 @@ export class SimpleAutomationService {
         success: true,
         user: authData.user,
         assets: {
-          activationCode,
+          activationCode: megaottSubscription.activationCode || activationCode,
           playlistToken: activationCode,
-          playlistUrl: megaottSubscription.playlistUrls?.m3u || 'https://steadystreamtv.com/playlist/demo',
-          qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(megaottSubscription.playlistUrls?.m3u || 'https://steadystreamtv.com/playlist/demo')}`
+          playlistUrl: megaottSubscription.playlistUrl || 'https://steadystreamtv.com/playlist/demo',
+          qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(megaottSubscription.playlistUrl || 'https://steadystreamtv.com/playlist/demo')}`
         },
         subscription: megaottSubscription
       };

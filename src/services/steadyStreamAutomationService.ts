@@ -53,34 +53,15 @@ export class SteadyStreamAutomationService {
       // 2. Generate activation code
       const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-      // 3. Create MegaOTT subscription
+      // 3. Create MegaOTT subscription using the correct method name
       let iptvCredentials;
       try {
-        // Convert to compatible UserData format
-        const completeUserData: UserData = {
-          name: userData.name,
-          email: userData.email,
-          password: userData.password,
-          plan: userData.plan,
-          deviceType: 'mobile',
-          preferences: {
-            favoriteGenres: ['sports', 'movies', 'news', 'documentary', 'kids', 'entertainment'],
-            parentalControls: false,
-            autoOptimization: true,
-            videoQuality: 'Auto'
-          }
-        };
-
-        const subscription = await MegaOTTService.createSubscription(
-          authData.user.id,
-          userData.plan,
-          completeUserData
-        );
+        const subscription = await MegaOTTService.createUserLine(userData.email, userData.plan);
         
         iptvCredentials = {
-          activationCode,
-          username: subscription.credentials?.username || `megaott_${activationCode.toLowerCase()}`,
-          password: subscription.credentials?.password || 'auto-generated'
+          activationCode: subscription.activationCode || activationCode,
+          username: subscription.username || `megaott_${activationCode.toLowerCase()}`,
+          password: subscription.password || 'auto-generated'
         };
 
         console.log('✅ MegaOTT subscription created successfully');
