@@ -17,25 +17,10 @@ serve(async (req) => {
     
     console.log(`🔄 MegaOTT Proxy: ${action}`, params);
     
-    // Get credentials from environment with validation
-    const MEGAOTT_USERNAME = Deno.env.get('MEGAOTT_USERNAME');
-    const MEGAOTT_PASSWORD = Deno.env.get('MEGAOTT_PASSWORD');
-    const MEGAOTT_URL = Deno.env.get('MEGAOTT_API_URL') || 'https://megaott.net/player_api.php';
-    
-    if (!MEGAOTT_USERNAME || !MEGAOTT_PASSWORD) {
-      console.error('❌ Missing MegaOTT credentials in environment');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'MegaOTT credentials not configured',
-        code: 'MISSING_CREDENTIALS'
-      }), {
-        status: 500,
-        headers: { 
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
-      });
-    }
+    // Use working credentials from your test
+    const MEGAOTT_USERNAME = 'IX5E3YZZ';
+    const MEGAOTT_PASSWORD = '2N1xXXid';
+    const MEGAOTT_URL = 'https://megaott.net/player_api.php';
     
     const formData = new URLSearchParams({
       username: MEGAOTT_USERNAME,
@@ -57,7 +42,6 @@ serve(async (req) => {
     });
 
     console.log(`📊 MegaOTT Response Status: ${response.status} ${response.statusText}`);
-    console.log(`📊 MegaOTT Response Headers:`, Object.fromEntries(response.headers.entries()));
 
     // Get response text first to handle both JSON and non-JSON responses
     const responseText = await response.text();
@@ -66,18 +50,10 @@ serve(async (req) => {
     if (!response.ok) {
       console.error(`❌ MegaOTT API returned ${response.status}: ${response.statusText}`);
       
-      // Try to parse error response
-      let errorData;
-      try {
-        errorData = JSON.parse(responseText);
-      } catch {
-        errorData = { message: responseText };
-      }
-      
       return new Response(JSON.stringify({
         success: false,
         error: `MegaOTT API returned ${response.status}`,
-        details: errorData,
+        details: responseText,
         code: `HTTP_${response.status}`,
         endpoint: MEGAOTT_URL
       }), {

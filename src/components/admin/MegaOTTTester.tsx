@@ -3,33 +3,25 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MegaOTTService } from '@/services/megaOTTService';
-import { TestTube, CheckCircle, XCircle, RefreshCw, DollarSign } from 'lucide-react';
+import { MegaOTTTestService } from '@/services/megaOTTTestService';
+import { TestTube, CheckCircle, XCircle, RefreshCw, DollarSign, Users, Zap } from 'lucide-react';
 
 export const MegaOTTTester: React.FC = () => {
   const [testing, setTesting] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [credits, setCredits] = useState<any>(null);
+  const [results, setResults] = useState<any>(null);
 
-  const testConnection = async () => {
+  const runTest = async () => {
     setTesting(true);
-    setResult(null);
-    setCredits(null);
+    setResults(null);
 
     try {
-      console.log('🧪 Starting MegaOTT connection test...');
-      
-      const testResult = await MegaOTTService.testConnection();
-      setResult(testResult);
-      
-      if (testResult.success && testResult.credits) {
-        setCredits(testResult.credits);
-      }
-      
+      console.log('🧪 Starting comprehensive MegaOTT test...');
+      const testResults = await MegaOTTTestService.runFullTest();
+      setResults(testResults);
     } catch (error: any) {
       console.error('Test failed:', error);
-      setResult({
-        success: false,
+      setResults({
+        overall: false,
         error: error.message
       });
     } finally {
@@ -37,26 +29,25 @@ export const MegaOTTTester: React.FC = () => {
     }
   };
 
+  const testConnection = async () => {
+    setTesting(true);
+    try {
+      const result = await MegaOTTTestService.testConnection();
+      setResults({ connection: result, overall: result.success });
+    } catch (error: any) {
+      setResults({ connection: { success: false, error: error.message }, overall: false });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const testUserCreation = async () => {
     setTesting(true);
-    
     try {
-      console.log('🧪 Testing user creation...');
-      
-      const userResult = await MegaOTTService.createUserLine('test@steadystreamtv.com', 'trial');
-      
-      setResult({
-        success: true,
-        userCreation: userResult,
-        message: 'Test user created successfully!'
-      });
-      
+      const result = await MegaOTTTestService.createTestUser();
+      setResults({ userCreation: result, overall: true });
     } catch (error: any) {
-      console.error('User creation test failed:', error);
-      setResult({
-        success: false,
-        error: error.message
-      });
+      setResults({ userCreation: { success: false, error: error.message }, overall: false });
     } finally {
       setTesting(false);
     }
@@ -67,27 +58,27 @@ export const MegaOTTTester: React.FC = () => {
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-3">
           <TestTube className="w-6 h-6 text-blue-400" />
-          MegaOTT Reseller API Tester
+          MegaOTT API Tester (Updated Credentials)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Test Controls */}
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap">
           <Button 
-            onClick={testConnection}
+            onClick={runTest}
             disabled={testing}
             className="bg-blue-600 hover:bg-blue-700"
           >
             {testing ? (
               <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              <TestTube className="w-4 h-4 mr-2" />
+              <Zap className="w-4 h-4 mr-2" />
             )}
-            Test Connection
+            Run Full Test
           </Button>
           
           <Button 
-            onClick={testUserCreation}
+            onClick={testConnection}
             disabled={testing}
             variant="outline"
             className="border-gray-600"
@@ -97,101 +88,164 @@ export const MegaOTTTester: React.FC = () => {
             ) : (
               <TestTube className="w-4 h-4 mr-2" />
             )}
+            Test Connection
+          </Button>
+
+          <Button 
+            onClick={testUserCreation}
+            disabled={testing}
+            variant="outline"
+            className="border-gray-600"
+          >
+            {testing ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Users className="w-4 h-4 mr-2" />
+            )}
             Test User Creation
           </Button>
         </div>
 
-        {/* Credits Display */}
-        {credits && (
-          <Card className="bg-gray-700 border-gray-600">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <DollarSign className="w-5 h-5 text-green-400" />
-                  <div>
-                    <h3 className="font-semibold text-white">Credits Status</h3>
-                    <p className="text-sm text-gray-400">API: {credits.apiName}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-green-400">
-                    {credits.available}
-                  </div>
-                  <div className="text-sm text-gray-400">
-                    Used: {credits.used}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Test Results */}
-        {result && (
-          <Card className={`border-2 ${result.success ? 'border-green-600 bg-green-900/20' : 'border-red-600 bg-red-900/20'}`}>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                {result.success ? (
-                  <CheckCircle className="w-6 h-6 text-green-400 mt-1" />
-                ) : (
-                  <XCircle className="w-6 h-6 text-red-400 mt-1" />
-                )}
-                
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+        {results && (
+          <div className="space-y-4">
+            {/* Overall Status */}
+            <Card className={`border-2 ${results.overall ? 'border-green-600 bg-green-900/20' : 'border-red-600 bg-red-900/20'}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  {results.overall ? (
+                    <CheckCircle className="w-6 h-6 text-green-400" />
+                  ) : (
+                    <XCircle className="w-6 h-6 text-red-400" />
+                  )}
+                  <div>
                     <h3 className="font-semibold text-white">
-                      {result.success ? 'Test Successful' : 'Test Failed'}
+                      {results.overall ? 'All Tests Passed!' : 'Some Tests Failed'}
                     </h3>
-                    <Badge variant={result.success ? 'default' : 'destructive'}>
-                      {result.success ? 'Success' : 'Error'}
+                    <p className="text-sm text-gray-400">
+                      {results.overall ? 'MegaOTT integration is working properly' : 'Check individual test results below'}
+                    </p>
+                  </div>
+                  <Badge variant={results.overall ? 'default' : 'destructive'}>
+                    {results.overall ? 'Success' : 'Failed'}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Individual Test Results */}
+            {results.connection && (
+              <Card className="bg-gray-700 border-gray-600">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-white">Connection Test</h4>
+                    <Badge variant={results.connection.success ? 'default' : 'destructive'}>
+                      {results.connection.success ? 'Success' : 'Failed'}
                     </Badge>
                   </div>
-                  
-                  {result.error && (
-                    <p className="text-red-400 text-sm mb-2">{result.error}</p>
+                  {results.connection.error && (
+                    <p className="text-red-400 text-sm">{results.connection.error}</p>
                   )}
-                  
-                  {result.message && (
-                    <p className="text-green-400 text-sm mb-2">{result.message}</p>
+                  {results.connection.success && results.connection.data && (
+                    <div className="text-sm text-gray-300 mt-2">
+                      <p>✅ Successfully connected to MegaOTT API</p>
+                      <p>📊 Response received and parsed</p>
+                    </div>
                   )}
-                  
-                  {result.userCreation && (
-                    <div className="bg-gray-800 p-3 rounded mt-3">
-                      <h4 className="text-white font-semibold mb-2">Created User Details:</h4>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="text-gray-400">Username:</span>
-                          <span className="text-white ml-2">{result.userCreation.credentials.username}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Password:</span>
-                          <span className="text-white ml-2">{result.userCreation.credentials.password}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Server:</span>
-                          <span className="text-white ml-2">{result.userCreation.credentials.server}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">API Used:</span>
-                          <span className="text-white ml-2">{result.userCreation.apiName}</span>
-                        </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {results.userInfo && (
+              <Card className="bg-gray-700 border-gray-600">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-white">User Info Test</h4>
+                    <Badge variant={!results.userInfo.error ? 'default' : 'destructive'}>
+                      {!results.userInfo.error ? 'Success' : 'Failed'}
+                    </Badge>
+                  </div>
+                  {results.userInfo.error ? (
+                    <p className="text-red-400 text-sm">{results.userInfo.error}</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-300">
+                      <div>Credits: {results.userInfo.credits}</div>
+                      <div>Used: {results.userInfo.used_credits}</div>
+                      <div>Max Connections: {results.userInfo.max_connections}</div>
+                      <div>Status: {results.userInfo.status}</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {results.credits && (
+              <Card className="bg-gray-700 border-gray-600">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-white">Credits Test</h4>
+                    <Badge variant={!results.credits.error ? 'default' : 'destructive'}>
+                      {!results.credits.error ? 'Success' : 'Failed'}
+                    </Badge>
+                  </div>
+                  {results.credits.error ? (
+                    <p className="text-red-400 text-sm">{results.credits.error}</p>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-green-400" />
+                        <span className="text-white font-semibold">{results.credits.available}</span>
+                        <span className="text-gray-400 text-sm">available</span>
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {results.credits.percentage}% used
                       </div>
                     </div>
                   )}
-                  
-                  {result.info && (
+                </CardContent>
+              </Card>
+            )}
+
+            {results.userCreation && (
+              <Card className="bg-gray-700 border-gray-600">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-white">User Creation Test</h4>
+                    <Badge variant={results.userCreation.success ? 'default' : 'destructive'}>
+                      {results.userCreation.success ? 'Success' : 'Failed'}
+                    </Badge>
+                  </div>
+                  {results.userCreation.error ? (
+                    <p className="text-red-400 text-sm">{results.userCreation.error}</p>
+                  ) : results.userCreation.success && (
                     <div className="bg-gray-800 p-3 rounded mt-3">
-                      <h4 className="text-white font-semibold mb-2">Reseller Info:</h4>
-                      <pre className="text-xs text-gray-300 overflow-auto">
-                        {JSON.stringify(result.info.data, null, 2)}
-                      </pre>
+                      <h5 className="text-white font-semibold mb-2">Created Test User:</h5>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-300">
+                        <div>Username: {results.userCreation.username}</div>
+                        <div>Password: {results.userCreation.password}</div>
+                        <div>Server: {results.userCreation.credentials.server}</div>
+                        <div>Activation: {results.userCreation.activationCode}</div>
+                      </div>
                     </div>
                   )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
+
+        {/* Quick Test Button for Console */}
+        <Card className="bg-blue-900/20 border-blue-600">
+          <CardContent className="p-4">
+            <h4 className="text-blue-400 font-semibold mb-2">Console Testing</h4>
+            <p className="text-blue-200 text-sm mb-2">
+              You can also test directly in the browser console:
+            </p>
+            <code className="text-xs bg-gray-800 p-2 rounded block text-green-400">
+              await testMegaOTT()
+            </code>
+          </CardContent>
+        </Card>
       </CardContent>
     </Card>
   );
