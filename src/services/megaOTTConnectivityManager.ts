@@ -22,9 +22,10 @@ interface CachedResponse {
 
 export class MegaOTTConnectivityManager {
   private static endpoints = [
-    { url: 'https://megaott.net/player_api.php', region: 'primary' },
-    { url: 'https://api.megaott.net/player_api.php', region: 'backup' },
-    { url: 'https://megaott.com/player_api.php', region: 'alternate' }
+    { url: 'http://megaott.net/player_api.php', region: 'primary' },
+    { url: 'http://api.megaott.net/player_api.php', region: 'backup' },
+    { url: 'http://megaott.com/player_api.php', region: 'alternate' },
+    { url: 'http://panel.megaott.net/player_api.php', region: 'fallback' }
   ];
 
   private static endpointHealth: Map<string, EndpointHealth> = new Map();
@@ -56,7 +57,7 @@ export class MegaOTTConnectivityManager {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -71,7 +72,8 @@ export class MegaOTTConnectivityManager {
       const health: EndpointHealth = {
         url: endpoint,
         region: this.getEndpointRegion(endpoint),
-        status: response.ok ? (responseTime < 2000 ? 'online' : 'slow') : 'offline',
+        status: (response.ok || response.status === 400) ? 
+          (responseTime < 2000 ? 'online' : 'slow') : 'offline',
         responseTime,
         lastChecked: new Date()
       };
@@ -200,6 +202,10 @@ export class MegaOTTConnectivityManager {
       return `MegaOTT service is temporarily unavailable in your region. Our system is working to restore connectivity.`;
     }
     
+    if (error.message?.includes('CONNECTION_FAILED') || error.message?.includes('All connection attempts failed')) {
+      return `All IPTV service endpoints are currently unavailable. This may be temporary - please try again in a few minutes.`;
+    }
+    
     return `Temporary service issue detected. Our intelligent system is finding the best connection for your location.`;
   }
 
@@ -217,6 +223,7 @@ export class MegaOTTConnectivityManager {
     if (endpoint.includes('megaott.net')) return 'primary';
     if (endpoint.includes('api.megaott')) return 'backup';
     if (endpoint.includes('megaott.com')) return 'alternate';
+    if (endpoint.includes('panel.megaott')) return 'fallback';
     return 'unknown';
   }
 

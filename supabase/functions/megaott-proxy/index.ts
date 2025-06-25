@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
@@ -5,42 +6,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Enhanced endpoint management with intelligent routing
+// Enhanced endpoint management with working endpoints
 const ENDPOINT_CONFIG = {
-  primary: 'https://megaott.net/player_api.php',
-  backup: 'https://api.megaott.net/player_api.php',
-  alternate: 'https://megaott.com/player_api.php'
+  primary: 'http://megaott.net/player_api.php',
+  backup: 'http://api.megaott.net/player_api.php', 
+  alternate: 'http://megaott.com/player_api.php',
+  fallback: 'http://panel.megaott.net/player_api.php'
 };
 
 async function selectBestEndpoint(): Promise<string> {
-  const envUrl = Deno.env.get('MEGAOTT_API_URL');
-  
-  // If environment URL is set and valid, use it
-  if (envUrl && envUrl !== 'duperab.xyz/player_api.php') {
-    try {
-      new URL(envUrl.startsWith('http') ? envUrl : `https://${envUrl}`);
-      return envUrl.startsWith('http') ? envUrl : `https://${envUrl}`;
-    } catch {
-      console.warn(`⚠️ Invalid environment URL: ${envUrl}, falling back to defaults`);
-    }
-  }
+  console.log('🔍 Testing endpoints for connectivity...');
   
   // Test endpoints in order and return first responsive one
   for (const [name, url] of Object.entries(ENDPOINT_CONFIG)) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      const response = await fetch(url, {
-        method: 'HEAD',
+      // Use POST instead of HEAD to match actual API usage
+      const testResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'SteadyStreamTV-Enhanced/2.0'
+        },
+        body: 'username=test&password=test&action=get_user_info',
         signal: controller.signal
       });
       
       clearTimeout(timeoutId);
       
-      if (response.ok || response.status === 405) { // 405 is acceptable for HEAD requests
+      if (testResponse.ok || testResponse.status === 400) { 
+        // 400 is acceptable - means endpoint is up but credentials are wrong
         console.log(`✅ Selected ${name} endpoint: ${url}`);
         return url;
+      } else {
+        console.warn(`⚠️ ${name} endpoint responded with status ${testResponse.status}`);
       }
     } catch (error) {
       console.warn(`⚠️ ${name} endpoint (${url}) failed:`, error.message);
@@ -48,7 +49,15 @@ async function selectBestEndpoint(): Promise<string> {
     }
   }
   
-  // Fallback to primary
+  // If all fail, try the environment URL as last resort
+  const envUrl = Deno.env.get('MEGAOTT_API_URL');
+  if (envUrl && !envUrl.includes('duperab.xyz')) {
+    const finalUrl = envUrl.startsWith('http') ? envUrl : `http://${envUrl}`;
+    console.log(`🔄 Using environment URL as last resort: ${finalUrl}`);
+    return finalUrl;
+  }
+  
+  // Final fallback to primary
   console.log(`🔄 All endpoints failed, using primary: ${ENDPOINT_CONFIG.primary}`);
   return ENDPOINT_CONFIG.primary;
 }
@@ -94,22 +103,21 @@ serve(async (req) => {
     // Enhanced request with retry logic
     let response;
     let attempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 2; // Reduced attempts since we pre-test endpoints
     
     while (attempts < maxAttempts) {
       attempts++;
       
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
         response = await fetch(MEGAOTT_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'User-Agent': 'SteadyStreamTV-Enhanced/2.0',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'Accept': 'application/json'
           },
           body: formData.toString(),
           signal: controller.signal
@@ -124,10 +132,11 @@ serve(async (req) => {
         if (attempts === maxAttempts) {
           return new Response(JSON.stringify({
             success: false,
-            error: 'All connection attempts failed',
+            error: 'MegaOTT service temporarily unavailable',
             code: 'CONNECTION_FAILED',
             attempts: attempts,
-            userFriendlyMessage: 'MegaOTT service is temporarily unavailable. Please try again in a few minutes.'
+            endpoint: MEGAOTT_URL,
+            userFriendlyMessage: 'IPTV service is temporarily unavailable. Please try again in a few minutes.'
           }), {
             status: 200,
             headers: { 
@@ -137,9 +146,8 @@ serve(async (req) => {
           });
         }
         
-        // Wait before retry with exponential backoff
-        const delay = Math.pow(2, attempts - 1) * 1000;
-        await new Promise(resolve => setTimeout(resolve, delay));
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
@@ -151,10 +159,10 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({
         success: false,
-        error: 'MegaOTT API endpoint not found. Service may be temporarily unavailable.',
+        error: 'MegaOTT API endpoint not found',
         code: 'HTTP_404',
         endpoint: MEGAOTT_URL,
-        userFriendlyMessage: 'MegaOTT service is temporarily unavailable. Please try again later.'
+        userFriendlyMessage: 'IPTV service endpoint is temporarily unavailable.'
       }), {
         status: 200,
         headers: { 
@@ -172,7 +180,7 @@ serve(async (req) => {
         error: `MegaOTT service unavailable (${response.status})`,
         code: `HTTP_${response.status}`,
         endpoint: MEGAOTT_URL,
-        userFriendlyMessage: 'MegaOTT service is experiencing issues. Please try again in a few minutes.'
+        userFriendlyMessage: 'IPTV service is experiencing issues. Please try again in a few minutes.'
       }), {
         status: 200,
         headers: { 
@@ -190,7 +198,7 @@ serve(async (req) => {
         error: `MegaOTT API error (${response.status})`,
         code: `HTTP_${response.status}`,
         endpoint: MEGAOTT_URL,
-        userFriendlyMessage: 'MegaOTT service is temporarily unavailable. Please try again later.'
+        userFriendlyMessage: 'IPTV service returned an error. Please try again later.'
       }), {
         status: 200,
         headers: { 
@@ -213,7 +221,7 @@ serve(async (req) => {
         error: 'MegaOTT service returned an error page',
         code: 'HTML_ERROR_PAGE',
         details: 'Received HTML instead of JSON response',
-        userFriendlyMessage: 'MegaOTT service is currently unavailable. Please try again later.'
+        userFriendlyMessage: 'IPTV service is currently unavailable. Please try again later.'
       }), {
         status: 200,
         headers: { 
@@ -231,7 +239,7 @@ serve(async (req) => {
         success: false,
         error: 'MegaOTT returned empty response',
         code: 'EMPTY_RESPONSE',
-        userFriendlyMessage: 'MegaOTT service is not responding properly. Please try again later.'
+        userFriendlyMessage: 'IPTV service is not responding properly. Please try again later.'
       }), {
         status: 200,
         headers: { 
@@ -253,7 +261,7 @@ serve(async (req) => {
         error: 'Invalid response format from MegaOTT',
         rawResponse: responseText.substring(0, 1000),
         code: 'INVALID_JSON',
-        userFriendlyMessage: 'MegaOTT returned an unexpected response format.'
+        userFriendlyMessage: 'IPTV service returned an unexpected response format.'
       }), {
         status: 200,
         headers: { 
@@ -275,7 +283,7 @@ serve(async (req) => {
           error: data.error || data.message || 'MegaOTT API error',
           code: 'MEGAOTT_ERROR',
           data: data,
-          userFriendlyMessage: data.error || 'MegaOTT service returned an error.'
+          userFriendlyMessage: data.error || 'IPTV service returned an error.'
         }), {
           status: 200,
           headers: { 
@@ -316,10 +324,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || 'Unknown enhanced proxy error',
+        error: error.message || 'Enhanced proxy service error',
         code: 'ENHANCED_PROXY_ERROR',
         stack: error.stack,
-        userFriendlyMessage: 'Enhanced service temporarily unavailable. Please try again later.'
+        userFriendlyMessage: 'IPTV service temporarily unavailable. Please try again later.'
       }),
       { 
         status: 200,
