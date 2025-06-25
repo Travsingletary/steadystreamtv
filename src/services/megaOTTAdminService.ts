@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { MegaOTTConnectivityManager } from './megaOTTConnectivityManager';
-import { EnhancedMegaOTTService } from './enhancedMegaOTTService';
+import { enhancedMegaOTTService } from './enhancedMegaOTTService';
 
 interface MegaOTTSubscription {
   id: number;
@@ -43,7 +43,7 @@ export class MegaOTTAdminService {
       console.log('🔍 Getting enhanced MegaOTT user info...');
       
       // Use enhanced service instead of direct supabase call
-      return await EnhancedMegaOTTService.getUserInfo();
+      return await enhancedMegaOTTService.getUserInfo();
       
     } catch (error: any) {
       console.error('❌ Enhanced admin service error:', error);
@@ -159,7 +159,7 @@ export class MegaOTTAdminService {
 
   static async createUserLine(email: string, plan: string) {
     try {
-      return await EnhancedMegaOTTService.createUserLine(email, plan);
+      return await enhancedMegaOTTService.createUserLine(email, plan);
     } catch (error: any) {
       console.error('❌ Enhanced user creation failed:', error);
       throw error;

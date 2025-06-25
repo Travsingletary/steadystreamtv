@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { EnhancedMegaOTTService } from '@/services/enhancedMegaOTTService';
+import { enhancedMegaOTTService } from '@/services/enhancedMegaOTTService';
 
 interface OnboardingProps {
   onComplete: (data: any) => void;
@@ -75,7 +75,7 @@ export const AutomatedOnboarding: React.FC<OnboardingProps> = ({ onComplete }) =
       if (prefError) console.warn('Preferences save failed:', prefError);
 
       // 4. Use enhanced MegaOTT service to create user line
-      const subscriptionResult = await EnhancedMegaOTTService.createUserLine(
+      const subscriptionResult = await enhancedMegaOTTService.createUserLine(
         formData.email,
         formData.plan
       );
