@@ -465,6 +465,48 @@ export type Database = {
         }
         Relationships: []
       }
+      megaott_tokens: {
+        Row: {
+          assigned_at: string | null
+          assigned_to: string | null
+          created_at: string
+          duration_days: number
+          id: string
+          megaott_token_id: string | null
+          package_type: string
+          purchased_at: string
+          status: string
+          token_code: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          duration_days: number
+          id?: string
+          megaott_token_id?: string | null
+          package_type: string
+          purchased_at?: string
+          status?: string
+          token_code: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          duration_days?: number
+          id?: string
+          megaott_token_id?: string | null
+          package_type?: string
+          purchased_at?: string
+          status?: string
+          token_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       megaott_transactions: {
         Row: {
           created_at: string | null
@@ -504,6 +546,39 @@ export type Database = {
           response_time_ms?: number | null
           status?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      optimized_playlists: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          last_accessed: string | null
+          original_url: string | null
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          last_accessed?: string | null
+          original_url?: string | null
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          last_accessed?: string | null
+          original_url?: string | null
+          token?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -961,6 +1036,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_preferences: {
+        Row: {
+          blocked_categories: string[] | null
+          created_at: string
+          device_type: string | null
+          favorite_categories: string[] | null
+          id: string
+          preferred_quality: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blocked_categories?: string[] | null
+          created_at?: string
+          device_type?: string | null
+          favorite_categories?: string[] | null
+          id?: string
+          preferred_quality?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blocked_categories?: string[] | null
+          created_at?: string
+          device_type?: string | null
+          favorite_categories?: string[] | null
+          id?: string
+          preferred_quality?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_profiles: {
         Row: {
