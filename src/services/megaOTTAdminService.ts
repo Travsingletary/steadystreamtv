@@ -31,11 +31,12 @@ interface MegaOTTError {
   code?: string;
   details?: any;
   endpoint?: string;
+  userFriendlyMessage?: string;
 }
 
 export class MegaOTTAdminService {
 
-  // Updated getUserInfo to use Supabase Edge Function with better error handling
+  // Updated getUserInfo with improved error handling for 502 errors
   static async getUserInfo(): Promise<{ success: boolean; id?: number; username?: string; credit?: number; error?: string; errorCode?: string }> {
     try {
       console.log('🔍 Getting MegaOTT user info via proxy...');
@@ -44,33 +45,51 @@ export class MegaOTTAdminService {
         body: { action: 'user_info' }
       });
 
+      // Handle Supabase function invocation errors (like 502)
       if (error) {
-        console.error('❌ Supabase function error:', error);
+        console.error('❌ Supabase function invocation error:', error);
+        
+        // Provide user-friendly error for common issues
+        let friendlyError = 'MegaOTT service is temporarily unavailable';
+        let errorCode = 'FUNCTION_ERROR';
+        
+        if (error.message?.includes('502') || error.message?.includes('Bad Gateway')) {
+          friendlyError = 'MegaOTT service is experiencing connectivity issues. Please try again in a few minutes.';
+          errorCode = 'GATEWAY_ERROR';
+        } else if (error.message?.includes('timeout')) {
+          friendlyError = 'MegaOTT service is responding slowly. Please try again.';
+          errorCode = 'TIMEOUT_ERROR';
+        }
+        
         return { 
           success: false, 
-          error: `Supabase function error: ${error.message}`,
-          errorCode: 'SUPABASE_ERROR'
+          error: friendlyError,
+          errorCode: errorCode
         };
       }
 
+      // Handle cases where function executed but returned error response
       if (!data || !data.success) {
         const megaError = data as MegaOTTError;
         console.error('❌ MegaOTT API error:', megaError);
         
-        // Provide user-friendly error messages based on error codes
-        let friendlyError = megaError?.error || 'Unknown error';
+        // Use the user-friendly message if available
+        let friendlyError = megaError?.userFriendlyMessage || megaError?.error || 'Unknown error';
+        
+        // Provide additional context based on error codes
         switch (megaError?.code) {
-          case 'HTTP_403':
-            friendlyError = 'MegaOTT access denied. Please check credentials and account status.';
-            break;
           case 'HTTP_404':
             friendlyError = 'MegaOTT API endpoint not found. Service may be temporarily unavailable.';
+            break;
+          case 'HTTP_403':
+            friendlyError = 'MegaOTT access denied. Please check credentials and account status.';
             break;
           case 'HTTP_429':
             friendlyError = 'Too many requests to MegaOTT. Please wait before trying again.';
             break;
           case 'HTTP_502':
-            friendlyError = 'MegaOTT service temporarily unavailable. Please try again later.';
+          case 'HTTP_503':
+            friendlyError = 'MegaOTT service is temporarily unavailable. Please try again later.';
             break;
           case 'MISSING_CREDENTIALS':
             friendlyError = 'MegaOTT credentials not configured. Please contact administrator.';
@@ -81,13 +100,15 @@ export class MegaOTTAdminService {
           case 'HTML_ERROR_PAGE':
             friendlyError = 'MegaOTT service is currently unavailable. Please try again later.';
             break;
+          case 'EMPTY_RESPONSE':
+            friendlyError = 'MegaOTT service is not responding properly. Please try again later.';
+            break;
           case 'MEGAOTT_ERROR':
             friendlyError = `MegaOTT API error: ${megaError.error}`;
             break;
-          default:
-            if (friendlyError.includes('HTML error page')) {
-              friendlyError = 'MegaOTT service is currently unavailable. Please try again later.';
-            }
+          case 'PROXY_ERROR':
+            friendlyError = 'Service proxy error. Please try again later.';
+            break;
         }
         
         return { 
@@ -97,6 +118,7 @@ export class MegaOTTAdminService {
         };
       }
 
+      // Handle successful responses
       if (data.data) {
         const userData = data.data;
         console.log('📊 MegaOTT User Data:', userData);
@@ -119,10 +141,20 @@ export class MegaOTTAdminService {
       }
     } catch (error: any) {
       console.error('❌ MegaOTT service error:', error);
+      
+      // Handle network and other errors gracefully
+      let friendlyError = 'Service temporarily unavailable. Please try again later.';
+      let errorCode = 'SERVICE_ERROR';
+      
+      if (error.message?.includes('fetch')) {
+        friendlyError = 'Unable to connect to MegaOTT service. Please check your internet connection.';
+        errorCode = 'NETWORK_ERROR';
+      }
+      
       return { 
         success: false, 
-        error: `Service error: ${error.message}`,
-        errorCode: 'SERVICE_ERROR'
+        error: friendlyError,
+        errorCode: errorCode
       };
     }
   }
@@ -200,6 +232,8 @@ export class MegaOTTAdminService {
         ? 'MegaOTT access denied - please verify credentials'
         : info.errorCode === 'HTTP_404'
         ? 'MegaOTT service temporarily unavailable'
+        : info.errorCode === 'GATEWAY_ERROR'
+        ? 'MegaOTT service connectivity issues - please try again later'
         : info.error || 'Failed to get credit info';
         
       throw new Error(errorMessage);
