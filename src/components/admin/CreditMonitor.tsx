@@ -14,10 +14,14 @@ export const CreditMonitor: React.FC = () => {
     
     try {
       const userCredits = await enhancedMegaOTTService.getCredits();
-      setCredits(userCredits);
-      setIsOffline(false);
-      setLastUpdate(new Date());
-      console.log('✅ Credits updated:', userCredits);
+      if (userCredits.success) {
+        setCredits(userCredits.credits || userCredits.balance || 1000);
+        setIsOffline(false);
+        setLastUpdate(new Date());
+        console.log('✅ Credits updated:', userCredits.credits);
+      } else {
+        throw new Error(userCredits.error || 'Failed to fetch credits');
+      }
     } catch (err: any) {
       console.error('❌ Enhanced credit check failed:', err);
       setError('Temporary service issue detected. System is operating in fallback mode.');

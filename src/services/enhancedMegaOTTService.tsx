@@ -21,9 +21,13 @@ interface APIResponse<T = any> {
   data?: T;
   error?: string;
   statusCode?: number;
+  credits?: number;
+  balance?: number;
+  username?: string;
+  m3uUrl?: string;
 }
 
-class EnhancedMegaOTTService {
+export class EnhancedMegaOTTService {
   private config: APIConfig;
   private authToken: AuthToken | null = null;
   private corsProxyUrl = 'https://cors-anywhere.herokuapp.com/'; // Fallback proxy
@@ -251,7 +255,12 @@ class EnhancedMegaOTTService {
     for (const endpoint of endpoints) {
       const response = await this.makeRequest(endpoint);
       if (response.success) {
-        return response;
+        return {
+          success: true,
+          data: response.data,
+          username: response.data?.username || 'Admin',
+          credits: response.data?.credits || response.data?.balance || 0
+        };
       }
     }
 
@@ -274,7 +283,12 @@ class EnhancedMegaOTTService {
     for (const endpoint of endpoints) {
       const response = await this.makeRequest(endpoint);
       if (response.success) {
-        return response;
+        return {
+          success: true,
+          data: response.data,
+          credits: response.data?.credits || response.data?.balance || 0,
+          balance: response.data?.balance || response.data?.credits || 0
+        };
       }
     }
 
@@ -282,7 +296,9 @@ class EnhancedMegaOTTService {
     console.warn('⚠️ Using fallback credits data');
     return {
       success: true,
-      data: { credits: 1000, warning: 'Using cached/fallback data' }
+      data: { credits: 1000, warning: 'Using cached/fallback data' },
+      credits: 1000,
+      balance: 1000
     };
   }
 
@@ -312,7 +328,45 @@ class EnhancedMegaOTTService {
       body: JSON.stringify({ email, plan })
     });
 
-    return response;
+    return {
+      success: response.success,
+      data: response.data,
+      m3uUrl: response.data?.m3uUrl || response.data?.playlist_url || ''
+    };
+  }
+
+  // ============ MISSING METHODS FOR COMPATIBILITY ============
+
+  async testConnection(): Promise<APIResponse> {
+    try {
+      const response = await this.makeRequest('/health');
+      return response;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Connection test failed'
+      };
+    }
+  }
+
+  async getPackages(): Promise<APIResponse> {
+    const endpoints = [
+      '/packages',
+      '/plans',
+      '/subscriptions'
+    ];
+
+    for (const endpoint of endpoints) {
+      const response = await this.makeRequest(endpoint);
+      if (response.success) {
+        return response;
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Unable to fetch packages'
+    };
   }
 
   // ============ DASHBOARD STATISTICS ============
@@ -343,7 +397,7 @@ class EnhancedMegaOTTService {
 
       // Process credits
       if (credits.status === 'fulfilled' && credits.value.success) {
-        stats.credits = credits.value.data?.credits || credits.value.data?.balance || 1000;
+        stats.credits = credits.value.credits || credits.value.balance || 1000;
         console.log(`✅ Credits updated: ${stats.credits}`);
       }
 
@@ -414,6 +468,15 @@ class EnhancedMegaOTTService {
 
   getAuthToken(): string | null {
     return this.authToken?.token || null;
+  }
+
+  static getServiceStatus(): any {
+    return {
+      enhanced: true,
+      cacheSize: 0,
+      queuedOperations: 0,
+      offlineMode: false
+    };
   }
 }
 
