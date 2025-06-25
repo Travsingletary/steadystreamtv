@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EnhancedMegaOTTService } from '@/services/enhancedMegaOTTService';
@@ -24,8 +23,6 @@ export const AutomatedOnboarding: React.FC<OnboardingProps> = ({ onComplete }) =
     }
   });
   const [setupData, setSetupData] = useState<any>(null);
-
-  const enhancedMegaOTT = new EnhancedMegaOTTService();
 
   // Step 1: Create account
   const createAccount = async () => {
@@ -77,35 +74,34 @@ export const AutomatedOnboarding: React.FC<OnboardingProps> = ({ onComplete }) =
 
       if (prefError) console.warn('Preferences save failed:', prefError);
 
-      // 4. Use enhanced MegaOTT service to create user with token management
-      const subscriptionResult = await enhancedMegaOTT.createUserWithToken(
+      // 4. Use enhanced MegaOTT service to create user line
+      const subscriptionResult = await EnhancedMegaOTTService.createUserLine(
         formData.email,
-        formData.plan,
-        authData.user.id
+        formData.plan
       );
 
       if (!subscriptionResult.success) {
         throw new Error('Failed to create IPTV subscription');
       }
 
-      // 5. Generate optimized playlist
-      const playlistData = await enhancedMegaOTT.generateUserPlaylist(authData.user.id);
+      // 5. Generate playlist URL based on subscription result
+      const playlistUrl = subscriptionResult.m3uUrl || 
+        `${window.location.origin}/api/playlist/${authData.user.id}`;
 
-      // 6. Register initial device if deviceType is provided
-      if (formData.deviceType) {
-        await enhancedMegaOTT.registerDevice(authData.user.id, {
-          deviceId: `${formData.deviceType}_${Date.now()}`,
-          deviceName: `${formData.name}'s ${formData.deviceType}`,
-          deviceType: formData.deviceType
-        });
-      }
+      // 6. Create setup data with available information
+      const deviceInfo = formData.deviceType ? {
+        deviceId: `${formData.deviceType}_${Date.now()}`,
+        deviceName: `${formData.name}'s ${formData.deviceType}`,
+        deviceType: formData.deviceType
+      } : null;
 
       // 7. Send welcome email
       await sendWelcomeEmail(authData.user.id, {
         ...subscriptionResult,
-        ...playlistData,
+        playlistUrl,
         name: formData.name,
-        email: formData.email
+        email: formData.email,
+        deviceInfo
       });
 
       // 8. Mark onboarding as complete
@@ -116,10 +112,11 @@ export const AutomatedOnboarding: React.FC<OnboardingProps> = ({ onComplete }) =
 
       setSetupData({
         ...subscriptionResult,
-        ...playlistData,
+        playlistUrl,
         userId: authData.user.id,
         email: formData.email,
-        name: formData.name
+        name: formData.name,
+        deviceInfo
       });
 
       setStep(4); // Go to success step
