@@ -22,10 +22,10 @@ interface CachedResponse {
 
 export class MegaOTTConnectivityManager {
   private static endpoints = [
-    { url: 'http://megaott.net/player_api.php', region: 'primary' },
-    { url: 'http://api.megaott.net/player_api.php', region: 'backup' },
-    { url: 'http://megaott.com/player_api.php', region: 'alternate' },
-    { url: 'http://panel.megaott.net/player_api.php', region: 'fallback' }
+    { url: 'http://xtream-codes.org/player_api.php', region: 'primary' },
+    { url: 'http://api.xtream-codes.com/player_api.php', region: 'backup' },
+    { url: 'http://panel.xtream-codes.com/player_api.php', region: 'alternate' },
+    { url: 'http://xtream.codes/player_api.php', region: 'fallback' }
   ];
 
   private static endpointHealth: Map<string, EndpointHealth> = new Map();
@@ -37,7 +37,6 @@ export class MegaOTTConnectivityManager {
     if (this.userLocation) return this.userLocation;
 
     try {
-      // Use timezone as a fallback location indicator
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const region = this.getRegionFromTimezone(timezone);
 
@@ -51,18 +50,17 @@ export class MegaOTTConnectivityManager {
     }
   }
 
-  // Test endpoint health with regional awareness
+  // Test endpoint health with improved testing
   static async testEndpointHealth(endpoint: string): Promise<EndpointHealth> {
     const startTime = Date.now();
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
 
+      // Use GET request first for basic connectivity test
       const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'username=test&password=test&action=get_user_info',
+        method: 'GET',
         signal: controller.signal
       });
 
@@ -72,8 +70,8 @@ export class MegaOTTConnectivityManager {
       const health: EndpointHealth = {
         url: endpoint,
         region: this.getEndpointRegion(endpoint),
-        status: (response.ok || response.status === 400) ? 
-          (responseTime < 2000 ? 'online' : 'slow') : 'offline',
+        status: response.status < 500 ? 
+          (responseTime < 1500 ? 'online' : 'slow') : 'offline',
         responseTime,
         lastChecked: new Date()
       };
@@ -95,11 +93,11 @@ export class MegaOTTConnectivityManager {
     }
   }
 
-  // Get best available endpoint based on health and location
+  // Get best available endpoint based on health
   static async getBestEndpoint(): Promise<string> {
     const location = await this.detectUserLocation();
     
-    // Test all endpoints if we don't have recent health data
+    // Test all endpoints quickly
     const healthPromises = this.endpoints.map(ep => 
       this.testEndpointHealth(ep.url)
     );
@@ -127,12 +125,12 @@ export class MegaOTTConnectivityManager {
       return bestEndpoint;
     }
 
-    // Fallback to primary endpoint
+    // Fallback to primary endpoint even if it appears offline
     console.warn('⚠️ No healthy endpoints found, using primary fallback');
     return this.endpoints[0].url;
   }
 
-  // Enhanced caching with TTL and endpoint awareness
+  // Enhanced caching with TTL
   static getCachedResponse(key: string): any | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
@@ -155,15 +153,14 @@ export class MegaOTTConnectivityManager {
       endpoint
     });
     
-    // Clean up old cache entries
     this.cleanupCache();
   }
 
   // Intelligent retry with exponential backoff
   static async retryWithBackoff<T>(
     operation: () => Promise<T>,
-    maxRetries: number = 3,
-    baseDelay: number = 1000
+    maxRetries: number = 2,
+    baseDelay: number = 500
   ): Promise<T> {
     let lastError: any;
 
@@ -176,8 +173,7 @@ export class MegaOTTConnectivityManager {
 
         if (attempt === maxRetries) break;
 
-        // Exponential backoff with jitter
-        const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+        const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 500;
         console.log(`⏳ Retrying in ${Math.round(delay)}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -186,27 +182,23 @@ export class MegaOTTConnectivityManager {
     throw lastError;
   }
 
-  // Generate user-friendly error messages based on location and issue type
+  // Generate user-friendly error messages
   static getLocationAwareErrorMessage(error: any, userLocation: UserLocation): string {
     const region = userLocation.region || 'unknown';
     
     if (error.message?.includes('network') || error.message?.includes('fetch')) {
-      return `Network connectivity issue detected in ${region}. This may be due to DNS propagation delays. Please try again in a few minutes.`;
+      return `Network connectivity issue detected. System is using local fallback mode.`;
     }
     
     if (error.message?.includes('timeout')) {
-      return `Service is responding slowly in your region (${region}). We're automatically switching to a faster server.`;
+      return `Service is responding slowly. Switching to optimized endpoints.`;
     }
     
     if (error.message?.includes('404') || error.message?.includes('502')) {
-      return `MegaOTT service is temporarily unavailable in your region. Our system is working to restore connectivity.`;
+      return `IPTV service is temporarily unavailable. Local fallback mode is active.`;
     }
     
-    if (error.message?.includes('CONNECTION_FAILED') || error.message?.includes('All connection attempts failed')) {
-      return `All IPTV service endpoints are currently unavailable. This may be temporary - please try again in a few minutes.`;
-    }
-    
-    return `Temporary service issue detected. Our intelligent system is finding the best connection for your location.`;
+    return `Temporary service issue detected. System is operating in fallback mode.`;
   }
 
   // Utility methods
@@ -220,10 +212,10 @@ export class MegaOTTConnectivityManager {
   }
 
   private static getEndpointRegion(endpoint: string): string {
-    if (endpoint.includes('megaott.net')) return 'primary';
-    if (endpoint.includes('api.megaott')) return 'backup';
-    if (endpoint.includes('megaott.com')) return 'alternate';
-    if (endpoint.includes('panel.megaott')) return 'fallback';
+    if (endpoint.includes('xtream-codes.org')) return 'primary';
+    if (endpoint.includes('api.xtream-codes')) return 'backup';
+    if (endpoint.includes('panel.xtream-codes')) return 'alternate';
+    if (endpoint.includes('xtream.codes')) return 'fallback';
     return 'unknown';
   }
 
@@ -241,7 +233,7 @@ export class MegaOTTConnectivityManager {
   static getConnectivityStatus() {
     const healthData = Array.from(this.endpointHealth.values());
     const onlineCount = healthData.filter(h => h.status === 'online').length;
-    const totalCount = healthData.length;
+    const totalCount = this.endpoints.length;
     
     return {
       overall: onlineCount > 0 ? 'connected' : 'disconnected',
@@ -249,7 +241,8 @@ export class MegaOTTConnectivityManager {
       onlineCount,
       totalCount,
       cacheSize: this.cache.size,
-      userLocation: this.userLocation
+      userLocation: this.userLocation,
+      enhanced: true
     };
   }
 }
