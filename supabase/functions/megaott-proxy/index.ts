@@ -20,7 +20,32 @@ serve(async (req) => {
     // Use the working credentials from environment or fallback
     const MEGAOTT_USERNAME = Deno.env.get('MEGAOTT_USERNAME') || 'IX5E3YZZ';
     const MEGAOTT_PASSWORD = Deno.env.get('MEGAOTT_PASSWORD') || '2N1xXXid';
-    const MEGAOTT_URL = Deno.env.get('MEGAOTT_API_URL') || 'https://megaott.net/player_api.php';
+    let MEGAOTT_URL = Deno.env.get('MEGAOTT_API_URL') || 'https://megaott.net/player_api.php';
+    
+    // Fix URL format if it's missing protocol
+    if (MEGAOTT_URL && !MEGAOTT_URL.startsWith('http://') && !MEGAOTT_URL.startsWith('https://')) {
+      console.log(`⚠️ Fixing URL format: ${MEGAOTT_URL} -> https://${MEGAOTT_URL}`);
+      MEGAOTT_URL = `https://${MEGAOTT_URL}`;
+    }
+    
+    // Validate URL format before proceeding
+    try {
+      new URL(MEGAOTT_URL);
+    } catch (urlError) {
+      console.error(`❌ Invalid MegaOTT URL: ${MEGAOTT_URL}`, urlError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Invalid MegaOTT API URL configuration: ${MEGAOTT_URL}`,
+        code: 'INVALID_URL_CONFIG',
+        userFriendlyMessage: 'MegaOTT service configuration error. Please contact administrator.'
+      }), {
+        status: 200,
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      });
+    }
     
     // Map actions to the correct MegaOTT API actions
     let megaottAction = action;
@@ -230,6 +255,26 @@ serve(async (req) => {
     
   } catch (error) {
     console.error('❌ MegaOTT proxy fatal error:', error);
+    
+    // Check if it's a URL-related error
+    if (error.message?.includes('Invalid URL')) {
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'MegaOTT API URL configuration error',
+          code: 'INVALID_URL_CONFIG',
+          details: error.message,
+          userFriendlyMessage: 'MegaOTT service configuration error. Please contact administrator.'
+        }),
+        { 
+          status: 200,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
     
     // Ensure we always return a valid response even on catastrophic errors
     return new Response(
