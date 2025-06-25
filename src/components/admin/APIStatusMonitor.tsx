@@ -1,150 +1,173 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Wifi, WifiOff, Activity, Clock, Zap } from 'lucide-react';
-import { MegaOTTAPIManager } from '@/services/megaOTTAPIManager';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, Wifi, WifiOff, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface APIStatus {
+  id: string;
+  name: string;
+  status: 'online' | 'offline' | 'checking';
+  lastChecked: string;
+  responseTime?: number;
+  error?: string;
+}
 
 export const APIStatusMonitor: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [apiStatuses, setApiStatuses] = useState<any[]>([]);
-  const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [apiStatuses, setApiStatuses] = useState<APIStatus[]>([]);
+  const [checking, setChecking] = useState(false);
 
-  const checkAllAPIs = async () => {
-    setLoading(true);
+  const checkAPIStatus = async () => {
+    setChecking(true);
+    const newStatuses: APIStatus[] = [];
+
+    // Test MegaOTT Proxy
     try {
-      const statuses = await MegaOTTAPIManager.checkAllAPIs();
-      setApiStatuses(statuses);
-      setLastChecked(new Date());
-    } catch (error) {
-      console.error('API status check failed:', error);
-    } finally {
-      setLoading(false);
+      const startTime = Date.now();
+      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+        body: { action: 'user_info' }
+      });
+      const responseTime = Date.now() - startTime;
+
+      newStatuses.push({
+        id: 'megaott-proxy',
+        name: 'MegaOTT Proxy',
+        status: error || !data?.success ? 'offline' : 'online',
+        lastChecked: new Date().toISOString(),
+        responseTime: error ? undefined : responseTime,
+        error: error?.message || (!data?.success ? data?.error : undefined)
+      });
+    } catch (error: any) {
+      newStatuses.push({
+        id: 'megaott-proxy',
+        name: 'MegaOTT Proxy',
+        status: 'offline',
+        lastChecked: new Date().toISOString(),
+        error: error.message
+      });
     }
+
+    // Test Supabase Database
+    try {
+      const startTime = Date.now();
+      const { error } = await supabase.from('profiles').select('count').limit(1);
+      const responseTime = Date.now() - startTime;
+
+      newStatuses.push({
+        id: 'supabase-db',
+        name: 'Supabase Database',
+        status: error ? 'offline' : 'online',
+        lastChecked: new Date().toISOString(),
+        responseTime: error ? undefined : responseTime,
+        error: error?.message
+      });
+    } catch (error: any) {
+      newStatuses.push({
+        id: 'supabase-db',
+        name: 'Supabase Database',
+        status: 'offline',
+        lastChecked: new Date().toISOString(),
+        error: error.message
+      });
+    }
+
+    setApiStatuses(newStatuses);
+    setChecking(false);
   };
 
   useEffect(() => {
-    checkAllAPIs();
+    checkAPIStatus();
+    // Check every 5 minutes
+    const interval = setInterval(checkAPIStatus, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online':
-        return 'bg-green-900/30 text-green-400 border-green-600';
-      case 'offline':
-        return 'bg-red-900/30 text-red-400 border-red-600';
-      default:
-        return 'bg-gray-900/30 text-gray-400 border-gray-600';
-    }
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'online':
-        return <Wifi className="w-5 h-5 text-green-400" />;
+        return <CheckCircle className="w-4 h-4 text-green-400" />;
       case 'offline':
-        return <WifiOff className="w-5 h-5 text-red-400" />;
+        return <XCircle className="w-4 h-4 text-red-400" />;
+      case 'checking':
+        return <RefreshCw className="w-4 h-4 text-yellow-400 animate-spin" />;
       default:
-        return <Activity className="w-5 h-5 text-gray-400" />;
+        return <AlertTriangle className="w-4 h-4 text-gray-400" />;
     }
   };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'bg-green-600';
+      case 'offline':
+        return 'bg-red-600';
+      case 'checking':
+        return 'bg-yellow-600';
+      default:
+        return 'bg-gray-600';
+    }
+  };
+
+  const onlineCount = apiStatuses.filter(api => api.status === 'online').length;
+  const totalCount = apiStatuses.length;
 
   return (
     <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-white flex items-center gap-3">
-            <Zap className="w-6 h-6 text-yellow-400" />
-            MegaOTT API Status Monitor
-          </CardTitle>
-          <div className="flex items-center gap-3">
-            {lastChecked && (
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <Clock className="w-4 h-4" />
-                {lastChecked.toLocaleTimeString()}
-              </div>
+          <CardTitle className="text-white flex items-center gap-2">
+            {onlineCount === totalCount ? (
+              <Wifi className="w-5 h-5 text-green-400" />
+            ) : (
+              <WifiOff className="w-5 h-5 text-red-400" />
             )}
-            <Button 
-              onClick={checkAllAPIs} 
-              disabled={loading}
-              size="sm"
-              variant="outline"
-              className="border-gray-600"
-            >
-              {loading ? (
-                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              Check Status
-            </Button>
-          </div>
+            API Status Monitor
+            <Badge variant={onlineCount === totalCount ? "default" : "destructive"}>
+              {onlineCount}/{totalCount} Online
+            </Badge>
+          </CardTitle>
+          <Button 
+            onClick={checkAPIStatus}
+            disabled={checking}
+            size="sm"
+            variant="outline"
+            className="border-gray-600"
+          >
+            {checking ? (
+              <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Refresh
+          </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* API Status Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {apiStatuses.map((api, index) => (
-            <Card key={api.id} className={`border-2 ${getStatusColor(api.status)}`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    {getStatusIcon(api.status)}
-                    <div>
-                      <h3 className="font-semibold text-sm">{api.name}</h3>
-                      <p className="text-xs opacity-75">{api.purpose}</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="capitalize">
-                    {api.status}
-                  </Badge>
-                </div>
-                
-                {api.responseTime && (
-                  <div className="text-xs text-gray-400">
-                    Response: {api.responseTime}ms
-                  </div>
-                )}
-                
+      <CardContent className="space-y-3">
+        {apiStatuses.map((api) => (
+          <div key={api.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+            <div className="flex items-center space-x-3">
+              {getStatusIcon(api.status)}
+              <div>
+                <h4 className="text-white font-medium">{api.name}</h4>
+                <p className="text-sm text-gray-400">
+                  Last checked: {new Date(api.lastChecked).toLocaleTimeString()}
+                  {api.responseTime && ` • ${api.responseTime}ms`}
+                </p>
                 {api.error && (
-                  <div className="text-xs text-red-400 mt-2 truncate">
-                    Error: {api.error}
-                  </div>
+                  <p className="text-xs text-red-400 mt-1">{api.error}</p>
                 )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Summary */}
-        {apiStatuses.length > 0 && (
-          <Card className="bg-gray-700 border-gray-600">
-            <CardContent className="p-4">
-              <h3 className="font-semibold text-white mb-3">System Status Summary</h3>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-green-400">
-                    {apiStatuses.filter(api => api.status === 'online').length}
-                  </div>
-                  <div className="text-sm text-gray-400">Online</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-red-400">
-                    {apiStatuses.filter(api => api.status === 'offline').length}
-                  </div>
-                  <div className="text-sm text-gray-400">Offline</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-yellow-400">
-                    {apiStatuses.length}
-                  </div>
-                  <div className="text-sm text-gray-400">Total APIs</div>
-                </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+            <Badge 
+              variant="outline" 
+              className={`${getStatusColor(api.status)} text-white border-0`}
+            >
+              {api.status}
+            </Badge>
+          </div>
+        ))}
       </CardContent>
     </Card>
   );

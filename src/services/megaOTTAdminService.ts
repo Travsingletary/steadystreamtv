@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 interface MegaOTTSubscription {
@@ -76,6 +77,12 @@ export class MegaOTTAdminService {
             break;
           case 'INVALID_JSON':
             friendlyError = 'MegaOTT returned invalid response format.';
+            break;
+          case 'HTML_ERROR_PAGE':
+            friendlyError = 'MegaOTT service is currently unavailable. Please try again later.';
+            break;
+          case 'MEGAOTT_ERROR':
+            friendlyError = `MegaOTT API error: ${megaError.error}`;
             break;
           default:
             if (friendlyError.includes('HTML error page')) {

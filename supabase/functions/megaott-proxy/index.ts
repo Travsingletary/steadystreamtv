@@ -17,7 +17,7 @@ serve(async (req) => {
     
     console.log(`🔄 MegaOTT Proxy: ${action}`, params);
     
-    // Use working credentials from your test
+    // Use the working credentials from the working test
     const MEGAOTT_USERNAME = 'IX5E3YZZ';
     const MEGAOTT_PASSWORD = '2N1xXXid';
     const MEGAOTT_URL = 'https://megaott.net/player_api.php';
@@ -28,6 +28,8 @@ serve(async (req) => {
       megaottAction = 'get_user_info';
     } else if (action === 'get_users') {
       megaottAction = 'get_users';
+    } else if (action === 'get_credits') {
+      megaottAction = 'get_user_info'; // Credits are part of user info
     }
     
     const formData = new URLSearchParams({
@@ -45,33 +47,21 @@ serve(async (req) => {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent': 'SteadyStreamTV/1.0',
+        'Accept': 'application/json'
       },
       body: formData.toString()
     });
 
     console.log(`📊 MegaOTT Response Status: ${response.status} ${response.statusText}`);
 
-    // Get response text first to handle both JSON and non-JSON responses
-    const responseText = await response.text();
-    console.log(`📊 MegaOTT Raw Response:`, responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
-
-    // Check if response is HTML (error page)
-    if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
-      console.error(`❌ MegaOTT returned HTML error page`);
-      
-      // Extract error message from HTML if possible
-      let errorMessage = 'MegaOTT API unavailable';
-      if (responseText.includes('Not Found')) {
-        errorMessage = 'MegaOTT API endpoint not found';
-      } else if (responseText.includes('Unauthorized')) {
-        errorMessage = 'MegaOTT API authentication failed';
-      }
+    if (!response.ok) {
+      console.error(`❌ MegaOTT API returned ${response.status}: ${response.statusText}`);
       
       return new Response(JSON.stringify({
         success: false,
-        error: errorMessage,
+        error: `MegaOTT API unavailable (${response.status})`,
         code: `HTTP_${response.status}`,
-        details: 'MegaOTT API returned HTML error page instead of JSON'
+        endpoint: MEGAOTT_URL
       }), {
         status: 502,
         headers: { 
@@ -81,17 +71,21 @@ serve(async (req) => {
       });
     }
 
-    if (!response.ok) {
-      console.error(`❌ MegaOTT API returned ${response.status}: ${response.statusText}`);
+    // Get response text first to handle both JSON and non-JSON responses
+    const responseText = await response.text();
+    console.log(`📊 MegaOTT Raw Response:`, responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
+
+    // Check if response is HTML (error page)
+    if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
+      console.error(`❌ MegaOTT returned HTML error page`);
       
       return new Response(JSON.stringify({
         success: false,
-        error: `MegaOTT API returned ${response.status}`,
-        details: responseText,
-        code: `HTTP_${response.status}`,
-        endpoint: MEGAOTT_URL
+        error: 'MegaOTT service temporarily unavailable',
+        code: 'HTML_ERROR_PAGE',
+        details: 'Received HTML instead of JSON response'
       }), {
-        status: response.status,
+        status: 502,
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -122,7 +116,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: false,
         error: 'Invalid response format from MegaOTT',
-        rawResponse: responseText,
+        rawResponse: responseText.substring(0, 1000),
         code: 'INVALID_JSON'
       }), {
         status: 502,
@@ -137,6 +131,22 @@ serve(async (req) => {
     
     // Handle different response formats from MegaOTT
     if (data && typeof data === 'object') {
+      // Check if it's an error response from MegaOTT
+      if (data.error || data.message === 'Error') {
+        return new Response(JSON.stringify({
+          success: false,
+          error: data.error || data.message || 'MegaOTT API error',
+          code: 'MEGAOTT_ERROR',
+          data: data
+        }), {
+          status: 400,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
       return new Response(JSON.stringify({
         success: true,
         data: data
@@ -163,7 +173,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message,
+        error: error.message || 'Unknown proxy error',
         code: 'PROXY_ERROR',
         stack: error.stack
       }),
