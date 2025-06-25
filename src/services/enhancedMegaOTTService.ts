@@ -35,11 +35,11 @@ export class EnhancedMegaOTTService {
         deviceLimit
       });
 
-      // Update user profile with credentials
+      // Update user profile with credentials - fix the type issues
       await supabase
         .from('user_profiles')
         .upsert({
-          id: userId,
+          supabase_user_id: userId, // Use supabase_user_id instead of id
           email,
           full_name: email.split('@')[0],
           subscription_plan: plan,
@@ -48,7 +48,7 @@ export class EnhancedMegaOTTService {
           password: result.password,
           playlist_url: result.playlistUrl,
           stream_url: result.serverUrl,
-          subscription_expires: new Date(result.expiresAt),
+          subscription_expires: new Date(result.expiresAt).toISOString(), // Convert Date to string
           iptv_credentials: {
             server: result.serverUrl,
             username: result.username,
