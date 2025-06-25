@@ -254,6 +254,39 @@ export type Database = {
         }
         Relationships: []
       }
+      email_logs: {
+        Row: {
+          created_at: string
+          email_type: string
+          error_message: string | null
+          id: string
+          recipient: string
+          sent_at: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_type: string
+          error_message?: string | null
+          id?: string
+          recipient: string
+          sent_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          recipient?: string
+          sent_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       iptv_accounts: {
         Row: {
           activation_code: string | null
