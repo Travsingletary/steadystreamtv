@@ -136,7 +136,7 @@ export class TokenMonitoringService {
         message
       };
 
-    } catch (error) {
+    } catch (error: any) {
       const message = `Failed to auto-purchase ${packageType} tokens: ${error.message}`;
       console.error(`❌ ${message}`);
 
@@ -149,7 +149,8 @@ export class TokenMonitoringService {
 
   private async logMonitoringResults(data: any) {
     try {
-      await supabase
+      // Use type assertion to work around missing types
+      await (supabase as any)
         .from('token_monitoring_logs')
         .insert({
           inventory_snapshot: data.inventory,
@@ -209,7 +210,8 @@ export class TokenMonitoringService {
 
   private async logError(error: any) {
     try {
-      await supabase
+      // Use type assertion to work around missing types
+      await (supabase as any)
         .from('system_errors')
         .insert({
           error_type: 'token_monitoring',
@@ -225,7 +227,8 @@ export class TokenMonitoringService {
   // Get monitoring statistics
   async getMonitoringStats(days: number = 7) {
     try {
-      const { data, error } = await supabase
+      // Use type assertion to work around missing types
+      const { data, error } = await (supabase as any)
         .from('token_monitoring_logs')
         .select('*')
         .gte('monitored_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
@@ -235,8 +238,8 @@ export class TokenMonitoringService {
 
       return {
         totalChecks: data?.length || 0,
-        totalAlerts: data?.reduce((sum, log) => sum + (log.alerts_generated?.length || 0), 0) || 0,
-        totalActions: data?.reduce((sum, log) => sum + (log.actions_taken?.length || 0), 0) || 0,
+        totalAlerts: data?.reduce((sum: number, log: any) => sum + (log.alerts_generated?.length || 0), 0) || 0,
+        totalActions: data?.reduce((sum: number, log: any) => sum + (log.actions_taken?.length || 0), 0) || 0,
         recentInventory: data?.[0]?.inventory_snapshot || {},
         logs: data || []
       };

@@ -1063,6 +1063,60 @@ export type Database = {
         }
         Relationships: []
       }
+      system_errors: {
+        Row: {
+          created_at: string
+          error_message: string
+          error_stack: string | null
+          error_type: string
+          id: string
+          occurred_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_message: string
+          error_stack?: string | null
+          error_type: string
+          id?: string
+          occurred_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string
+          error_stack?: string | null
+          error_type?: string
+          id?: string
+          occurred_at?: string
+        }
+        Relationships: []
+      }
+      token_monitoring_logs: {
+        Row: {
+          actions_taken: Json | null
+          alerts_generated: Json | null
+          created_at: string
+          id: string
+          inventory_snapshot: Json
+          monitored_at: string
+        }
+        Insert: {
+          actions_taken?: Json | null
+          alerts_generated?: Json | null
+          created_at?: string
+          id?: string
+          inventory_snapshot: Json
+          monitored_at?: string
+        }
+        Update: {
+          actions_taken?: Json | null
+          alerts_generated?: Json | null
+          created_at?: string
+          id?: string
+          inventory_snapshot?: Json
+          monitored_at?: string
+        }
+        Relationships: []
+      }
       token_retry_queue: {
         Row: {
           activation_code: string
