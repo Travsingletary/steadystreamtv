@@ -1,3 +1,4 @@
+
 import { FunctionComponent, lazy } from "react";
 import { LucideIcon } from "lucide-react";
 
@@ -44,6 +45,18 @@ export const navItems: NavItem[] = [
     to: "/admin",
     icon: "settings",
     page: () => import("./pages/Admin").then((module) => ({ default: module.default })),
+  },
+  {
+    title: "MegaOTT Tester",
+    to: "/megaott-tester",
+    icon: "settings",
+    page: () => import("./pages/MegaOTTTester").then((module) => ({ default: module.default })),
+  },
+  {
+    title: "MegaOTT Test Page",
+    to: "/megaott-test",
+    icon: "wrench",
+    page: () => import("./pages/MegaOTTTestPage").then((module) => ({ default: module.default })),
   },
   {
     title: "Purchase Success",

@@ -1,102 +1,36 @@
-
 import React, { useState, useEffect } from 'react';
-
-// Simple service that won't throw errors
-const safeMegaOTTService = {
-  async checkCredits() {
-    try {
-      // Try to get from localStorage first
-      const cached = localStorage.getItem('megaott_credits');
-      if (cached) {
-        const data = JSON.parse(cached);
-        if (data.timestamp > Date.now() - 5 * 60 * 1000) { // 5 min cache
-          return { success: true, credits: data.credits, cached: true };
-        }
-      }
-
-      // Try API with your key
-      const apiKey = '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d';
-      
-      // Try multiple endpoints
-      const endpoints = [
-        'https://megaott.net/api/user/credits',
-        'https://megaott.net/api/user/balance',
-        'https://megaott.net/api/reseller/balance',
-        'https://gangstageeks.com/tivimate/rs6/steady/api/credits'
-      ];
-
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(endpoint, {
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Accept': 'application/json'
-            }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            const credits = data.credits || data.balance || data.data?.credits || 1000;
-            
-            // Cache the result
-            localStorage.setItem('megaott_credits', JSON.stringify({
-              credits,
-              timestamp: Date.now()
-            }));
-
-            return { success: true, credits, cached: false };
-          }
-        } catch (e) {
-          // Continue to next endpoint
-        }
-      }
-
-      // All endpoints failed - return default
-      return { success: false, credits: 1000, cached: true, error: 'API unavailable' };
-
-    } catch (error) {
-      // Return safe default
-      return { success: false, credits: 1000, cached: true, error: error.message };
-    }
-  }
-};
+import { enhancedMegaOTTService } from '@/services/enhancedMegaOTTService';
 
 export const CreditMonitor: React.FC = () => {
-  const [credits, setCredits] = useState(1000);
+  const [credits, setCredits] = useState<number>(1000);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   const checkCredits = async () => {
     setLoading(true);
+    setError(null);
     
     try {
-      const result = await safeMegaOTTService.checkCredits();
-      
-      setCredits(result.credits);
-      setIsOffline(!result.success || result.cached);
+      const userCredits = await enhancedMegaOTTService.getCredits();
+      setCredits(userCredits);
+      setIsOffline(false);
       setLastUpdate(new Date());
-      
-      // Don't show error toasts - just update the UI
-      console.log('Credit check result:', result);
-      
-    } catch (error) {
-      // Fallback to safe defaults
-      console.log('Using fallback credits');
-      setCredits(1000);
+      console.log('✅ Credits updated:', userCredits);
+    } catch (err: any) {
+      console.error('❌ Enhanced credit check failed:', err);
+      setError('Temporary service issue detected. System is operating in fallback mode.');
       setIsOffline(true);
+      // Keep existing credits value
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Initial check
     checkCredits();
-    
-    // Check every 5 minutes
-    const interval = setInterval(checkCredits, 5 * 60 * 1000);
-    
+    const interval = setInterval(checkCredits, 5 * 60 * 1000); // Check every 5 minutes
     return () => clearInterval(interval);
   }, []);
 
@@ -140,6 +74,14 @@ export const CreditMonitor: React.FC = () => {
         </div>
       )}
 
+      {error && (
+        <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded">
+          <p className="text-xs text-yellow-400">
+            ⚠️ {error}
+          </p>
+        </div>
+      )}
+
       {credits < 100 && (
         <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded">
           <p className="text-xs text-yellow-400">
@@ -151,5 +93,4 @@ export const CreditMonitor: React.FC = () => {
   );
 };
 
-// Export this as default if needed
 export default CreditMonitor;
