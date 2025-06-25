@@ -455,49 +455,6 @@ export function useMegaOTTService() {
   };
 }
 
-// ============ CREDIT MONITOR COMPONENT ============
-
-export function CreditMonitor() {
-  const { service, isLoading, error, executeWithLoading } = useMegaOTTService();
-  const [credits, setCredits] = useState<number>(0);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-
-  const checkCredits = useCallback(async () => {
-    const result = await executeWithLoading(() => service.getCredits());
-    if (result) {
-      setCredits(result.credits || result.balance || 0);
-      setLastUpdate(new Date());
-    }
-  }, [service, executeWithLoading]);
-
-  useEffect(() => {
-    checkCredits();
-    
-    // Set up periodic credit checking
-    const interval = setInterval(checkCredits, 30000); // Every 30 seconds
-    return () => clearInterval(interval);
-  }, [checkCredits]);
-
-  if (isLoading) {
-    return <div>Loading credits...</div>;
-  }
-
-  return (
-    <div className="credit-monitor">
-      <h3>Credits: {credits}</h3>
-      {error && <div className="error">Error: {error}</div>}
-      {lastUpdate && (
-        <div className="last-update">
-          Last updated: {lastUpdate.toLocaleTimeString()}
-        </div>
-      )}
-      <button onClick={checkCredits} disabled={isLoading}>
-        Refresh Credits
-      </button>
-    </div>
-  );
-}
-
 // Create singleton instance
 const enhancedMegaOTTService = new EnhancedMegaOTTService();
 
