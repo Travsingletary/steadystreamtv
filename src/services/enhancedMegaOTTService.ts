@@ -306,6 +306,15 @@ class EnhancedMegaOTTService {
     };
   }
 
+  async createUserLine(email: string, plan: string): Promise<APIResponse> {
+    const response = await this.makeRequest('/user/create', {
+      method: 'POST',
+      body: JSON.stringify({ email, plan })
+    });
+
+    return response;
+  }
+
   // ============ DASHBOARD STATISTICS ============
 
   async getDashboardStats(): Promise<APIResponse> {
@@ -416,7 +425,7 @@ export function useMegaOTTService() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const executeWithLoading = async <T extends any>(
+  const executeWithLoading = async <T = any>(
     operation: () => Promise<APIResponse<T>>
   ): Promise<T | null> => {
     setIsLoading(true);
@@ -489,5 +498,9 @@ export function CreditMonitor() {
   );
 }
 
-// Export the service class
+// Create singleton instance
+const enhancedMegaOTTService = new EnhancedMegaOTTService();
+
+// Export the service class and instance
+export { enhancedMegaOTTService };
 export default EnhancedMegaOTTService;
