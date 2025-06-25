@@ -34,7 +34,7 @@ interface MegaOTTError {
 
 export class MegaOTTAdminService {
 
-  // Updated getUserInfo to use Supabase Edge Function
+  // Updated getUserInfo to use Supabase Edge Function with better error handling
   static async getUserInfo(): Promise<{ success: boolean; id?: number; username?: string; credit?: number; error?: string; errorCode?: string }> {
     try {
       console.log('🔍 Getting MegaOTT user info via proxy...');
@@ -52,13 +52,13 @@ export class MegaOTTAdminService {
         };
       }
 
-      if (!data.success) {
+      if (!data || !data.success) {
         const megaError = data as MegaOTTError;
         console.error('❌ MegaOTT API error:', megaError);
         
         // Provide user-friendly error messages based on error codes
-        let friendlyError = megaError.error;
-        switch (megaError.code) {
+        let friendlyError = megaError?.error || 'Unknown error';
+        switch (megaError?.code) {
           case 'HTTP_403':
             friendlyError = 'MegaOTT access denied. Please check credentials and account status.';
             break;
@@ -68,29 +68,40 @@ export class MegaOTTAdminService {
           case 'HTTP_429':
             friendlyError = 'Too many requests to MegaOTT. Please wait before trying again.';
             break;
+          case 'HTTP_502':
+            friendlyError = 'MegaOTT service temporarily unavailable. Please try again later.';
+            break;
           case 'MISSING_CREDENTIALS':
             friendlyError = 'MegaOTT credentials not configured. Please contact administrator.';
             break;
           case 'INVALID_JSON':
             friendlyError = 'MegaOTT returned invalid response format.';
             break;
+          default:
+            if (friendlyError.includes('HTML error page')) {
+              friendlyError = 'MegaOTT service is currently unavailable. Please try again later.';
+            }
         }
         
         return { 
           success: false, 
           error: friendlyError,
-          errorCode: megaError.code
+          errorCode: megaError?.code || 'UNKNOWN_ERROR'
         };
       }
 
       if (data.data) {
         const userData = data.data;
         console.log('📊 MegaOTT User Data:', userData);
+        
+        // Handle different response formats
+        const credit = userData.credits || userData.available_credits || userData.credit || 0;
+        
         return {
           success: true,
           id: userData.id,
           username: userData.username,
-          credit: userData.credits || userData.available_credits || 0
+          credit: credit
         };
       } else {
         return { 
@@ -133,8 +144,8 @@ export class MegaOTTAdminService {
         return [];
       }
 
-      if (!data.success) {
-        console.error('❌ MegaOTT API error:', data.error);
+      if (!data || !data.success) {
+        console.error('❌ MegaOTT API error:', data?.error || 'Unknown error');
         return [];
       }
 
@@ -154,8 +165,8 @@ export class MegaOTTAdminService {
         }
       });
 
-      if (error || !data.success) {
-        console.error('❌ Error fetching MegaOTT subscription:', error || data.error);
+      if (error || !data?.success) {
+        console.error('❌ Error fetching MegaOTT subscription:', error || data?.error);
         return null;
       }
 
@@ -180,6 +191,8 @@ export class MegaOTTAdminService {
       // Enhanced error handling for credit check
       const errorMessage = info.errorCode === 'HTTP_403' 
         ? 'MegaOTT access denied - please verify credentials'
+        : info.errorCode === 'HTTP_404'
+        ? 'MegaOTT service temporarily unavailable'
         : info.error || 'Failed to get credit info';
         
       throw new Error(errorMessage);
@@ -217,7 +230,7 @@ export class MegaOTTAdminService {
         }
       });
 
-      if (error || !data.success) {
+      if (error || !data?.success) {
         throw new Error(data?.error || error?.message || 'Failed to create user');
       }
 
