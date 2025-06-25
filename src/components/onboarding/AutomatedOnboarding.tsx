@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { MegaOTTIntegrationService } from '@/services/megaOTTIntegrationService';
 import { EnhancedMegaOTTService } from '@/services/enhancedMegaOTTService';
 
 interface OnboardingProps {
@@ -50,20 +49,35 @@ export const AutomatedOnboarding: React.FC<OnboardingProps> = ({ onComplete }) =
       if (authError) throw authError;
       if (!authData.user) throw new Error('User creation failed');
 
-      // 2. Store user preferences first
+      // 2. Create user profile in new table
+      const { error: profileError } = await supabase
+        .from('user_profiles_new')
+        .insert({
+          id: authData.user.id,
+          full_name: formData.name,
+          email: formData.email,
+          subscription_plan: formData.plan,
+          device_type: formData.deviceType,
+          onboarding_completed: false
+        });
+
+      if (profileError) throw profileError;
+
+      // 3. Store user preferences in enhanced table
       const { error: prefError } = await supabase
-        .from('user_preferences')
+        .from('user_preferences_enhanced')
         .insert({
           user_id: authData.user.id,
           favorite_categories: formData.preferences.favoriteCategories,
           blocked_categories: formData.preferences.blockedCategories,
           preferred_quality: formData.preferences.preferredQuality,
-          device_type: formData.deviceType
+          parental_controls: false,
+          language_preference: 'en'
         });
 
       if (prefError) console.warn('Preferences save failed:', prefError);
 
-      // 3. Use enhanced MegaOTT service to create user with token management
+      // 4. Use enhanced MegaOTT service to create user with token management
       const subscriptionResult = await enhancedMegaOTT.createUserWithToken(
         formData.email,
         formData.plan,
@@ -74,10 +88,19 @@ export const AutomatedOnboarding: React.FC<OnboardingProps> = ({ onComplete }) =
         throw new Error('Failed to create IPTV subscription');
       }
 
-      // 4. Generate optimized playlist
+      // 5. Generate optimized playlist
       const playlistData = await enhancedMegaOTT.generateUserPlaylist(authData.user.id);
 
-      // 5. Send welcome email
+      // 6. Register initial device if deviceType is provided
+      if (formData.deviceType) {
+        await enhancedMegaOTT.registerDevice(authData.user.id, {
+          deviceId: `${formData.deviceType}_${Date.now()}`,
+          deviceName: `${formData.name}'s ${formData.deviceType}`,
+          deviceType: formData.deviceType
+        });
+      }
+
+      // 7. Send welcome email
       await sendWelcomeEmail(authData.user.id, {
         ...subscriptionResult,
         ...playlistData,
@@ -85,11 +108,11 @@ export const AutomatedOnboarding: React.FC<OnboardingProps> = ({ onComplete }) =
         email: formData.email
       });
 
-      // 6. Update user profile to mark onboarding as complete
+      // 8. Mark onboarding as complete
       await supabase
-        .from('user_profiles')
+        .from('user_profiles_new')
         .update({ onboarding_completed: true })
-        .eq('supabase_user_id', authData.user.id);
+        .eq('id', authData.user.id);
 
       setSetupData({
         ...subscriptionResult,

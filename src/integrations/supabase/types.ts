@@ -471,6 +471,7 @@ export type Database = {
           assigned_to: string | null
           created_at: string
           duration_days: number
+          expires_at: string | null
           id: string
           megaott_token_id: string | null
           package_type: string
@@ -484,6 +485,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           duration_days: number
+          expires_at?: string | null
           id?: string
           megaott_token_id?: string | null
           package_type: string
@@ -497,6 +499,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           duration_days?: number
+          expires_at?: string | null
           id?: string
           megaott_token_id?: string | null
           package_type?: string
@@ -581,6 +584,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_history: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          id: string
+          megaott_token_id: string | null
+          payment_method: string | null
+          payment_status: string
+          stripe_payment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          megaott_token_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          stripe_payment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          megaott_token_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          stripe_payment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_history_megaott_token_id_fkey"
+            columns: ["megaott_token_id"]
+            isOneToOne: false
+            referencedRelation: "megaott_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -950,6 +997,39 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          priority: string | null
+          status: string | null
+          subject: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          subject: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          subject?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       token_retry_queue: {
         Row: {
           activation_code: string
@@ -992,6 +1072,42 @@ export type Database = {
           retry_count?: number | null
           status?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_devices: {
+        Row: {
+          created_at: string | null
+          device_id: string
+          device_name: string | null
+          device_type: string | null
+          id: string
+          ip_address: unknown | null
+          is_active: boolean | null
+          last_active: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_id: string
+          device_name?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address?: unknown | null
+          is_active?: boolean | null
+          last_active?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string
+          device_name?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address?: unknown | null
+          is_active?: boolean | null
+          last_active?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1066,6 +1182,42 @@ export type Database = {
           id?: string
           preferred_quality?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences_enhanced: {
+        Row: {
+          blocked_categories: string[] | null
+          created_at: string | null
+          favorite_categories: string[] | null
+          id: string
+          language_preference: string | null
+          parental_controls: boolean | null
+          preferred_quality: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          blocked_categories?: string[] | null
+          created_at?: string | null
+          favorite_categories?: string[] | null
+          id?: string
+          language_preference?: string | null
+          parental_controls?: boolean | null
+          preferred_quality?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          blocked_categories?: string[] | null
+          created_at?: string | null
+          favorite_categories?: string[] | null
+          id?: string
+          language_preference?: string | null
+          parental_controls?: boolean | null
+          preferred_quality?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -1146,6 +1298,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_profiles_new: {
+        Row: {
+          created_at: string | null
+          device_type: string | null
+          email: string
+          full_name: string
+          id: string
+          onboarding_completed: boolean | null
+          subscription_plan: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_type?: string | null
+          email: string
+          full_name: string
+          id: string
+          onboarding_completed?: boolean | null
+          subscription_plan?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_type?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          onboarding_completed?: boolean | null
+          subscription_plan?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -1238,6 +1423,54 @@ export type Database = {
           },
         ]
       }
+      user_subscriptions_new: {
+        Row: {
+          created_at: string | null
+          device_limit: number
+          devices_connected: number | null
+          expires_at: string | null
+          id: string
+          password: string | null
+          plan: string
+          playlist_url: string | null
+          server_url: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_limit?: number
+          devices_connected?: number | null
+          expires_at?: string | null
+          id?: string
+          password?: string | null
+          plan: string
+          playlist_url?: string | null
+          server_url?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_limit?: number
+          devices_connected?: number | null
+          expires_at?: string | null
+          id?: string
+          password?: string | null
+          plan?: string
+          playlist_url?: string | null
+          server_url?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       Users: {
         Row: {
           created_at: string
@@ -1280,6 +1513,36 @@ export type Database = {
           changed_at?: string
           id?: number
           user_id?: number
+        }
+        Relationships: []
+      }
+      viewing_analytics: {
+        Row: {
+          category: string | null
+          channel_id: string | null
+          channel_name: string | null
+          duration_seconds: number | null
+          id: string
+          user_id: string
+          watched_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          channel_id?: string | null
+          channel_name?: string | null
+          duration_seconds?: number | null
+          id?: string
+          user_id: string
+          watched_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          channel_id?: string | null
+          channel_name?: string | null
+          duration_seconds?: number | null
+          id?: string
+          user_id?: string
+          watched_at?: string | null
         }
         Relationships: []
       }
@@ -1341,6 +1604,10 @@ export type Database = {
           stripe_session_id?: string
         }
         Returns: Json
+      }
+      expire_subscriptions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       generate_m3u_playlist: {
         Args: { input_token: string }

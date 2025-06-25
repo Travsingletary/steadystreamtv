@@ -9,10 +9,10 @@ export class EnhancedMegaOTTService {
     this.integrationService = new MegaOTTIntegrationService();
   }
 
-  // Enhanced user creation with token management
+  // Enhanced user creation with new database structure
   async createUserWithToken(email: string, plan: string, userId: string) {
     try {
-      console.log('🔄 Creating user with token system...', { email, plan, userId });
+      console.log('🔄 Creating user with enhanced token system...', { email, plan, userId });
       
       // Map plan to device limit
       const deviceLimits = {
@@ -35,11 +35,30 @@ export class EnhancedMegaOTTService {
         deviceLimit
       });
 
-      // Update user profile with credentials - fix the type issues
+      // Create user subscription record
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + (plan === 'trial' ? 1 : 30));
+
+      await supabase
+        .from('user_subscriptions_new')
+        .upsert({
+          user_id: userId,
+          plan,
+          status: 'active',
+          playlist_url: result.playlistUrl,
+          username: result.username,
+          password: result.password,
+          server_url: result.serverUrl,
+          device_limit: deviceLimit,
+          devices_connected: 0,
+          expires_at: expiryDate.toISOString()
+        });
+
+      // Update user profile with credentials
       await supabase
         .from('user_profiles')
         .upsert({
-          supabase_user_id: userId, // Use supabase_user_id instead of id
+          supabase_user_id: userId,
           email,
           full_name: email.split('@')[0],
           subscription_plan: plan,
@@ -48,7 +67,7 @@ export class EnhancedMegaOTTService {
           password: result.password,
           playlist_url: result.playlistUrl,
           stream_url: result.serverUrl,
-          subscription_expires: new Date(result.expiresAt).toISOString(), // Convert Date to string
+          subscription_expires: expiryDate.toISOString(),
           iptv_credentials: {
             server: result.serverUrl,
             username: result.username,
@@ -57,7 +76,7 @@ export class EnhancedMegaOTTService {
           }
         });
 
-      console.log('✅ User created with token system successfully');
+      console.log('✅ User created with enhanced system successfully');
       
       return {
         success: true,
@@ -68,14 +87,12 @@ export class EnhancedMegaOTTService {
           port: '80'
         },
         playlistUrl: result.playlistUrl,
-        expiryDate: new Date(result.expiresAt),
+        expiryDate: expiryDate,
         activationCode: result.username.split('_')[1] || 'N/A'
       };
 
     } catch (error) {
-      console.error('❌ Token-based user creation failed:', error);
-      
-      // Fallback to existing MegaOTT service
+      console.error('❌ Enhanced user creation failed:', error);
       return this.fallbackToDirectAPI(email, plan, userId);
     }
   }
@@ -100,7 +117,6 @@ export class EnhancedMegaOTTService {
         throw new Error(data?.error || 'Direct API failed');
       }
 
-      // Generate local fallback
       return this.generateLocalFallback(email, plan, userId);
       
     } catch (error) {
@@ -143,6 +159,108 @@ export class EnhancedMegaOTTService {
         playlistUrl: `${window.location.origin}/api/playlist/${playlistToken}`,
         token: playlistToken
       };
+    }
+  }
+
+  // Register device for user
+  async registerDevice(userId: string, deviceInfo: {
+    deviceId: string;
+    deviceName?: string;
+    deviceType: string;
+    ipAddress?: string;
+  }) {
+    try {
+      const { error } = await supabase
+        .from('user_devices')
+        .upsert({
+          user_id: userId,
+          device_id: deviceInfo.deviceId,
+          device_name: deviceInfo.deviceName,
+          device_type: deviceInfo.deviceType,
+          ip_address: deviceInfo.ipAddress,
+          is_active: true
+        });
+
+      if (error) throw error;
+
+      // Update devices_connected count
+      const { count } = await supabase
+        .from('user_devices')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_active', true);
+
+      await supabase
+        .from('user_subscriptions_new')
+        .update({ devices_connected: count || 0 })
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Device registration failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Track viewing analytics
+  async trackViewing(userId: string, viewingData: {
+    channelId?: string;
+    channelName: string;
+    category?: string;
+    durationSeconds: number;
+  }) {
+    try {
+      const { error } = await supabase
+        .from('viewing_analytics')
+        .insert({
+          user_id: userId,
+          channel_id: viewingData.channelId,
+          channel_name: viewingData.channelName,
+          category: viewingData.category,
+          duration_seconds: viewingData.durationSeconds
+        });
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Viewing analytics failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get user analytics
+  async getUserAnalytics(userId: string, days: number = 30) {
+    try {
+      const { data, error } = await supabase
+        .from('viewing_analytics')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('watched_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
+        .order('watched_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Process analytics data
+      const totalWatchTime = data?.reduce((sum, record) => sum + (record.duration_seconds || 0), 0) || 0;
+      const categoryStats = data?.reduce((acc, record) => {
+        const category = record.category || 'Unknown';
+        acc[category] = (acc[category] || 0) + (record.duration_seconds || 0);
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      return {
+        success: true,
+        analytics: {
+          totalWatchTime,
+          totalSessions: data?.length || 0,
+          categoryStats,
+          recentActivity: data?.slice(0, 10) || []
+        }
+      };
+    } catch (error) {
+      console.error('❌ Analytics retrieval failed:', error);
+      return { success: false, error: error.message };
     }
   }
 
