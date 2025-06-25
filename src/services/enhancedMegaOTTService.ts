@@ -23,14 +23,6 @@ interface APIResponse<T = any> {
   statusCode?: number;
 }
 
-interface MegaOTTUserInfo {
-  credits: number;
-  username?: string;
-  email?: string;
-  status?: string;
-  expiryDate?: string;
-}
-
 class EnhancedMegaOTTService {
   private config: APIConfig;
   private authToken: AuthToken | null = null;
@@ -137,9 +129,6 @@ class EnhancedMegaOTTService {
     // Add authentication if available and required
     if (useAuth && this.authToken) {
       headers['Authorization'] = `Bearer ${this.authToken.token}`;
-    } else if (useAuth) {
-      // Use hardcoded API key as fallback
-      headers['Authorization'] = 'Bearer 338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d';
     }
 
     const requestOptions: RequestInit = {
@@ -250,7 +239,7 @@ class EnhancedMegaOTTService {
     return response;
   }
 
-  async getUserInfo(): Promise<MegaOTTUserInfo> {
+  async getUserInfo(): Promise<APIResponse> {
     // Try multiple endpoint variations
     const endpoints = [
       '/user/info',
@@ -262,19 +251,17 @@ class EnhancedMegaOTTService {
     for (const endpoint of endpoints) {
       const response = await this.makeRequest(endpoint);
       if (response.success) {
-        return this.parseUserInfo(response.data);
+        return response;
       }
     }
 
-    // Fallback user info
     return {
-      credits: 1000,
-      username: 'Admin',
-      status: 'active'
+      success: false,
+      error: 'Unable to fetch user info from any endpoint'
     };
   }
 
-  async getCredits(): Promise<number> {
+  async getCredits(): Promise<APIResponse> {
     // Try multiple credit endpoints
     const endpoints = [
       '/user/credits',
@@ -287,14 +274,16 @@ class EnhancedMegaOTTService {
     for (const endpoint of endpoints) {
       const response = await this.makeRequest(endpoint);
       if (response.success) {
-        const credits = response.data?.credits || response.data?.balance || response.data || 0;
-        this.cacheCredits(credits);
-        return credits;
+        return response;
       }
     }
 
-    // Return cached credits if all fails
-    return this.getCachedCredits();
+    // Fallback: return mock data with warning
+    console.warn('⚠️ Using fallback credits data');
+    return {
+      success: true,
+      data: { credits: 1000, warning: 'Using cached/fallback data' }
+    };
   }
 
   async getProfiles(): Promise<APIResponse> {
@@ -315,77 +304,6 @@ class EnhancedMegaOTTService {
       success: false,
       error: 'Unable to fetch profiles'
     };
-  }
-
-  async createUserLine(email: string, plan: string): Promise<any> {
-    try {
-      // Generate credentials
-      const username = this.generateUsername(email);
-      const password = this.generatePassword();
-      const deviceLimit = this.getDeviceLimitForPlan(plan);
-      const expiryDate = plan === 'trial' ? 
-        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : // 24 hours for trial
-        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days for paid
-
-      // Try to create user via API endpoints
-      const createEndpoints = [
-        '/create_user',
-        '/user/create',
-        '/reseller/create_user'
-      ];
-
-      for (const endpoint of createEndpoints) {
-        const response = await this.makeRequest(endpoint, {
-          method: 'POST',
-          body: JSON.stringify({
-            username,
-            password,
-            email,
-            max_connections: deviceLimit,
-            package_id: this.getPackageIdForPlan(plan),
-            expiry_date: Math.floor(new Date(expiryDate).getTime() / 1000)
-          })
-        });
-
-        if (response.success) {
-          console.log(`✅ User created via ${endpoint}`);
-          
-          return {
-            success: true,
-            credentials: {
-              username,
-              password,
-              server: 'http://xtream-server.com:8080',
-              deviceLimit
-            },
-            m3uUrl: this.generateM3UUrl(username, password, 'http://xtream-server.com:8080'),
-            expiryDate,
-            activationCode: this.generateActivationCode()
-          };
-        }
-      }
-
-      // Fallback: return mock credentials for development
-      console.warn('⚠️ API user creation failed, returning mock credentials');
-      return {
-        success: true,
-        credentials: {
-          username,
-          password,
-          server: 'http://xtream-server.com:8080',
-          deviceLimit
-        },
-        m3uUrl: this.generateM3UUrl(username, password, 'http://xtream-server.com:8080'),
-        expiryDate,
-        activationCode: this.generateActivationCode()
-      };
-
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || 'Failed to create user line'
-      };
-    }
   }
 
   // ============ DASHBOARD STATISTICS ============
@@ -410,13 +328,13 @@ class EnhancedMegaOTTService {
       };
 
       // Process user info
-      if (userInfo.status === 'fulfilled') {
+      if (userInfo.status === 'fulfilled' && userInfo.value.success) {
         console.log('👥 User info loaded');
       }
 
       // Process credits
-      if (credits.status === 'fulfilled') {
-        stats.credits = credits.value || 1000;
+      if (credits.status === 'fulfilled' && credits.value.success) {
+        stats.credits = credits.value.data?.credits || credits.value.data?.balance || 1000;
         console.log(`✅ Credits updated: ${stats.credits}`);
       }
 
@@ -488,90 +406,6 @@ class EnhancedMegaOTTService {
   getAuthToken(): string | null {
     return this.authToken?.token || null;
   }
-
-  static getServiceStatus() {
-    return {
-      queuedOperations: 0,
-      cacheSize: localStorage.length || 0,
-      offlineMode: false,
-      enhanced: true
-    };
-  }
-
-  // ============ PRIVATE HELPER METHODS ============
-
-  private parseUserInfo(data: any): MegaOTTUserInfo {
-    return {
-      credits: data.credits || data.balance || data.data?.credits || data.data?.balance || 1000,
-      username: data.username || data.user?.username || data.data?.username || 'Admin',
-      email: data.email || data.user?.email || data.data?.email,
-      status: data.status || data.user?.status || 'active',
-      expiryDate: data.expiry_date || data.user?.expiry_date
-    };
-  }
-
-  private cacheCredits(credits: number) {
-    localStorage.setItem('megaott_credits_cache', JSON.stringify({
-      credits,
-      timestamp: Date.now()
-    }));
-  }
-
-  private getCachedCredits(): number {
-    try {
-      const cached = localStorage.getItem('megaott_credits_cache');
-      if (cached) {
-        const data = JSON.parse(cached);
-        // Use cache if less than 30 minutes old
-        if (Date.now() - data.timestamp < 30 * 60 * 1000) {
-          return data.credits;
-        }
-      }
-    } catch (error) {
-      console.error('Cache read error:', error);
-    }
-    return 1000; // Default credits
-  }
-
-  private generateUsername(email: string): string {
-    const prefix = email.split('@')[0].substring(0, 8);
-    const suffix = Math.random().toString(36).substring(2, 6);
-    return `${prefix}_${suffix}`;
-  }
-
-  private generatePassword(): string {
-    return Math.random().toString(36).substring(2, 10) + 
-           Math.random().toString(36).substring(2, 6).toUpperCase();
-  }
-
-  private getDeviceLimitForPlan(plan: string): number {
-    switch (plan) {
-      case 'trial': return 1;
-      case 'solo': return 1;
-      case 'duo': return 2;
-      case 'family': return 3;
-      default: return 1;
-    }
-  }
-
-  private getPackageIdForPlan(plan: string): number {
-    switch (plan) {
-      case 'trial': return 1;
-      case 'solo': return 2;
-      case 'duo': return 3;
-      case 'family': return 4;
-      default: return 1;
-    }
-  }
-
-  private generateM3UUrl(username: string, password: string, server: string): string {
-    const baseUrl = server.replace('/api', '');
-    return `${baseUrl}/get.php?username=${username}&password=${password}&type=m3u_plus&output=ts`;
-  }
-
-  private generateActivationCode(): string {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  }
 }
 
 // ============ REACT HOOK FOR COMPONENT INTEGRATION ============
@@ -582,7 +416,7 @@ export function useMegaOTTService() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const executeWithLoading = async <T,>(
+  const executeWithLoading = async <T extends any>(
     operation: () => Promise<APIResponse<T>>
   ): Promise<T | null> => {
     setIsLoading(true);
@@ -620,11 +454,9 @@ export function CreditMonitor() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   const checkCredits = useCallback(async () => {
-    const result = await executeWithLoading(() => 
-      service.getCredits().then(credits => ({ success: true, data: { credits } }))
-    );
+    const result = await executeWithLoading(() => service.getCredits());
     if (result) {
-      setCredits(result.credits || 0);
+      setCredits(result.credits || result.balance || 0);
       setLastUpdate(new Date());
     }
   }, [service, executeWithLoading]);
@@ -656,9 +488,6 @@ export function CreditMonitor() {
     </div>
   );
 }
-
-// Export singleton instance
-export const enhancedMegaOTTService = new EnhancedMegaOTTService();
 
 // Export the service class
 export default EnhancedMegaOTTService;
