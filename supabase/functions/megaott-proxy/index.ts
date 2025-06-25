@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
@@ -22,10 +21,16 @@ serve(async (req) => {
     const MEGAOTT_PASSWORD = Deno.env.get('MEGAOTT_PASSWORD') || '2N1xXXid';
     let MEGAOTT_URL = Deno.env.get('MEGAOTT_API_URL') || 'https://megaott.net/player_api.php';
     
-    // Fix URL format if it's missing protocol
+    // Fix URL format if it's missing protocol or is invalid
     if (MEGAOTT_URL && !MEGAOTT_URL.startsWith('http://') && !MEGAOTT_URL.startsWith('https://')) {
       console.log(`⚠️ Fixing URL format: ${MEGAOTT_URL} -> https://${MEGAOTT_URL}`);
       MEGAOTT_URL = `https://${MEGAOTT_URL}`;
+    }
+    
+    // Check if the URL is the problematic duperab.xyz and replace with working endpoint
+    if (MEGAOTT_URL.includes('duperab.xyz')) {
+      console.log(`⚠️ Replacing invalid URL ${MEGAOTT_URL} with working MegaOTT endpoint`);
+      MEGAOTT_URL = 'https://megaott.net/player_api.php';
     }
     
     // Validate URL format before proceeding
@@ -33,18 +38,9 @@ serve(async (req) => {
       new URL(MEGAOTT_URL);
     } catch (urlError) {
       console.error(`❌ Invalid MegaOTT URL: ${MEGAOTT_URL}`, urlError);
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Invalid MegaOTT API URL configuration: ${MEGAOTT_URL}`,
-        code: 'INVALID_URL_CONFIG',
-        userFriendlyMessage: 'MegaOTT service configuration error. Please contact administrator.'
-      }), {
-        status: 200,
-        headers: { 
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
-      });
+      // Use working fallback URL
+      MEGAOTT_URL = 'https://megaott.net/player_api.php';
+      console.log(`✅ Using fallback URL: ${MEGAOTT_URL}`);
     }
     
     // Map actions to the correct MegaOTT API actions
