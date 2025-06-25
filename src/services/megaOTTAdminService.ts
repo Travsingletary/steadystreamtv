@@ -1,5 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { MegaOTTConnectivityManager } from './megaOTTConnectivityManager';
+import { EnhancedMegaOTTService } from './enhancedMegaOTTService';
 
 interface MegaOTTSubscription {
   id: number;
@@ -36,126 +37,64 @@ interface MegaOTTError {
 
 export class MegaOTTAdminService {
 
-  // Updated getUserInfo with improved error handling for 502 errors
+  // Enhanced getUserInfo with connectivity management
   static async getUserInfo(): Promise<{ success: boolean; id?: number; username?: string; credit?: number; error?: string; errorCode?: string }> {
     try {
-      console.log('🔍 Getting MegaOTT user info via proxy...');
+      console.log('🔍 Getting enhanced MegaOTT user info...');
       
-      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
-        body: { action: 'user_info' }
-      });
-
-      // Handle Supabase function invocation errors (like 502)
-      if (error) {
-        console.error('❌ Supabase function invocation error:', error);
-        
-        // Provide user-friendly error for common issues
-        let friendlyError = 'MegaOTT service is temporarily unavailable';
-        let errorCode = 'FUNCTION_ERROR';
-        
-        if (error.message?.includes('502') || error.message?.includes('Bad Gateway')) {
-          friendlyError = 'MegaOTT service is experiencing connectivity issues. Please try again in a few minutes.';
-          errorCode = 'GATEWAY_ERROR';
-        } else if (error.message?.includes('timeout')) {
-          friendlyError = 'MegaOTT service is responding slowly. Please try again.';
-          errorCode = 'TIMEOUT_ERROR';
-        }
-        
-        return { 
-          success: false, 
-          error: friendlyError,
-          errorCode: errorCode
-        };
-      }
-
-      // Handle cases where function executed but returned error response
-      if (!data || !data.success) {
-        const megaError = data as MegaOTTError;
-        console.error('❌ MegaOTT API error:', megaError);
-        
-        // Use the user-friendly message if available
-        let friendlyError = megaError?.userFriendlyMessage || megaError?.error || 'Unknown error';
-        
-        // Provide additional context based on error codes
-        switch (megaError?.code) {
-          case 'HTTP_404':
-            friendlyError = 'MegaOTT API endpoint not found. Service may be temporarily unavailable.';
-            break;
-          case 'HTTP_403':
-            friendlyError = 'MegaOTT access denied. Please check credentials and account status.';
-            break;
-          case 'HTTP_429':
-            friendlyError = 'Too many requests to MegaOTT. Please wait before trying again.';
-            break;
-          case 'HTTP_502':
-          case 'HTTP_503':
-            friendlyError = 'MegaOTT service is temporarily unavailable. Please try again later.';
-            break;
-          case 'MISSING_CREDENTIALS':
-            friendlyError = 'MegaOTT credentials not configured. Please contact administrator.';
-            break;
-          case 'INVALID_JSON':
-            friendlyError = 'MegaOTT returned invalid response format.';
-            break;
-          case 'HTML_ERROR_PAGE':
-            friendlyError = 'MegaOTT service is currently unavailable. Please try again later.';
-            break;
-          case 'EMPTY_RESPONSE':
-            friendlyError = 'MegaOTT service is not responding properly. Please try again later.';
-            break;
-          case 'MEGAOTT_ERROR':
-            friendlyError = `MegaOTT API error: ${megaError.error}`;
-            break;
-          case 'PROXY_ERROR':
-            friendlyError = 'Service proxy error. Please try again later.';
-            break;
-        }
-        
-        return { 
-          success: false, 
-          error: friendlyError,
-          errorCode: megaError?.code || 'UNKNOWN_ERROR'
-        };
-      }
-
-      // Handle successful responses
-      if (data.data) {
-        const userData = data.data;
-        console.log('📊 MegaOTT User Data:', userData);
-        
-        // Handle different response formats
-        const credit = userData.credits || userData.available_credits || userData.credit || 0;
-        
-        return {
-          success: true,
-          id: userData.id,
-          username: userData.username,
-          credit: credit
-        };
-      } else {
-        return { 
-          success: false, 
-          error: 'No user data received from MegaOTT',
-          errorCode: 'NO_DATA'
-        };
-      }
+      // Use enhanced service instead of direct supabase call
+      return await EnhancedMegaOTTService.getUserInfo();
+      
     } catch (error: any) {
-      console.error('❌ MegaOTT service error:', error);
+      console.error('❌ Enhanced admin service error:', error);
       
-      // Handle network and other errors gracefully
-      let friendlyError = 'Service temporarily unavailable. Please try again later.';
-      let errorCode = 'SERVICE_ERROR';
-      
-      if (error.message?.includes('fetch')) {
-        friendlyError = 'Unable to connect to MegaOTT service. Please check your internet connection.';
-        errorCode = 'NETWORK_ERROR';
-      }
+      const userLocation = await MegaOTTConnectivityManager.detectUserLocation();
+      const friendlyError = MegaOTTConnectivityManager.getLocationAwareErrorMessage(error, userLocation);
       
       return { 
         success: false, 
         error: friendlyError,
-        errorCode: errorCode
+        errorCode: 'ENHANCED_SERVICE_ERROR'
       };
+    }
+  }
+
+  // Enhanced subscription fetching with fallback
+  static async fetchSubscriptions(): Promise<any[]> {
+    const cacheKey = 'megaott_subscriptions';
+    
+    // Try cache first
+    const cached = MegaOTTConnectivityManager.getCachedResponse(cacheKey);
+    if (cached) {
+      console.log('📦 Using cached subscriptions data');
+      return cached;
+    }
+
+    try {
+      const result = await MegaOTTConnectivityManager.retryWithBackoff(async () => {
+        const { data, error } = await supabase.functions.invoke('megaott-proxy', {
+          body: { action: 'get_users' }
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.error || 'Failed to fetch subscriptions');
+        
+        return Array.isArray(data.data) ? data.data : data.data?.data || [];
+      });
+
+      // Cache successful response
+      MegaOTTConnectivityManager.setCachedResponse(cacheKey, result, 300000); // 5 minutes
+      
+      return result;
+
+    } catch (error) {
+      console.error('❌ Enhanced subscription fetch failed:', error);
+      
+      // Return empty array but log the issue
+      const userLocation = await MegaOTTConnectivityManager.detectUserLocation();
+      console.warn('⚠️ Subscription fetch failed for region:', userLocation.region);
+      
+      return [];
     }
   }
 
@@ -170,29 +109,6 @@ export class MegaOTTAdminService {
       };
     }
     return null;
-  }
-
-  static async fetchSubscriptions(): Promise<MegaOTTSubscription[]> {
-    try {
-      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
-        body: { action: 'get_users' }
-      });
-
-      if (error) {
-        console.error('❌ Supabase function error:', error);
-        return [];
-      }
-
-      if (!data || !data.success) {
-        console.error('❌ MegaOTT API error:', data?.error || 'Unknown error');
-        return [];
-      }
-
-      return Array.isArray(data.data) ? data.data : data.data?.data || [];
-    } catch (error) {
-      console.error('❌ Error fetching MegaOTT subscriptions:', error);
-      return [];
-    }
   }
 
   static async getSubscriptionById(id: number): Promise<MegaOTTSubscription | null> {
@@ -222,83 +138,30 @@ export class MegaOTTAdminService {
       if (info.success) {
         return {
           available: info.credit || 0,
-          used: 0, // Not available in this API response
-          percentage: 0 // Cannot calculate without used credits
+          used: 0,
+          percentage: 0,
+          enhanced: true
         };
       }
       
-      // Enhanced error handling for credit check
-      const errorMessage = info.errorCode === 'HTTP_403' 
-        ? 'MegaOTT access denied - please verify credentials'
-        : info.errorCode === 'HTTP_404'
-        ? 'MegaOTT service temporarily unavailable'
-        : info.errorCode === 'GATEWAY_ERROR'
-        ? 'MegaOTT service connectivity issues - please try again later'
-        : info.error || 'Failed to get credit info';
+      const userLocation = await MegaOTTConnectivityManager.detectUserLocation();
+      const errorMessage = MegaOTTConnectivityManager.getLocationAwareErrorMessage(
+        { message: info.error }, 
+        userLocation
+      );
         
       throw new Error(errorMessage);
     } catch (error: any) {
-      console.error('❌ Credit check failed:', error);
-      throw new Error(error.message || 'No credit data received');
+      console.error('❌ Enhanced credit check failed:', error);
+      throw new Error(error.message || 'Enhanced credit service unavailable');
     }
   }
 
   static async createUserLine(email: string, plan: string) {
     try {
-      const packages = {
-        trial: { credits: 1, connections: 1, days: 1 },
-        basic: { credits: 30, connections: 1, days: 30 },
-        duo: { credits: 60, connections: 2, days: 30 },
-        family: { credits: 90, connections: 3, days: 30 },
-        standard: { credits: 60, connections: 2, days: 30 },
-        premium: { credits: 90, connections: 3, days: 30 },
-        ultimate: { credits: 150, connections: 5, days: 30 }
-      };
-
-      const pkg = packages[plan] || packages.basic;
-      const userUsername = `steady_${Date.now()}`;
-      const userPassword = this.generatePassword();
-      const expireDate = this.getExpireDate(pkg.days);
-
-      const { data, error } = await supabase.functions.invoke('megaott-proxy', {
-        body: {
-          action: 'create_user',
-          user_username: userUsername,
-          user_password: userPassword,
-          credits: pkg.credits.toString(),
-          max_connections: pkg.connections.toString(),
-          expire_date: expireDate
-        }
-      });
-
-      if (error || !data?.success) {
-        throw new Error(data?.error || error?.message || 'Failed to create user');
-      }
-
-      if (data.data?.result === true || data.data?.success === true) {
-        const baseUrl = 'https://megaott.net';
-        const playlistUrl = `${baseUrl}/get.php?username=${userUsername}&password=${userPassword}&type=m3u_plus&output=ts`;
-        
-        return {
-          success: true,
-          activationCode: `SS-${userUsername.split('_')[1]}`,
-          megaottId: data.data.user_id || userUsername,
-          credentials: {
-            server: baseUrl.replace('https://', '').replace('http://', ''),
-            port: '80',
-            username: userUsername,
-            password: userPassword
-          },
-          m3uUrl: playlistUrl,
-          smartTvUrl: playlistUrl,
-          expiryDate: new Date(parseInt(expireDate) * 1000),
-          source: 'megaott-proxy'
-        };
-      }
-      
-      throw new Error(data.data?.message || 'Failed to create user');
+      return await EnhancedMegaOTTService.createUserLine(email, plan);
     } catch (error: any) {
-      console.error('❌ Failed to create user:', error);
+      console.error('❌ Enhanced user creation failed:', error);
       throw error;
     }
   }

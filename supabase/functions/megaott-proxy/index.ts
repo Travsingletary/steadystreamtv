@@ -5,6 +5,54 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Enhanced endpoint management with intelligent routing
+const ENDPOINT_CONFIG = {
+  primary: 'https://megaott.net/player_api.php',
+  backup: 'https://api.megaott.net/player_api.php',
+  alternate: 'https://megaott.com/player_api.php'
+};
+
+async function selectBestEndpoint(): Promise<string> {
+  const envUrl = Deno.env.get('MEGAOTT_API_URL');
+  
+  // If environment URL is set and valid, use it
+  if (envUrl && envUrl !== 'duperab.xyz/player_api.php') {
+    try {
+      new URL(envUrl.startsWith('http') ? envUrl : `https://${envUrl}`);
+      return envUrl.startsWith('http') ? envUrl : `https://${envUrl}`;
+    } catch {
+      console.warn(`⚠️ Invalid environment URL: ${envUrl}, falling back to defaults`);
+    }
+  }
+  
+  // Test endpoints in order and return first responsive one
+  for (const [name, url] of Object.entries(ENDPOINT_CONFIG)) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      const response = await fetch(url, {
+        method: 'HEAD',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok || response.status === 405) { // 405 is acceptable for HEAD requests
+        console.log(`✅ Selected ${name} endpoint: ${url}`);
+        return url;
+      }
+    } catch (error) {
+      console.warn(`⚠️ ${name} endpoint (${url}) failed:`, error.message);
+      continue;
+    }
+  }
+  
+  // Fallback to primary
+  console.log(`🔄 All endpoints failed, using primary: ${ENDPOINT_CONFIG.primary}`);
+  return ENDPOINT_CONFIG.primary;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -14,34 +62,14 @@ serve(async (req) => {
   try {
     const { action, ...params } = await req.json();
     
-    console.log(`🔄 MegaOTT Proxy: ${action}`, params);
+    console.log(`🔄 Enhanced MegaOTT Proxy: ${action}`, params);
+    
+    // Use enhanced endpoint selection
+    const MEGAOTT_URL = await selectBestEndpoint();
     
     // Use the working credentials from environment or fallback
     const MEGAOTT_USERNAME = Deno.env.get('MEGAOTT_USERNAME') || 'IX5E3YZZ';
     const MEGAOTT_PASSWORD = Deno.env.get('MEGAOTT_PASSWORD') || '2N1xXXid';
-    let MEGAOTT_URL = Deno.env.get('MEGAOTT_API_URL') || 'https://megaott.net/player_api.php';
-    
-    // Fix URL format if it's missing protocol or is invalid
-    if (MEGAOTT_URL && !MEGAOTT_URL.startsWith('http://') && !MEGAOTT_URL.startsWith('https://')) {
-      console.log(`⚠️ Fixing URL format: ${MEGAOTT_URL} -> https://${MEGAOTT_URL}`);
-      MEGAOTT_URL = `https://${MEGAOTT_URL}`;
-    }
-    
-    // Check if the URL is the problematic duperab.xyz and replace with working endpoint
-    if (MEGAOTT_URL.includes('duperab.xyz')) {
-      console.log(`⚠️ Replacing invalid URL ${MEGAOTT_URL} with working MegaOTT endpoint`);
-      MEGAOTT_URL = 'https://megaott.net/player_api.php';
-    }
-    
-    // Validate URL format before proceeding
-    try {
-      new URL(MEGAOTT_URL);
-    } catch (urlError) {
-      console.error(`❌ Invalid MegaOTT URL: ${MEGAOTT_URL}`, urlError);
-      // Use working fallback URL
-      MEGAOTT_URL = 'https://megaott.net/player_api.php';
-      console.log(`✅ Using fallback URL: ${MEGAOTT_URL}`);
-    }
     
     // Map actions to the correct MegaOTT API actions
     let megaottAction = action;
@@ -60,20 +88,62 @@ serve(async (req) => {
       ...params
     });
 
-    console.log(`📡 Calling MegaOTT API: ${megaottAction} to ${MEGAOTT_URL}`);
+    console.log(`📡 Calling Enhanced MegaOTT API: ${megaottAction} to ${MEGAOTT_URL}`);
     console.log(`🔑 Using credentials: ${MEGAOTT_USERNAME.substring(0, 3)}***`);
     
-    const response = await fetch(MEGAOTT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'SteadyStreamTV/1.0',
-        'Accept': 'application/json'
-      },
-      body: formData.toString()
-    });
+    // Enhanced request with retry logic
+    let response;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
+        response = await fetch(MEGAOTT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'SteadyStreamTV-Enhanced/2.0',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: formData.toString(),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        break; // Success, exit retry loop
+        
+      } catch (error) {
+        console.warn(`❌ Attempt ${attempts}/${maxAttempts} failed:`, error.message);
+        
+        if (attempts === maxAttempts) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'All connection attempts failed',
+            code: 'CONNECTION_FAILED',
+            attempts: attempts,
+            userFriendlyMessage: 'MegaOTT service is temporarily unavailable. Please try again in a few minutes.'
+          }), {
+            status: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
+        }
+        
+        // Wait before retry with exponential backoff
+        const delay = Math.pow(2, attempts - 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
 
-    console.log(`📊 MegaOTT Response Status: ${response.status} ${response.statusText}`);
+    console.log(`📊 Enhanced MegaOTT Response Status: ${response.status} ${response.statusText} (attempt ${attempts})`);
 
     // Handle different HTTP status codes
     if (response.status === 404) {
@@ -86,7 +156,7 @@ serve(async (req) => {
         endpoint: MEGAOTT_URL,
         userFriendlyMessage: 'MegaOTT service is temporarily unavailable. Please try again later.'
       }), {
-        status: 200, // Return 200 to prevent 502 errors in the client
+        status: 200,
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -104,7 +174,7 @@ serve(async (req) => {
         endpoint: MEGAOTT_URL,
         userFriendlyMessage: 'MegaOTT service is experiencing issues. Please try again in a few minutes.'
       }), {
-        status: 200, // Return 200 to prevent 502 errors in the client
+        status: 200,
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -122,7 +192,7 @@ serve(async (req) => {
         endpoint: MEGAOTT_URL,
         userFriendlyMessage: 'MegaOTT service is temporarily unavailable. Please try again later.'
       }), {
-        status: 200, // Return 200 to prevent 502 errors in the client
+        status: 200,
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -132,7 +202,7 @@ serve(async (req) => {
 
     // Get response text first to handle both JSON and non-JSON responses
     const responseText = await response.text();
-    console.log(`📊 MegaOTT Raw Response:`, responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
+    console.log(`📊 Enhanced MegaOTT Raw Response:`, responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
 
     // Check if response is HTML (error page)
     if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
@@ -145,7 +215,7 @@ serve(async (req) => {
         details: 'Received HTML instead of JSON response',
         userFriendlyMessage: 'MegaOTT service is currently unavailable. Please try again later.'
       }), {
-        status: 200, // Return 200 to prevent 502 errors in the client
+        status: 200,
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -163,7 +233,7 @@ serve(async (req) => {
         code: 'EMPTY_RESPONSE',
         userFriendlyMessage: 'MegaOTT service is not responding properly. Please try again later.'
       }), {
-        status: 200, // Return 200 to prevent 502 errors in the client
+        status: 200,
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -178,19 +248,6 @@ serve(async (req) => {
     } catch (parseError) {
       console.error(`❌ Failed to parse MegaOTT response as JSON:`, parseError);
       
-      // If it's not JSON, maybe it's a simple string response
-      if (responseText.trim().length < 500) {
-        return new Response(JSON.stringify({
-          success: true,
-          data: { message: responseText.trim(), raw: responseText }
-        }), {
-          headers: { 
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          },
-        });
-      }
-      
       return new Response(JSON.stringify({
         success: false,
         error: 'Invalid response format from MegaOTT',
@@ -198,7 +255,7 @@ serve(async (req) => {
         code: 'INVALID_JSON',
         userFriendlyMessage: 'MegaOTT returned an unexpected response format.'
       }), {
-        status: 200, // Return 200 to prevent 502 errors in the client
+        status: 200,
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -206,7 +263,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`✅ MegaOTT response parsed successfully:`, JSON.stringify(data).substring(0, 500));
+    console.log(`✅ Enhanced MegaOTT response parsed successfully:`, JSON.stringify(data).substring(0, 500));
     
     // Handle different response formats from MegaOTT
     if (data && typeof data === 'object') {
@@ -220,7 +277,7 @@ serve(async (req) => {
           data: data,
           userFriendlyMessage: data.error || 'MegaOTT service returned an error.'
         }), {
-          status: 200, // Return 200 to prevent 502 errors in the client
+          status: 200,
           headers: { 
             'Content-Type': 'application/json',
             ...corsHeaders
@@ -230,7 +287,9 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({
         success: true,
-        data: data
+        data: data,
+        endpoint: MEGAOTT_URL,
+        enhanced: true
       }), {
         headers: { 
           'Content-Type': 'application/json',
@@ -240,7 +299,9 @@ serve(async (req) => {
     } else {
       return new Response(JSON.stringify({
         success: true,
-        data: { message: data, raw: responseText }
+        data: { message: data, raw: responseText },
+        endpoint: MEGAOTT_URL,
+        enhanced: true
       }), {
         headers: { 
           'Content-Type': 'application/json',
@@ -250,39 +311,18 @@ serve(async (req) => {
     }
     
   } catch (error) {
-    console.error('❌ MegaOTT proxy fatal error:', error);
+    console.error('❌ Enhanced MegaOTT proxy fatal error:', error);
     
-    // Check if it's a URL-related error
-    if (error.message?.includes('Invalid URL')) {
-      return new Response(
-        JSON.stringify({ 
-          success: false,
-          error: 'MegaOTT API URL configuration error',
-          code: 'INVALID_URL_CONFIG',
-          details: error.message,
-          userFriendlyMessage: 'MegaOTT service configuration error. Please contact administrator.'
-        }),
-        { 
-          status: 200,
-          headers: { 
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          } 
-        }
-      );
-    }
-    
-    // Ensure we always return a valid response even on catastrophic errors
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || 'Unknown proxy error',
-        code: 'PROXY_ERROR',
+        error: error.message || 'Unknown enhanced proxy error',
+        code: 'ENHANCED_PROXY_ERROR',
         stack: error.stack,
-        userFriendlyMessage: 'Service temporarily unavailable. Please try again later.'
+        userFriendlyMessage: 'Enhanced service temporarily unavailable. Please try again later.'
       }),
       { 
-        status: 200, // Return 200 to prevent 502 errors in the client
+        status: 200,
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
