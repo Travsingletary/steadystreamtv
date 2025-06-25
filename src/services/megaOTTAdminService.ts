@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { MegaOTTConnectivityManager } from './megaOTTConnectivityManager';
 import { enhancedMegaOTTService } from './enhancedMegaOTTService';
@@ -42,8 +43,15 @@ export class MegaOTTAdminService {
     try {
       console.log('🔍 Getting enhanced MegaOTT user info...');
       
-      // Use enhanced service instead of direct supabase call
-      return await enhancedMegaOTTService.getUserInfo();
+      // Use enhanced service and transform the response
+      const userInfo = await enhancedMegaOTTService.getUserInfo();
+      
+      return {
+        success: true,
+        id: 1, // Default admin ID since MegaOTT doesn't provide numeric IDs
+        username: userInfo.username || 'Admin',
+        credit: userInfo.credits || 0
+      };
       
     } catch (error: any) {
       console.error('❌ Enhanced admin service error:', error);
