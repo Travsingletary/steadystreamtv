@@ -9,11 +9,20 @@ export const CONFIG = {
   },
   app: {
     downloadCode: '1592817',
-    downloadUrl: 'aftv.news/1592817'
+    downloadUrl: 'https://aftv.news/1592817'
+  },
+  tivimate: {
+    downloadUrl: 'https://aftv.news/1592817',
+    downloadCode: '1592817',
+    adminUrl: 'https://gangstageeks.com/tivimate/rs6/steady/',
+    adminUser: 'SteadyBoss',
+    adminPass: 'Skyhigh123'
   },
   megaOTT: {
     streamBaseUrl: 'https://megaott.net/live',
-    apiUrl: 'https://megaott.net/api/v1/user',
-    apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
+    apiUrl: 'https://megaott.net/api/v1',
+    apiKey: 'PduXXKv6Hi6M9xrstKEpXzmJ3WWBvZjigmr9opdg9c3c15af',
+    username: 'IX5E3YZZ',
+    password: '2N1xXXid'
   }
 };
