@@ -212,7 +212,6 @@ export type Database = {
           plan_name: string
           session_id: string
           status: string
-          stripe_customer_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -223,7 +222,6 @@ export type Database = {
           plan_name: string
           session_id: string
           status?: string
-          stripe_customer_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -234,7 +232,6 @@ export type Database = {
           plan_name?: string
           session_id?: string
           status?: string
-          stripe_customer_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -750,7 +747,6 @@ export type Database = {
           megaott_token_id: string | null
           payment_method: string | null
           payment_status: string
-          stripe_payment_id: string | null
           user_id: string
         }
         Insert: {
@@ -761,7 +757,6 @@ export type Database = {
           megaott_token_id?: string | null
           payment_method?: string | null
           payment_status?: string
-          stripe_payment_id?: string | null
           user_id: string
         }
         Update: {
@@ -772,7 +767,6 @@ export type Database = {
           megaott_token_id?: string | null
           payment_method?: string | null
           payment_status?: string
-          stripe_payment_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -793,8 +787,6 @@ export type Database = {
           id: string
           paid_at: string | null
           status: string
-          stripe_invoice_id: string
-          stripe_subscription_id: string | null
         }
         Insert: {
           amount: number
@@ -803,8 +795,6 @@ export type Database = {
           id?: string
           paid_at?: string | null
           status: string
-          stripe_invoice_id: string
-          stripe_subscription_id?: string | null
         }
         Update: {
           amount?: number
@@ -813,8 +803,6 @@ export type Database = {
           id?: string
           paid_at?: string | null
           status?: string
-          stripe_invoice_id?: string
-          stripe_subscription_id?: string | null
         }
         Relationships: []
       }
@@ -860,8 +848,6 @@ export type Database = {
           megaott_subscription_id: string | null
           name: string | null
           preferred_device: string | null
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
           subscription_end_date: string | null
           subscription_start_date: string | null
           subscription_status: string | null
@@ -879,8 +865,6 @@ export type Database = {
           megaott_subscription_id?: string | null
           name?: string | null
           preferred_device?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string | null
@@ -898,8 +882,6 @@ export type Database = {
           megaott_subscription_id?: string | null
           name?: string | null
           preferred_device?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string | null
@@ -920,7 +902,6 @@ export type Database = {
           id: string
           megaott_response: Json | null
           payment_intent_id: string | null
-          stripe_session_id: string
           updated_at: string
           user_id: string | null
         }
@@ -932,7 +913,6 @@ export type Database = {
           id?: string
           megaott_response?: Json | null
           payment_intent_id?: string | null
-          stripe_session_id: string
           updated_at?: string
           user_id?: string | null
         }
@@ -944,7 +924,6 @@ export type Database = {
           id?: string
           megaott_response?: Json | null
           payment_intent_id?: string | null
-          stripe_session_id?: string
           updated_at?: string
           user_id?: string | null
         }
@@ -1078,54 +1057,6 @@ export type Database = {
           subscription_status?: string
           updated_at?: string
           username?: string
-        }
-        Relationships: []
-      }
-      stripe_subscriptions: {
-        Row: {
-          amount: number
-          canceled_at: string | null
-          created_at: string
-          currency: string
-          current_period_end: string
-          current_period_start: string
-          id: string
-          plan_name: string
-          status: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          amount: number
-          canceled_at?: string | null
-          created_at?: string
-          currency?: string
-          current_period_end: string
-          current_period_start: string
-          id?: string
-          plan_name: string
-          status: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          amount?: number
-          canceled_at?: string | null
-          created_at?: string
-          currency?: string
-          current_period_end?: string
-          current_period_start?: string
-          id?: string
-          plan_name?: string
-          status?: string
-          stripe_customer_id?: string
-          stripe_subscription_id?: string
-          updated_at?: string
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -1612,7 +1543,6 @@ export type Database = {
           id: string
           plan_type: string
           start_date: string
-          stripe_subscription_id: string | null
           updated_at: string
           user_profile_id: string
         }
@@ -1624,7 +1554,6 @@ export type Database = {
           id?: string
           plan_type: string
           start_date?: string
-          stripe_subscription_id?: string | null
           updated_at?: string
           user_profile_id: string
         }
@@ -1636,7 +1565,6 @@ export type Database = {
           id?: string
           plan_type?: string
           start_date?: string
-          stripe_subscription_id?: string | null
           updated_at?: string
           user_profile_id?: string
         }

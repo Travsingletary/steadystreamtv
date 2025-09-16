@@ -10,5 +10,5 @@ verify_jwt = true
 [functions.send-welcome-email]
 verify_jwt = true
 
-# Removed Stripe webhook function
+# Stripe integration removed - using crypto payments only
 verify_jwt = false
