@@ -161,24 +161,38 @@ serve(async (req) => {
           throw new Error('Auth user id missing after create/find flow');
         }
 
-        const { data: newProfile, error: insertError } = await supabaseAdmin
+        // If profile already exists, select it; otherwise create it
+        const { data: existingProfile, error: selectProfileError } = await supabaseAdmin
           .from('profiles')
-          .insert({
-            id: authUserId,
-            email: payload.email,
-            name: desiredName,
-            subscription_status: 'inactive'
-          })
           .select('id, name, email')
-          .single();
+          .eq('id', authUserId)
+          .maybeSingle();
 
-        if (insertError) {
-          log('Failed to auto-create profile', insertError);
-          throw insertError;
+        let profileId = existingProfile?.id;
+        let profileName = existingProfile?.name;
+
+        if (!profileId) {
+          const { data: newProfile, error: insertError } = await supabaseAdmin
+            .from('profiles')
+            .insert({
+              id: authUserId,
+              email: payload.email,
+              name: desiredName,
+              subscription_status: 'inactive'
+            })
+            .select('id, name, email')
+            .single();
+
+          if (insertError) {
+            log('Failed to auto-create profile', insertError);
+            throw insertError;
+          }
+          profileId = newProfile.id;
+          profileName = newProfile.name;
         }
 
-        resolvedUserId = newProfile.id;
-        resolvedName = newProfile.name;
+        resolvedUserId = profileId as string;
+        resolvedName = profileName || desiredName;
       } else {
         resolvedUserId = byEmail.id;
         resolvedName = resolvedName || byEmail.name || payload.email.split('@')[0];
