@@ -122,9 +122,11 @@ serve(async (req) => {
       if (!byEmail?.id) {
         // Auto-create profile using email if not found
         log('No profile found. Auto-creating profile for email', { email: payload.email });
+        const generatedId = (globalThis as any).crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
         const { data: newProfile, error: insertError } = await supabaseAdmin
           .from('profiles')
           .insert({
+            id: generatedId,
             email: payload.email,
             name: (payload.name || payload.email.split('@')[0]).trim(),
             subscription_status: 'inactive'
