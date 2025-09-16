@@ -7,7 +7,6 @@ import { HtmlVideoPlayerComponent } from './html-video-player.component';
 describe('HtmlVideoPlayerComponent', () => {
     let component: HtmlVideoPlayerComponent;
     let fixture: ComponentFixture<HtmlVideoPlayerComponent>;
-    let dataService: DataService;
 
     const TEST_CHANNEL = {
         id: '1234',

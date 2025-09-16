@@ -162,8 +162,7 @@ export class EpgListComponent {
      * @param direction direction to switch
      */
     changeDate(direction: 'next' | 'prev'): void {
-        const newDate = moment(this.selectedDate$.value)
-            [direction === 'next' ? 'add' : 'subtract'](1, 'days')
+        const newDate = moment(this.selectedDate$.value)[direction === 'next' ? 'add' : 'subtract'](1, 'days')
             .format(DATE_FORMAT);
 
         this.dateToday = newDate;

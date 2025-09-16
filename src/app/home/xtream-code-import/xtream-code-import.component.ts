@@ -100,7 +100,7 @@ export class XtreamCodeImportComponent {
         if (!this.form.valid) return;
 
         this.isTestingConnection = true;
-        const serverUrlAsString = this.form.value.serverUrl as string;
+        const serverUrlAsString = this.form.value.serverUrl;
         const url = new URL(serverUrlAsString);
         const serverUrl = `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
 
@@ -108,8 +108,8 @@ export class XtreamCodeImportComponent {
             this.connectionStatus =
                 await this.portalStatusService.checkPortalStatus(
                     serverUrl,
-                    this.form.value.username as string,
-                    this.form.value.password as string
+                    this.form.value.username,
+                    this.form.value.password
                 );
         } catch (error) {
             console.error('Error testing connection:', error);
@@ -132,7 +132,7 @@ export class XtreamCodeImportComponent {
     }
 
     addPlaylist() {
-        const serverUrlAsString = this.form.value.serverUrl as string;
+        const serverUrlAsString = this.form.value.serverUrl;
         const url = new URL(serverUrlAsString);
         const serverUrl = `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
         this.store.dispatch(
