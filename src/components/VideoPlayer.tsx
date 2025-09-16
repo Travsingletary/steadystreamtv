@@ -9,9 +9,7 @@ interface VideoPlayerProps {
 const VideoPlayer = ({ isPlaying, src }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // This is a placeholder video URL - in a production environment,
-  // this would be the actual IPTV stream URL
-  const placeholderVideo = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+  // No placeholder video per policy; if no src, render nothing
 
   useEffect(() => {
     if (videoRef.current) {
@@ -27,14 +25,20 @@ const VideoPlayer = ({ isPlaying, src }: VideoPlayerProps) => {
 
   return (
     <div className="w-full h-full">
-      <video
-        ref={videoRef}
-        src={src || placeholderVideo}
-        className="w-full h-full object-contain"
-        playsInline
-        controls={false}
-        loop
-      />
+      {src ? (
+        <video
+          ref={videoRef}
+          src={src}
+          className="w-full h-full object-contain"
+          playsInline
+          controls={false}
+          loop
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-gray-400">
+          No stream available
+        </div>
+      )}
       {!isPlaying && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
           <div className="rounded-full h-16 w-16 bg-gold/20 flex items-center justify-center border border-gold/40">

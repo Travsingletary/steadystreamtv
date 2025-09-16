@@ -188,36 +188,22 @@ async function downloadCategoryLogos(baseDir, category, logos) {
         successful++;
       } else {
         failed++;
-        // Create placeholder if logo couldn't be downloaded
-        await createPlaceholderLogo(filePath, logo);
-        logger.warn(`Created placeholder for ${logo}`);
+        logger.warn(`Skipping placeholder creation for ${logo} (policy: no placeholders)`);
       }
     } catch (error) {
       logger.error(`Failed to download ${logo}: ${error}`);
       failed++;
       
-      // Create placeholder if logo couldn't be downloaded
-      await createPlaceholderLogo(filePath, logo);
-      logger.warn(`Created placeholder for ${logo}`);
+      logger.warn(`Skipping placeholder creation for ${logo} due to download error (policy: no placeholders)`);
     }
   }
   
   return { successful, failed };
 }
 
-// Create a simple placeholder logo with the channel name
-async function createPlaceholderLogo(filePath, channelName) {
-  // Basic placeholder creation using HTTP request to placeholder service
-  // We'll use a placeholder service that generates images with text
-  const placeholderUrl = `https://placehold.co/300x200/222222/FFCC00?text=${encodeURIComponent(channelName)}`;
-  
-  try {
-    await downloadFile(placeholderUrl, filePath);
-    return true;
-  } catch (error) {
-    logger.error(`Failed to create placeholder for ${channelName}: ${error}`);
-    return false;
-  }
+// Placeholder creation disabled by policy
+async function createPlaceholderLogo() {
+  return false;
 }
 
 // Main function

@@ -53,12 +53,53 @@ const AdminDashboard = () => {
         return;
       }
 
-      // In a real app, you'd check for admin role in a roles table or user metadata
-      // For now, we'll assume the user is an admin if they're logged in
-      // TODO: Implement proper admin role check
-      setIsAdmin(true);
-      
-      loadUsers();
+      // Perform proper admin role check using user metadata or profiles table
+      try {
+        // Prefer user metadata flag if available
+        const isAdminMeta = (data.user.user_metadata as any)?.role === 'admin' || (data.user.app_metadata as any)?.roles?.includes('admin');
+
+        if (isAdminMeta) {
+          setIsAdmin(true);
+          await loadUsers();
+          return;
+        }
+
+        // Fallback: check profiles table for role
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+        }
+
+        if (profile?.role === 'admin') {
+          setIsAdmin(true);
+          await loadUsers();
+          return;
+        }
+
+        setIsAdmin(false);
+        toast({
+          title: "Access Denied",
+          description: "Admin privileges are required to access this page.",
+          variant: "destructive"
+        });
+        navigate("/");
+        return;
+      } catch (e) {
+        console.error('Admin role check failed:', e);
+        setIsAdmin(false);
+        toast({
+          title: "Error",
+          description: "Unable to verify admin privileges.",
+          variant: "destructive"
+        });
+        navigate("/");
+        return;
+      }
     };
     
     checkAdminAccess();
