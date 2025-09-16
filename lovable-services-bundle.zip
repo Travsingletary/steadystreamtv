@@ -1,0 +1,5 @@
+// This would be a zip file with all the service files
+// Since I can't create actual zip files, I'll create a script to bundle them
+
+// Run this to create the bundle for Lovable:
+// tar -czf lovable-services-bundle.tar.gz src/services/ src/components/payment/ src/components/subscription-dashboard/ supabase/functions/

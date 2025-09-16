@@ -33,6 +33,53 @@
         >
             <mat-icon>filter_alt</mat-icon>
         </button>
+        <!-- Authentication buttons -->
+        <ng-container *ngIf="currentUser$ | async; else notLoggedIn">
+            <!-- User is logged in -->
+            <button
+                mat-button
+                (click)="navigateToSubscription()"
+                [matTooltip]="'Dashboard'"
+            >
+                <mat-icon>dashboard</mat-icon>
+                Dashboard
+            </button>
+            <button
+                mat-button
+                (click)="navigateToPayment()"
+                [matTooltip]="'Subscribe'"
+            >
+                <mat-icon>payment</mat-icon>
+                Subscribe
+            </button>
+            <button
+                mat-icon-button
+                [matMenuTriggerFor]="userMenu"
+                [matTooltip]="'User Menu'"
+            >
+                <mat-icon>account_circle</mat-icon>
+            </button>
+        </ng-container>
+
+        <ng-template #notLoggedIn>
+            <!-- User is not logged in -->
+            <button
+                mat-button
+                (click)="navigateToLogin()"
+            >
+                <mat-icon>login</mat-icon>
+                Sign In
+            </button>
+            <button
+                mat-raised-button
+                color="primary"
+                (click)="navigateToSignup()"
+            >
+                <mat-icon>person_add</mat-icon>
+                Sign Up
+            </button>
+        </ng-template>
+
         <button
             *ngIf="isElectron || isTauri; else pwaMenu"
             mat-icon-button
@@ -179,6 +226,32 @@
             >
                 <mat-icon>dashboard</mat-icon>
                 <span>{{ 'HOME.TABS.STALKER_PORTAL_IMPORT' | translate }}</span>
+            </button>
+        </mat-menu>
+
+        <!-- User menu -->
+        <mat-menu #userMenu="matMenu">
+            <button
+                mat-menu-item
+                (click)="navigateToSubscription()"
+            >
+                <mat-icon>dashboard</mat-icon>
+                <span>My Dashboard</span>
+            </button>
+            <button
+                mat-menu-item
+                (click)="navigateToPayment()"
+            >
+                <mat-icon>payment</mat-icon>
+                <span>Subscribe</span>
+            </button>
+            <mat-divider></mat-divider>
+            <button
+                mat-menu-item
+                (click)="signOut()"
+            >
+                <mat-icon>logout</mat-icon>
+                <span>Sign Out</span>
             </button>
         </mat-menu>
     </div>

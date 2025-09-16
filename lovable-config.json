@@ -1,0 +1,96 @@
+{
+  "project_name": "SteadyStream IPTV Onboarding",
+  "framework": "angular",
+  "environment_variables": {
+    "VITE_NOWPAYMENTS_API_URL": "https://api.nowpayments.io/v1",
+    "VITE_NOWPAYMENTS_API_KEY": "TMhut7sRBMcQ8achNXRTuFyutc9QT1DKfv",
+    "VITE_NOWPAYMENTS_IPN_SECRET": "241dd87f-e1de-44e0-8baf-787c42a6b8c8",
+    "VITE_SUPABASE_URL": "https://ojueihcytxwcioqtvwez.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qdWVpaGN5dHh3Y2lvcXR2d2V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0Mzc1NDQsImV4cCI6MjA2MjAxMzU0NH0.VsWI3EcSVaeY-NfsW1zJUw6DpMsrHHDP9GYTpaxMbPM",
+    "VITE_MEGAOTT_API_URL": "https://megaott.net/api/v1",
+    "VITE_WEBHOOK_URL": "https://ojueihcytxwcioqtvwez.supabase.co/functions/v1/nowpayments-webhook"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "axios": "^1.6.2",
+    "uuid": "^9.0.0"
+  },
+  "routes": [
+    {
+      "path": "/",
+      "component": "Home",
+      "description": "Landing page with IPTV service overview"
+    },
+    {
+      "path": "/payment",
+      "component": "PaymentComponent",
+      "description": "Subscription plan selection and crypto payment"
+    },
+    {
+      "path": "/subscription",
+      "component": "SubscriptionDashboard",
+      "description": "User subscription management and IPTV credentials"
+    },
+    {
+      "path": "/payment/success",
+      "component": "PaymentSuccess",
+      "description": "Payment confirmation and IPTV setup instructions"
+    },
+    {
+      "path": "/payment/cancel",
+      "component": "PaymentCancel",
+      "description": "Payment cancellation page"
+    },
+    {
+      "path": "/app-config/:id",
+      "component": "AppConfigComponent",
+      "description": "TiviMate app configuration page for mobile setup"
+    }
+  ],
+  "api_endpoints": [
+    {
+      "path": "/api/webhook/nowpayments",
+      "method": "POST",
+      "description": "NOWPayments webhook for payment notifications",
+      "handler": "webhookHandler"
+    },
+    {
+      "path": "/api/payment/create",
+      "method": "POST",
+      "description": "Create new crypto payment",
+      "handler": "createPayment"
+    },
+    {
+      "path": "/api/payment/status/:id",
+      "method": "GET",
+      "description": "Check payment status",
+      "handler": "getPaymentStatus"
+    }
+  ],
+  "features": [
+    "Cryptocurrency payments (300+ coins)",
+    "Automated IPTV account provisioning",
+    "Real-time payment monitoring",
+    "Email notifications with credentials",
+    "Subscription management dashboard",
+    "MegaOTT API integration",
+    "Rebranded TiviMate app integration",
+    "QR code app configuration",
+    "Deep link auto-setup",
+    "App download tracking",
+    "Supabase database storage",
+    "Responsive design"
+  ],
+  "automation_flow": {
+    "1": "User selects subscription plan",
+    "2": "NOWPayments generates crypto payment",
+    "3": "User completes cryptocurrency payment",
+    "4": "Webhook triggers automation",
+    "5": "Supabase creates user record",
+    "6": "MegaOTT provisions IPTV account",
+    "7": "Welcome email sent with credentials",
+    "8": "Dashboard shows active subscription",
+    "9": "User downloads TiviMate app",
+    "10": "QR code auto-configures app"
+  }
+}

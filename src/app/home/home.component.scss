@@ -1,28 +1,291 @@
-::ng-deep {
-    .mat-tab-label-content {
-        text-transform: uppercase;
+.steadystream-home {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+
+  .hero-section {
+    padding: 60px 20px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+
+    .hero-content {
+      max-width: 1200px;
+      margin: 0 auto;
+
+      h1 {
+        font-size: 3.5rem;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, #fff, #a8d8ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      h2 {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        font-weight: 400;
+        opacity: 0.9;
+      }
+
+      .hero-description {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        opacity: 0.8;
+      }
+
+      .hero-stats {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-bottom: 3rem;
+        flex-wrap: wrap;
+
+        .stat {
+          text-align: center;
+
+          .stat-number {
+            display: block;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #00ff88;
+          }
+
+          .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+          }
+        }
+      }
+
+      .hero-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+
+        .cta-button {
+          padding: 12px 24px;
+          font-size: 1.1rem;
+          border-radius: 8px;
+        }
+
+        .secondary-button {
+          padding: 12px 24px;
+          font-size: 1.1rem;
+          border-radius: 8px;
+          border-color: rgba(255, 255, 255, 0.5);
+          color: white;
+        }
+      }
+    }
+  }
+
+  .features-section {
+    padding: 60px 20px;
+    text-align: center;
+
+    h3 {
+      font-size: 2.5rem;
+      margin-bottom: 3rem;
+      font-weight: 600;
     }
 
-    .mat-tab-group.mat-background-primary .mat-tab-header-pagination {
-        display: none;
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+
+      .feature-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+
+        .feature-icon {
+          font-size: 3rem;
+          margin-bottom: 1rem;
+          color: #00ff88;
+        }
+
+        h4 {
+          font-size: 1.5rem;
+          margin-bottom: 1rem;
+          font-weight: 600;
+        }
+
+        p {
+          opacity: 0.8;
+          line-height: 1.6;
+        }
+      }
     }
-}
+  }
 
-.grid-container {
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-    height: 100vh;
-    gap: 1rem;
-    padding: 1rem;
-}
+  .pricing-section {
+    padding: 60px 20px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.2);
 
-.recent-playlists {
-    height: calc(100vh - 100px);
-    overflow: auto;
-}
-
-@media only screen and (max-width: 480px) {
-    .tab-title {
-        display: none;
+    h3 {
+      font-size: 2.5rem;
+      margin-bottom: 3rem;
+      font-weight: 600;
     }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+
+      .price-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+
+        &.popular {
+          border-color: #00ff88;
+          background: rgba(0, 255, 136, 0.1);
+
+          .popular-badge {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #00ff88;
+            color: black;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+          }
+        }
+
+        h4 {
+          font-size: 1.5rem;
+          margin-bottom: 1rem;
+          font-weight: 600;
+        }
+
+        .price {
+          font-size: 2.5rem;
+          font-weight: 700;
+          color: #00ff88;
+          margin-bottom: 0.5rem;
+        }
+
+        .savings {
+          color: #ffa500;
+          font-weight: 600;
+          margin-bottom: 1.5rem;
+        }
+
+        .features-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+
+          li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+
+            mat-icon {
+              color: #00ff88;
+              font-size: 1.2rem;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .security-section {
+    padding: 60px 20px;
+    text-align: center;
+
+    h3 {
+      font-size: 2.5rem;
+      margin-bottom: 3rem;
+      font-weight: 600;
+    }
+
+    .security-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      max-width: 1000px;
+      margin: 0 auto;
+
+      .security-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+
+        mat-icon {
+          color: #00ff88;
+          font-size: 1.5rem;
+        }
+
+        span {
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .steadystream-home {
+    .hero-section .hero-content {
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+      }
+
+      .hero-stats {
+        gap: 1rem;
+
+        .stat .stat-number {
+          font-size: 2rem;
+        }
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        align-items: center;
+
+        button {
+          width: 200px;
+        }
+      }
+    }
+
+    .features-section .features-grid,
+    .pricing-section .pricing-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .security-section .security-features {
+      grid-template-columns: 1fr;
+    }
+  }
 }

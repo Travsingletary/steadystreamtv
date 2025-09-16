@@ -1,8 +1,140 @@
-<div class="grid-container">
+<div class="steadystream-home">
     <app-header
-        [title]="'HOME.TITLE' | translate"
-        [subtitle]="'HOME.SUBTITLE' | translate"
+        [title]="'SteadyStream TV'"
+        [subtitle]="'Automated IPTV Onboarding Platform'"
     />
-    <app-recent-playlists class="recent-playlists" />
-    <mat-progress-bar *ngIf="isLoading" mode="indeterminate" />
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1>🚀 SteadyStream TV</h1>
+            <h2>Automated IPTV Subscription Platform</h2>
+            <p class="hero-description">
+                Pay with cryptocurrency • Instant IPTV delivery • Full automation
+            </p>
+
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-number">300+</span>
+                    <span class="stat-label">Cryptocurrencies Accepted</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">0.5%</span>
+                    <span class="stat-label">Processing Fee</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">5min</span>
+                    <span class="stat-label">Average Delivery Time</span>
+                </div>
+            </div>
+
+            <div class="hero-actions" *ngIf="currentUser$ | async; else notAuthenticated">
+                <!-- User is logged in -->
+                <button mat-raised-button color="primary" class="cta-button" routerLink="/payment">
+                    <mat-icon>payment</mat-icon>
+                    Subscribe Now
+                </button>
+                <button mat-stroked-button class="secondary-button" routerLink="/subscription">
+                    <mat-icon>dashboard</mat-icon>
+                    My Dashboard
+                </button>
+            </div>
+
+            <ng-template #notAuthenticated>
+                <!-- User is not logged in -->
+                <button mat-raised-button color="primary" class="cta-button" routerLink="/signup">
+                    <mat-icon>person_add</mat-icon>
+                    Get Started
+                </button>
+                <button mat-stroked-button class="secondary-button" routerLink="/login">
+                    <mat-icon>login</mat-icon>
+                    Sign In
+                </button>
+            </ng-template>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features-section">
+        <h3>🎯 How It Works</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <mat-icon class="feature-icon">account_circle</mat-icon>
+                <h4>1. Sign Up</h4>
+                <p>Create your account in seconds</p>
+            </div>
+            <div class="feature-card">
+                <mat-icon class="feature-icon">payment</mat-icon>
+                <h4>2. Pay with Crypto</h4>
+                <p>Bitcoin, USDT, Ethereum & 300+ more</p>
+            </div>
+            <div class="feature-card">
+                <mat-icon class="feature-icon">live_tv</mat-icon>
+                <h4>3. Get IPTV Access</h4>
+                <p>Instant delivery of credentials & M3U links</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing Section -->
+    <div class="pricing-section">
+        <h3>📺 Subscription Plans</h3>
+        <div class="pricing-grid">
+            <div class="price-card">
+                <h4>Basic Monthly</h4>
+                <div class="price">$20.00</div>
+                <ul class="features-list">
+                    <li><mat-icon>check</mat-icon> 1000+ Channels</li>
+                    <li><mat-icon>check</mat-icon> HD Quality</li>
+                    <li><mat-icon>check</mat-icon> 1 Connection</li>
+                    <li><mat-icon>check</mat-icon> 30 Days</li>
+                </ul>
+            </div>
+            <div class="price-card popular">
+                <div class="popular-badge">Most Popular</div>
+                <h4>Premium Monthly</h4>
+                <div class="price">$39.99</div>
+                <ul class="features-list">
+                    <li><mat-icon>check</mat-icon> 5000+ Channels</li>
+                    <li><mat-icon>check</mat-icon> 4K Quality</li>
+                    <li><mat-icon>check</mat-icon> 3 Connections</li>
+                    <li><mat-icon>check</mat-icon> VOD Library</li>
+                </ul>
+            </div>
+            <div class="price-card">
+                <h4>Premium Yearly</h4>
+                <div class="price">$399.99</div>
+                <div class="savings">Save $79.89</div>
+                <ul class="features-list">
+                    <li><mat-icon>check</mat-icon> Everything Premium</li>
+                    <li><mat-icon>check</mat-icon> 12 Months + 2 Free</li>
+                    <li><mat-icon>check</mat-icon> Priority Support</li>
+                    <li><mat-icon>check</mat-icon> Best Value</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Section -->
+    <div class="security-section">
+        <h3>🔒 Enterprise Security</h3>
+        <div class="security-features">
+            <div class="security-item">
+                <mat-icon>verified_user</mat-icon>
+                <span>HMAC-SHA512 Webhook Security</span>
+            </div>
+            <div class="security-item">
+                <mat-icon>https</mat-icon>
+                <span>End-to-End Encryption</span>
+            </div>
+            <div class="security-item">
+                <mat-icon>privacy_tip</mat-icon>
+                <span>Zero-Log Privacy Policy</span>
+            </div>
+            <div class="security-item">
+                <mat-icon>flash_on</mat-icon>
+                <span>Instant Automated Delivery</span>
+            </div>
+        </div>
+    </div>
 </div>

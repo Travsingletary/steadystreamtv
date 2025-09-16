@@ -50,6 +50,7 @@
     "@rx-angular/cdk": "18.0.0",
     "@rx-angular/template": "18.0.0",
     "@slack/web-api": "7.10.0",
+    "@supabase/supabase-js": "2.57.4",
     "@tauri-apps/api": "2.3.0",
     "@tauri-apps/plugin-dialog": "2.2.0",
     "@tauri-apps/plugin-fs": "2.2.0",

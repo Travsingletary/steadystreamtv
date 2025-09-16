@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { isTauri } from '@tauri-apps/api/core';
 import { xtreamRoutes } from './xtream-tauri/xtream.routes';
 import { AppConfig } from '../environments/environment';
+import { AuthGuard, NoAuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
     {
@@ -37,6 +38,45 @@ const routes: Routes = [
             import('./settings/settings.component').then(
                 (c) => c.SettingsComponent
             ),
+    },
+    {
+        path: 'login',
+        loadComponent: () =>
+            import('./components/auth/login.component').then(
+                (c) => c.LoginComponent
+            ),
+        canActivate: [NoAuthGuard]
+    },
+    {
+        path: 'signup',
+        loadComponent: () =>
+            import('./components/auth/signup.component').then(
+                (c) => c.SignupComponent
+            ),
+        canActivate: [NoAuthGuard]
+    },
+    {
+        path: 'payment',
+        loadComponent: () =>
+            import('./components/payment/payment.component').then(
+                (c) => c.PaymentComponent
+            ),
+        canActivate: [AuthGuard]
+    },
+    {
+        path: 'subscription',
+        loadComponent: () =>
+            import('./components/subscription-dashboard/subscription-dashboard.component').then(
+                (c) => c.SubscriptionDashboardComponent
+            ),
+        canActivate: [AuthGuard]
+    },
+    {
+        path: 'app-config/:id',
+        loadComponent: () =>
+            import('./components/app-config/app-config.component').then(
+                (c) => c.AppConfigComponent
+            )
     },
     ...(isTauri()
         ? xtreamRoutes

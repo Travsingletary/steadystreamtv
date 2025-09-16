@@ -1,0 +1,207 @@
+<div class="payment-container">
+  <div class="header">
+    <h1>Choose Your IPTV Subscription</h1>
+    <p>Secure cryptocurrency payments with instant activation</p>
+  </div>
+
+  <div class="plans-grid">
+    <div
+      *ngFor="let plan of subscriptionPlans"
+      class="plan-card"
+      [class.selected]="selectedPlan?.id === plan.id"
+      (click)="selectPlan(plan)"
+    >
+      <div class="plan-badge" [ngClass]="getPlanBadgeClass(plan)">
+        <span *ngIf="plan.id === 'premium_yearly'">🔥 BEST VALUE</span>
+        <span *ngIf="plan.id === 'premium_monthly'">⭐ PREMIUM</span>
+        <span *ngIf="plan.id === 'basic_monthly'">📺 BASIC</span>
+      </div>
+
+      <div class="plan-header">
+        <h3>{{ plan.name }}</h3>
+        <div class="price">
+          <span class="amount">${{ plan.price }}</span>
+          <span class="currency">{{ plan.currency }}</span>
+        </div>
+        <div class="duration" *ngIf="plan.duration === 30">Per Month</div>
+        <div class="duration" *ngIf="plan.duration === 365">
+          Per Year
+          <div class="savings" *ngIf="calculateMonthlySavings(plan) > 0">
+            Save ${{ calculateMonthlySavings(plan).toFixed(2) }}/month
+          </div>
+        </div>
+      </div>
+
+      <div class="features">
+        <div class="feature" *ngFor="let feature of plan.features">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ feature }}</span>
+        </div>
+      </div>
+
+      <div class="plan-footer">
+        <button
+          mat-raised-button
+          [color]="selectedPlan?.id === plan.id ? 'primary' : 'basic'"
+          class="select-button"
+        >
+          {{ selectedPlan?.id === plan.id ? 'Selected' : 'Select Plan' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="payment-section" *ngIf="selectedPlan">
+    <div class="selected-plan-summary">
+      <h3>Selected Plan: {{ selectedPlan.name }}</h3>
+      <p class="plan-price">${{ selectedPlan.price }} {{ selectedPlan.currency }}</p>
+    </div>
+
+    <!-- Payment Method Selection -->
+    <div class="payment-method-selection">
+      <h3>Choose Payment Method</h3>
+
+      <!-- Crypto Payment Option (Recommended) -->
+      <div class="payment-option"
+           [class.selected]="selectedPaymentMethod === 'crypto'"
+           (click)="selectPaymentMethod('crypto')">
+        <div class="payment-option-header">
+          <div class="payment-method-icon">🪙</div>
+          <div class="payment-method-info">
+            <h4>Pay with Cryptocurrency</h4>
+            <p class="savings-badge">💰 Save 2.5% - Only 0.5% fee</p>
+          </div>
+          <div class="recommended-badge">RECOMMENDED</div>
+        </div>
+        <div class="crypto-badges">
+          <span class="crypto-badge">₿ Bitcoin</span>
+          <span class="crypto-badge">Ξ Ethereum</span>
+          <span class="crypto-badge">₮ USDT</span>
+          <span class="crypto-badge">+ 300+ more</span>
+        </div>
+        <p class="payment-description">
+          Anonymous, secure, and instant activation. Lowest processing fees.
+        </p>
+      </div>
+
+      <!-- Card Payment Option -->
+      <div class="payment-option"
+           [class.selected]="selectedPaymentMethod === 'card'"
+           (click)="selectPaymentMethod('card')">
+        <div class="payment-option-header">
+          <div class="payment-method-icon">💳</div>
+          <div class="payment-method-info">
+            <h4>Pay with Credit/Debit Card</h4>
+            <p class="fee-info">Standard processing fees apply</p>
+          </div>
+        </div>
+        <div class="card-badges">
+          <span class="card-badge">💳 Visa</span>
+          <span class="card-badge">💳 Mastercard</span>
+          <span class="card-badge">💳 Amex</span>
+          <span class="card-badge">🅿️ PayPal</span>
+        </div>
+        <p class="payment-description">
+          Traditional payment method. Secure and familiar checkout experience.
+        </p>
+      </div>
+    </div>
+
+    <!-- Payment Summary -->
+    <div class="payment-summary" *ngIf="selectedPaymentMethod">
+      <div class="summary-row">
+        <span>Subscription:</span>
+        <span>${{ selectedPlan.price }}</span>
+      </div>
+      <div class="summary-row" *ngIf="selectedPaymentMethod === 'card'">
+        <span>Processing Fee (3.5%):</span>
+        <span>${{ getProcessingFee().toFixed(2) }}</span>
+      </div>
+      <div class="summary-row" *ngIf="selectedPaymentMethod === 'crypto'">
+        <span>Processing Fee (0.5%):</span>
+        <span>${{ getCryptoFee().toFixed(2) }}</span>
+      </div>
+      <div class="summary-row total">
+        <span>Total:</span>
+        <span>${{ getTotalAmount().toFixed(2) }}</span>
+      </div>
+    </div>
+
+    <!-- Payment Actions -->
+    <div class="payment-actions" *ngIf="selectedPaymentMethod">
+      <!-- Crypto Payment Button -->
+      <button
+        *ngIf="selectedPaymentMethod === 'crypto'"
+        mat-raised-button
+        color="primary"
+        class="pay-button crypto-button"
+        [disabled]="isProcessing"
+        (click)="processCryptoPayment()"
+      >
+        <mat-icon *ngIf="isProcessing">hourglass_empty</mat-icon>
+        <mat-icon *ngIf="!isProcessing">currency_bitcoin</mat-icon>
+        {{ isProcessing ? 'Processing...' : 'Pay with Crypto' }}
+      </button>
+
+      <!-- Card Payment Button -->
+      <button
+        *ngIf="selectedPaymentMethod === 'card'"
+        mat-raised-button
+        color="accent"
+        class="pay-button card-button"
+        [disabled]="isProcessing"
+        (click)="processCardPayment()"
+      >
+        <mat-icon *ngIf="isProcessing">hourglass_empty</mat-icon>
+        <mat-icon *ngIf="!isProcessing">credit_card</mat-icon>
+        {{ isProcessing ? 'Processing...' : 'Pay with Card' }}
+      </button>
+    </div>
+
+    <div class="error-message" *ngIf="error">
+      <mat-icon>error</mat-icon>
+      <span>{{ error }}</span>
+    </div>
+  </div>
+
+  <div class="features-section">
+    <h2>Why Choose Our IPTV Service?</h2>
+    <div class="benefits-grid">
+      <div class="benefit">
+        <mat-icon>live_tv</mat-icon>
+        <h4>Premium Channels</h4>
+        <p>Access thousands of live TV channels from around the world</p>
+      </div>
+      <div class="benefit">
+        <mat-icon>4k</mat-icon>
+        <h4>4K Quality</h4>
+        <p>Crystal clear streaming in up to 4K resolution</p>
+      </div>
+      <div class="benefit">
+        <mat-icon>security</mat-icon>
+        <h4>Secure Payments</h4>
+        <p>Anonymous and secure cryptocurrency payments</p>
+      </div>
+      <div class="benefit">
+        <mat-icon>support_agent</mat-icon>
+        <h4>24/7 Support</h4>
+        <p>Round-the-clock customer support for all subscribers</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="security-badges">
+    <div class="security-badge">
+      <mat-icon>verified_user</mat-icon>
+      <span>Secure Payments</span>
+    </div>
+    <div class="security-badge">
+      <mat-icon>flash_on</mat-icon>
+      <span>Instant Activation</span>
+    </div>
+    <div class="security-badge">
+      <mat-icon>privacy_tip</mat-icon>
+      <span>Anonymous Billing</span>
+    </div>
+  </div>
+</div>

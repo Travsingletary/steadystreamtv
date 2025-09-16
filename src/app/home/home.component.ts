@@ -1,15 +1,17 @@
-import { NgIf } from '@angular/common';
+import { NgIf, AsyncPipe } from '@angular/common';
 import { Component, NgZone } from '@angular/core';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { RouterModule } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { TranslatePipe } from '@ngx-translate/core';
 import { ERROR, PLAYLIST_PARSE_RESPONSE } from '../../../shared/ipc-commands';
 import { Playlist } from '../../../shared/playlist.interface';
 import { DataService } from '../services/data.service';
+import { SupabaseService } from '../services/supabase.service';
 import { HeaderComponent } from '../shared/components/header/header.component';
 import { addPlaylist } from '../state/actions';
-import { RecentPlaylistsComponent } from './recent-playlists/recent-playlists.component';
 
 @Component({
     selector: 'app-home',
@@ -18,14 +20,19 @@ import { RecentPlaylistsComponent } from './recent-playlists/recent-playlists.co
     imports: [
         HeaderComponent,
         MatProgressBarModule,
+        MatButtonModule,
+        MatIconModule,
         NgIf,
-        RecentPlaylistsComponent,
-        TranslatePipe,
+        AsyncPipe,
+        RouterModule,
     ],
 })
 export class HomeComponent {
     /** Loading spinner state */
     isLoading = false;
+
+    /** Authentication stream */
+    currentUser$ = this.supabaseService.currentUser$;
 
     /** IPC Renderer commands list with callbacks */
     commandsList = [
@@ -53,7 +60,8 @@ export class HomeComponent {
         private dataService: DataService,
         private ngZone: NgZone,
         private snackBar: MatSnackBar,
-        private readonly store: Store
+        private readonly store: Store,
+        private supabaseService: SupabaseService
     ) {
         this.setRendererListeners();
     }

@@ -1,65 +1,110 @@
-# See http://help.github.com/ignore-files/ for more about ignoring files.
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# compiled output
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Build outputs
+dist/
+build/
+*.tgz
+*.tar.gz
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+
+# next.js build output
+.next
+
+# Nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Angular specific
 /dist
-/build
 /tmp
 /out-tsc
-/app-builds
-/release
-/e2e/tracing
-/e2e/screenshots
-/test-results
-api.js
-epg-worker.js
-main.js
-menu.js
-src/**/*.js
-!src/karma.conf.js
-*.js.map
-data.db
-preload.js
-shared/*.js
-playwright-report
-.nx
-server.js
+/bazel-out
 
-# dependencies
-/node_modules
+# Angular CLI
+.angular/
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# Tauri specific
+src-tauri/target/
 
-# IDE - VSCode
-.vscode/*
-.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# misc
-/.sass-cache
-/connect.lock
+# Test outputs
 /coverage
-/libpeerconnection.log
-npm-debug.log
-testem.log
-/typings
-package-lock.json
-.angular/*
+/.nyc_output
 
 # e2e
 /e2e/*.js
-!/e2e/protractor.conf.js
 /e2e/*.map
-/e2e/db
 
 # System Files
 .DS_Store
 Thumbs.db
+
+# Supabase
+.branches
+.temp
+.vscode
+supabase/.env
+
+# Local development
+test-nowpayments.js
+*.log

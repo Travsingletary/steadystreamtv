@@ -1,0 +1,251 @@
+<div class="dashboard-container">
+  <div class="header">
+    <h1>Subscription Dashboard</h1>
+    <p>Manage your IPTV subscription and billing</p>
+  </div>
+
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner></mat-spinner>
+    <p>Loading subscription data...</p>
+  </div>
+
+  <div *ngIf="!isLoading && !userSubscription" class="no-subscription">
+    <div class="no-sub-icon">
+      <mat-icon>tv_off</mat-icon>
+    </div>
+    <h2>No Active Subscription</h2>
+    <p>You don't have an active IPTV subscription. Choose a plan to get started.</p>
+    <button mat-raised-button color="primary" (click)="navigateToPayment()" class="subscribe-button">
+      <mat-icon>payment</mat-icon>
+      Subscribe Now
+    </button>
+  </div>
+
+  <div *ngIf="!isLoading && userSubscription" class="subscription-content">
+    <!-- Subscription Status Card -->
+    <div class="status-card" [ngClass]="getStatusClass()">
+      <div class="status-header">
+        <div class="status-info">
+          <h2>{{ userSubscription.planName }}</h2>
+          <div class="status-badge">
+            <mat-icon>{{ getSubscriptionStatus() === 'Active' ? 'check_circle' : 'error' }}</mat-icon>
+            <span>{{ getSubscriptionStatus() }}</span>
+          </div>
+        </div>
+        <div class="subscription-dates">
+          <div class="date-item">
+            <span class="label">Started:</span>
+            <span class="value">{{ formatDate(userSubscription.startDate) }}</span>
+          </div>
+          <div class="date-item">
+            <span class="label">Expires:</span>
+            <span class="value">{{ formatDate(userSubscription.endDate) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-section" *ngIf="userSubscription.isActive">
+        <div class="progress-info">
+          <span>{{ daysRemaining }} days remaining</span>
+          <span>{{ getProgressPercentage().toFixed(0) }}% used</span>
+        </div>
+        <mat-progress-bar
+          mode="determinate"
+          [value]="getProgressPercentage()"
+          [color]="daysRemaining <= 7 ? 'warn' : 'primary'">
+        </mat-progress-bar>
+      </div>
+
+      <!-- Renewal Warning -->
+      <div class="warning-section" *ngIf="getRenewalWarning()">
+        <div class="warning-message">
+          <mat-icon>warning</mat-icon>
+          <span>{{ getRenewalWarning() }}</span>
+        </div>
+        <button mat-raised-button color="warn" (click)="navigateToPayment()" class="renew-button">
+          <mat-icon>refresh</mat-icon>
+          Renew Now
+        </button>
+      </div>
+    </div>
+
+    <!-- Subscription Details -->
+    <div class="details-grid">
+      <div class="detail-card">
+        <div class="detail-header">
+          <mat-icon>receipt</mat-icon>
+          <h3>Billing Information</h3>
+        </div>
+        <div class="detail-content">
+          <div class="detail-row">
+            <span class="label">Subscription ID:</span>
+            <span class="value">{{ userSubscription.id }}</span>
+          </div>
+          <div class="detail-row" *ngIf="userSubscription.paymentId">
+            <span class="label">Payment ID:</span>
+            <span class="value">{{ userSubscription.paymentId }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Payment Method:</span>
+            <span class="value">Cryptocurrency</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Auto-Renewal:</span>
+            <span class="value">Manual (Crypto)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-header">
+          <mat-icon>tv</mat-icon>
+          <h3>Service Access</h3>
+        </div>
+        <div class="detail-content">
+          <div class="access-status">
+            <div class="access-item" [class.active]="userSubscription.isActive">
+              <mat-icon>live_tv</mat-icon>
+              <span>Live TV Channels</span>
+              <mat-icon class="status-icon">{{ userSubscription.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+            </div>
+            <div class="access-item" [class.active]="userSubscription.isActive">
+              <mat-icon>movie</mat-icon>
+              <span>Video on Demand</span>
+              <mat-icon class="status-icon">{{ userSubscription.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+            </div>
+            <div class="access-item" [class.active]="userSubscription.isActive">
+              <mat-icon>4k</mat-icon>
+              <span>HD/4K Streaming</span>
+              <mat-icon class="status-icon">{{ userSubscription.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+            </div>
+            <div class="access-item" [class.active]="userSubscription.isActive">
+              <mat-icon>support_agent</mat-icon>
+              <span>Priority Support</span>
+              <mat-icon class="status-icon">{{ userSubscription.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- App Download Section -->
+    <div class="app-download-section" *ngIf="appDownloadResponse">
+      <div class="app-download-card">
+        <div class="app-header">
+          <mat-icon>smartphone</mat-icon>
+          <h3>SteadyStream TV App - Android</h3>
+        </div>
+        <div class="app-content">
+          <div class="download-options">
+            <div class="download-option">
+              <h4>📱 Direct Download</h4>
+              <p>Download the APK file directly to your Android device</p>
+              <div class="download-actions">
+                <button mat-raised-button color="primary" (click)="copyToClipboard(appDownloadResponse.downloadUrl, 'Download URL')">
+                  <mat-icon>link</mat-icon>
+                  Copy Download URL
+                </button>
+                <button mat-stroked-button (click)="copyToClipboard(appDownloadResponse.downloadCode || '', 'Download Code')" *ngIf="appDownloadResponse.downloadCode">
+                  <mat-icon>qr_code</mat-icon>
+                  Code: {{ appDownloadResponse.downloadCode }}
+                </button>
+              </div>
+            </div>
+
+            <div class="download-option" *ngIf="appDownloadResponse.qrCode">
+              <h4>📷 QR Code Setup</h4>
+              <p>Scan this QR code with your phone for instant app configuration</p>
+              <div class="qr-code-container">
+                <img [src]="appDownloadResponse.qrCode" alt="QR Code for app setup" class="qr-code-image">
+                <button mat-button (click)="openDeepLink()">
+                  <mat-icon>open_in_new</mat-icon>
+                  Open Config Link
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="installation-instructions">
+            <h4>📋 Installation Instructions</h4>
+            <ol class="instructions-list">
+              <li *ngFor="let instruction of appDownloadResponse.instructions">{{ instruction }}</li>
+            </ol>
+          </div>
+
+          <div class="app-info">
+            <div class="info-item">
+              <strong>App Version:</strong> 1.0.0
+            </div>
+            <div class="info-item">
+              <strong>Platform:</strong> Android 5.0+
+            </div>
+            <div class="info-item">
+              <strong>File Size:</strong> ~45MB
+            </div>
+            <div class="info-item">
+              <strong>Features:</strong> Custom SteadyStream branding, Pre-configured setup
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions-section">
+      <div class="primary-actions">
+        <button mat-raised-button color="primary" (click)="navigateToPayment()" class="action-button">
+          <mat-icon>add_shopping_cart</mat-icon>
+          Upgrade Plan
+        </button>
+        <button
+          mat-stroked-button
+          color="primary"
+          class="action-button"
+          [disabled]="!canDownloadApp() || isDownloadingApp"
+          (click)="openAppDownloadDialog()">
+          <mat-icon>{{ isDownloadingApp ? 'sync' : 'download' }}</mat-icon>
+          {{ isDownloadingApp ? 'Generating...' : getAppDownloadStatus() }}
+        </button>
+      </div>
+
+      <div class="secondary-actions">
+        <button mat-button color="warn" (click)="cancelSubscription()" class="action-button">
+          <mat-icon>cancel</mat-icon>
+          Cancel Subscription
+        </button>
+        <button mat-button (click)="clearSubscriptionData()" class="action-button">
+          <mat-icon>delete</mat-icon>
+          Clear Data
+        </button>
+      </div>
+    </div>
+
+    <!-- Support Section -->
+    <div class="support-section">
+      <div class="support-card">
+        <div class="support-header">
+          <mat-icon>help_center</mat-icon>
+          <h3>Need Help?</h3>
+        </div>
+        <div class="support-content">
+          <p>Having issues with your subscription or need technical support?</p>
+          <div class="support-actions">
+            <button mat-stroked-button class="support-button">
+              <mat-icon>chat</mat-icon>
+              Live Chat
+            </button>
+            <button mat-stroked-button class="support-button">
+              <mat-icon>email</mat-icon>
+              Email Support
+            </button>
+            <button mat-stroked-button class="support-button">
+              <mat-icon>book</mat-icon>
+              User Guide
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

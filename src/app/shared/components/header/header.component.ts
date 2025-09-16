@@ -18,6 +18,7 @@ import { HomeComponent } from '../../../home/home.component';
 import { DataService } from '../../../services/data.service';
 import { SortBy, SortOrder, SortService } from '../../../services/sort.service';
 import { WhatsNewService } from '../../../services/whats-new.service';
+import { SupabaseService } from '../../../services/supabase.service';
 import { setSelectedFilters } from '../../../state/actions';
 import { selectActiveTypeFilters } from '../../../state/selectors';
 import { AboutDialogComponent } from '../about-dialog/about-dialog.component';
@@ -94,6 +95,9 @@ export class HeaderComponent implements OnInit {
     SortOrder = SortOrder;
     currentSortOptions: { by: SortBy; order: SortOrder };
 
+    // Authentication properties
+    currentUser$ = this.supabaseService.currentUser$;
+
     constructor(
         private activatedRoute: ActivatedRoute,
         private dialog: MatDialog,
@@ -101,7 +105,8 @@ export class HeaderComponent implements OnInit {
         private router: Router,
         private store: Store,
         private whatsNewService: WhatsNewService,
-        private sortService: SortService
+        private sortService: SortService,
+        private supabaseService: SupabaseService
     ) {
         effect(() => {
             if (this.selectedTypeFilters) {
@@ -192,5 +197,27 @@ export class HeaderComponent implements OnInit {
             this.currentSortOptions?.by === by &&
             this.currentSortOptions?.order === order
         );
+    }
+
+    // Authentication methods
+    navigateToLogin(): void {
+        this.router.navigate(['/login']);
+    }
+
+    navigateToSignup(): void {
+        this.router.navigate(['/signup']);
+    }
+
+    navigateToPayment(): void {
+        this.router.navigate(['/payment']);
+    }
+
+    navigateToSubscription(): void {
+        this.router.navigate(['/subscription']);
+    }
+
+    async signOut(): Promise<void> {
+        await this.supabaseService.signOut();
+        this.router.navigate(['/']);
     }
 }

@@ -1,0 +1,545 @@
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Roboto', sans-serif;
+
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 1.1rem;
+      color: #666;
+    }
+  }
+
+  .loading-container {
+    text-align: center;
+    padding: 4rem 0;
+
+    mat-spinner {
+      margin: 0 auto 2rem;
+    }
+
+    p {
+      font-size: 1.1rem;
+      color: #666;
+    }
+  }
+
+  .no-subscription {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+
+    .no-sub-icon {
+      mat-icon {
+        font-size: 4rem;
+        color: #ccc;
+        margin-bottom: 1rem;
+      }
+    }
+
+    h2 {
+      font-size: 2rem;
+      color: #333;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      font-size: 1.1rem;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+
+    .subscribe-button {
+      height: 48px;
+      padding: 0 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+
+      mat-icon {
+        margin-right: 0.5rem;
+      }
+    }
+  }
+
+  .subscription-content {
+    .status-card {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-left: 4px solid transparent;
+
+      &.status-active {
+        border-left-color: #4caf50;
+      }
+
+      &.status-expired {
+        border-left-color: #f44336;
+      }
+
+      &.status-inactive {
+        border-left-color: #ff9800;
+      }
+
+      .status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+
+        .status-info {
+          h2 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+          }
+
+          .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            background: #e8f5e8;
+            color: #2e7d32;
+
+            &.status-expired {
+              background: #ffebee;
+              color: #c62828;
+            }
+
+            &.status-inactive {
+              background: #fff3e0;
+              color: #ef6c00;
+            }
+
+            mat-icon {
+              font-size: 1.2rem;
+            }
+          }
+        }
+
+        .subscription-dates {
+          text-align: right;
+
+          .date-item {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0.5rem;
+
+            .label {
+              font-size: 0.9rem;
+              color: #666;
+            }
+
+            .value {
+              font-size: 1rem;
+              font-weight: 600;
+              color: #333;
+            }
+          }
+        }
+      }
+
+      .progress-section {
+        margin-bottom: 1.5rem;
+
+        .progress-info {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
+          color: #666;
+        }
+
+        mat-progress-bar {
+          height: 8px;
+          border-radius: 4px;
+        }
+      }
+
+      .warning-section {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 1rem;
+
+        .warning-message {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #856404;
+
+          mat-icon {
+            color: #ff9800;
+          }
+        }
+
+        .renew-button {
+          mat-icon {
+            margin-right: 0.5rem;
+          }
+        }
+      }
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+
+      .detail-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+        .detail-header {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+
+          mat-icon {
+            font-size: 2rem;
+            color: #2196f3;
+          }
+
+          h3 {
+            font-size: 1.5rem;
+            color: #333;
+            margin: 0;
+          }
+        }
+
+        .detail-content {
+          .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+
+            &:last-child {
+              border-bottom: none;
+              margin-bottom: 0;
+            }
+
+            .label {
+              font-weight: 500;
+              color: #666;
+            }
+
+            .value {
+              font-weight: 600;
+              color: #333;
+            }
+          }
+
+          .access-status {
+            .access-item {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 0.75rem;
+              margin-bottom: 0.5rem;
+              border-radius: 8px;
+              background: #f5f5f5;
+
+              &.active {
+                background: #e8f5e8;
+                color: #2e7d32;
+              }
+
+              mat-icon:first-child {
+                margin-right: 1rem;
+              }
+
+              span {
+                flex: 1;
+                font-weight: 500;
+              }
+
+              .status-icon {
+                &[ng-reflect-font-icon="check_circle"] {
+                  color: #4caf50;
+                }
+
+                &[ng-reflect-font-icon="cancel"] {
+                  color: #f44336;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .actions-section {
+      margin-bottom: 3rem;
+
+      .primary-actions {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        justify-content: center;
+
+        .action-button {
+          height: 48px;
+          padding: 0 2rem;
+          font-weight: 600;
+
+          mat-icon {
+            margin-right: 0.5rem;
+          }
+        }
+      }
+
+      .secondary-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+
+        .action-button {
+          mat-icon {
+            margin-right: 0.5rem;
+          }
+        }
+      }
+    }
+
+    .support-section {
+      .support-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+
+        .support-header {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 1rem;
+          margin-bottom: 1rem;
+
+          mat-icon {
+            font-size: 2rem;
+            color: #2196f3;
+          }
+
+          h3 {
+            font-size: 1.5rem;
+            color: #333;
+            margin: 0;
+          }
+        }
+
+        .support-content {
+          p {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 2rem;
+          }
+
+          .support-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+
+            .support-button {
+              mat-icon {
+                margin-right: 0.5rem;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+
+    .status-card .status-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+
+      .subscription-dates {
+        text-align: left;
+      }
+    }
+
+    .details-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .actions-section {
+      .primary-actions,
+      .secondary-actions {
+        flex-direction: column;
+        align-items: center;
+
+        .action-button {
+          width: 100%;
+          max-width: 300px;
+        }
+      }
+    }
+
+    .support-content .support-actions {
+      flex-direction: column;
+      align-items: center;
+
+      .support-button {
+        width: 100%;
+        max-width: 200px;
+      }
+    }
+  }
+
+  // App Download Section
+  .app-download-section {
+    margin: 2rem 0;
+
+    .app-download-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-left: 4px solid #4caf50;
+
+      .app-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+
+        mat-icon {
+          font-size: 2rem;
+          color: #4caf50;
+        }
+
+        h3 {
+          font-size: 1.5rem;
+          color: #333;
+          margin: 0;
+        }
+      }
+
+      .app-content {
+        .download-options {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 2rem;
+          margin-bottom: 2rem;
+
+          .download-option {
+            h4 {
+              font-size: 1.2rem;
+              color: #333;
+              margin-bottom: 1rem;
+            }
+
+            p {
+              color: #666;
+              margin-bottom: 1rem;
+            }
+
+            .download-actions {
+              display: flex;
+              gap: 1rem;
+              flex-wrap: wrap;
+
+              button {
+                mat-icon {
+                  margin-right: 0.5rem;
+                }
+              }
+            }
+
+            .qr-code-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 1rem;
+
+              .qr-code-image {
+                max-width: 200px;
+                height: auto;
+                border: 2px solid #eee;
+                border-radius: 8px;
+                padding: 10px;
+                background: white;
+              }
+            }
+          }
+        }
+
+        .installation-instructions {
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 1.5rem;
+          margin-bottom: 2rem;
+
+          h4 {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 1rem;
+          }
+
+          .instructions-list {
+            padding-left: 1.5rem;
+
+            li {
+              margin-bottom: 0.5rem;
+              color: #555;
+              line-height: 1.5;
+            }
+          }
+        }
+
+        .app-info {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+          background: #f0f7ff;
+          border-radius: 8px;
+          padding: 1.5rem;
+
+          .info-item {
+            strong {
+              color: #333;
+              display: block;
+              margin-bottom: 0.25rem;
+            }
+
+            color: #555;
+            font-size: 0.95rem;
+          }
+        }
+      }
+    }
+  }
+}
