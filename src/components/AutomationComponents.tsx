@@ -158,11 +158,11 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
   });
   const [error, setError] = useState('');
 
-  // Production Stripe checkout URLs
-  const stripeCheckoutUrls = {
-    'basic': 'https://buy.stripe.com/dRmfZj1OzbPk7UU9H1dby01',
-    'duo': 'https://buy.stripe.com/5kQ5kFdxh7z4fnm1avdby02', 
-    'family': 'https://buy.stripe.com/3cI9AVctd8D8eji4mHdby00'
+  // Crypto payment plans (NowPayments integration)
+  const cryptoPlans = {
+    'basic': { price: 15, name: 'Basic Plan' },
+    'duo': { price: 25, name: 'Duo Plan' }, 
+    'family': { price: 35, name: 'Family Plan' }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -183,7 +183,7 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
 
     // Route based on plan selection
     if (formData.plan !== 'trial') {
-      // PAID PLANS: Store data and redirect to Stripe
+      // PAID PLANS: Store data and redirect to crypto payment
       const userDataForPayment = {
         name: formData.name,
         email: formData.email,
@@ -194,8 +194,9 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
       localStorage.setItem('pendingUserData', JSON.stringify(userDataForPayment));
       sessionStorage.setItem('pendingUserData', JSON.stringify(userDataForPayment));
       
-      console.log('💳 Redirecting to Stripe for plan:', formData.plan);
-      window.location.href = stripeCheckoutUrls[formData.plan as keyof typeof stripeCheckoutUrls];
+      console.log('💳 Redirecting to crypto payment for plan:', formData.plan);
+      // Navigate to onboarding with payment step
+      window.location.href = '/onboarding?step=payment&plan=' + formData.plan;
       return;
     }
 
@@ -314,7 +315,7 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
             </>
           ) : (
             <>
-              <p>✅ Secure payment via Stripe</p>
+              <p>✅ Secure crypto payments</p>
               <p>✅ Instant access after payment</p>
               <p>✅ Cancel anytime, no contracts</p>
             </>

@@ -173,7 +173,7 @@ export const OnboardingSubscription = ({
       
       if (data?.url) {
         console.log("Redirecting to payment URL:", data.url);
-        // Redirect to Stripe checkout
+        // Redirect to crypto payment
         window.location.href = data.url;
       } else {
         throw new Error("No checkout URL returned");

@@ -589,7 +589,7 @@ const TestImplementation: React.FC = () => {
         </button>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .test-implementation {
           max-width: 1200px;
           margin: 0 auto;

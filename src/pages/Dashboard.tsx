@@ -196,16 +196,16 @@ const Dashboard = () => {
       addDebugInfo(`Edge function response: ${JSON.stringify(data)}`);
       
       if (data?.url) {
-        addDebugInfo(`Opening Stripe checkout in new tab: ${data.url}`);
+        addDebugInfo(`Opening crypto payment in new tab: ${data.url}`);
         
         // Show user feedback before opening new tab
         toast({
           title: "Redirecting to Payment",
-          description: "A new tab will open with your secure Stripe payment page.",
+          description: "A new tab will open with your secure crypto payment page.",
           variant: "default",
         });
         
-        // Open Stripe checkout in a new tab to avoid iframe restrictions
+        // Open crypto checkout in a new tab to avoid iframe restrictions
         const newWindow = window.open(data.url, '_blank');
         
         if (!newWindow) {
@@ -346,7 +346,7 @@ const Dashboard = () => {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Payment Process</AlertTitle>
             <AlertDescription>
-              When you click "Subscribe", a new tab will open with your secure Stripe payment page. 
+              When you click "Subscribe", a new tab will open with your secure crypto payment page. 
               Please complete your payment there and return to this page.
             </AlertDescription>
           </Alert>
@@ -529,7 +529,7 @@ const Dashboard = () => {
                             <Lock className="h-4 w-4 text-gold" />
                             <span className="font-medium">Secure Payments</span>
                           </p>
-                          <p>All payments are processed securely through Stripe. Your payment information is never stored on our servers.</p>
+                          <p>All payments are processed securely through cryptocurrency. Your payment information is never stored on our servers.</p>
                         </div>
                       </div>
                     </div>

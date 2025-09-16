@@ -66,7 +66,7 @@ const PaymentSuccess = () => {
             preferredDevice: "web",
             genres: [],
             subscription: {
-              plan: "premium", // Default, will be updated from Stripe
+              plan: "premium", // Default, will be updated from crypto payment
               name: "Premium",
               price: 35,
               trialDays: 30

@@ -275,7 +275,7 @@ const EnhancedFinalStep: React.FC<FinalStepProps> = ({ userData, onComplete, onE
         </details>
       )}
 
-      <style jsx>{`
+      <style>{`
         .final-step-container {
           max-width: 600px;
           margin: 0 auto;
