@@ -231,7 +231,7 @@ const InfoCard = ({
     <Button 
       size="sm"
       className="w-full bg-dark-400 hover:bg-dark-500 text-white"
-      onClick={buttonLink ? () => window.location.href = buttonLink : buttonAction}
+      onClick={buttonLink ? () => window.open(buttonLink, '_blank') : buttonAction}
     >
       {buttonText}
     </Button>

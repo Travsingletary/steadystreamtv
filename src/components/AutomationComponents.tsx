@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Production Configuration
 const SUPABASE_URL = 'https://ojueihcytxwcioqtvwez.supabase.co';
@@ -149,6 +150,7 @@ interface AutomationModalProps {
 }
 
 export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -195,8 +197,8 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
       sessionStorage.setItem('pendingUserData', JSON.stringify(userDataForPayment));
       
       console.log('💳 Redirecting to crypto payment for plan:', formData.plan);
-      // Navigate to onboarding with payment step
-      window.location.href = '/onboarding?step=payment&plan=' + formData.plan;
+      // Navigate to onboarding with payment step using React Router
+      navigate('/onboarding?step=payment&plan=' + formData.plan);
       return;
     }
 

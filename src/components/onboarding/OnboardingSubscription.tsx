@@ -173,7 +173,7 @@ export const OnboardingSubscription = ({
       
       if (data?.url) {
         console.log("Redirecting to payment URL:", data.url);
-        // Redirect to crypto payment
+        // External payment - keep using window.location.href for external redirect
         window.location.href = data.url;
       } else {
         throw new Error("No checkout URL returned");
