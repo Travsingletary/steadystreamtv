@@ -120,15 +120,29 @@ serve(async (req) => {
       }
 
       if (!byEmail?.id) {
-        log('No profile found for provided email', { email: payload.email });
-        return new Response(
-          JSON.stringify({ error: 'Profile not found for provided email' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+        // Auto-create profile using email if not found
+        log('No profile found. Auto-creating profile for email', { email: payload.email });
+        const { data: newProfile, error: insertError } = await supabaseAdmin
+          .from('profiles')
+          .insert({
+            email: payload.email,
+            name: (payload.name || payload.email.split('@')[0]).trim(),
+            subscription_status: 'inactive'
+          })
+          .select('id, name, email')
+          .single();
 
-      resolvedUserId = byEmail.id;
-      resolvedName = resolvedName || byEmail.name || payload.email.split('@')[0];
+        if (insertError) {
+          log('Failed to auto-create profile', insertError);
+          throw insertError;
+        }
+
+        resolvedUserId = newProfile.id;
+        resolvedName = newProfile.name;
+      } else {
+        resolvedUserId = byEmail.id;
+        resolvedName = resolvedName || byEmail.name || payload.email.split('@')[0];
+      }
     }
 
     // Check if user already has IPTV credentials
