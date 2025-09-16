@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,17 +7,19 @@ const corsHeaders = {
 };
 
 interface CreatePaymentRequest {
-  planType: string;
   customerEmail: string;
   customerName: string;
+  planType: string;
 }
 
-const log = (message: string, data?: any) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${message}`, data || '');
+// Plan mapping for crypto payments
+const planPricing = {
+  standard: { price_usd: 15, name: "Standard Plan", duration_months: 1 },
+  premium: { price_usd: 25, name: "Premium Plan", duration_months: 1 },
+  ultimate: { price_usd: 35, name: "Ultimate Plan", duration_months: 1 }
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -27,122 +30,113 @@ serve(async (req) => {
       JSON.stringify({ error: 'Method not allowed' }),
       { 
         status: 405, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       }
     );
   }
 
   try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     const payload: CreatePaymentRequest = await req.json();
-    log("Crypto payment request received", { planType: payload.planType, email: payload.customerEmail });
-
-    // Plan mapping for crypto payments
-    const planPricing = {
-      'basic': { price: 15, name: 'Basic Plan' },
-      'standard': { price: 15, name: 'Standard Plan' },
-      'premium': { price: 25, name: 'Premium Plan' },
-      'ultimate': { price: 35, name: 'Ultimate Plan' },
-      'duo': { price: 25, name: 'Duo Plan' },
-      'family': { price: 35, name: 'Family Plan' }
-    };
-
-    const selectedPlan = planPricing[payload.planType as keyof typeof planPricing];
     
-    if (!selectedPlan) {
-      log("Invalid plan type", { planType: payload.planType });
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid plan type',
-          availablePlans: Object.keys(planPricing)
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    console.log('Creating crypto payment for:', { 
+      email: payload.customerEmail, 
+      plan: payload.planType 
+    });
+
+    // Validate plan type
+    if (!planPricing[payload.planType as keyof typeof planPricing]) {
+      throw new Error(`Invalid plan type: ${payload.planType}`);
     }
 
-    // Get NowPayments API key
+    const planDetails = planPricing[payload.planType as keyof typeof planPricing];
+
+    // Create payment session in database
+    const { data: session, error: sessionError } = await supabase
+      .from('checkout_sessions')
+      .insert({
+        session_id: crypto.randomUUID(),
+        plan_name: planDetails.name,
+        amount: planDetails.price_usd * 100, // Store in cents
+        status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (sessionError) {
+      console.error('Failed to create checkout session:', sessionError);
+      throw new Error('Failed to create payment session');
+    }
+
+    // Generate crypto payment URL using NowPayments API
     const nowPaymentsApiKey = Deno.env.get('NOWPAYMENTS_API_KEY');
+    const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://steadystreamtv.com';
+    
     if (!nowPaymentsApiKey) {
-      log("ERROR: Missing NowPayments API key");
-      return new Response(
-        JSON.stringify({
-          error: 'Payment system configuration error',
-          detail: 'NOWPAYMENTS_API_KEY not configured'
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      throw new Error('NowPayments API key not configured');
     }
 
-    // Create NowPayments invoice
     const paymentData = {
-      price_amount: selectedPlan.price,
+      price_amount: planDetails.price_usd,
       price_currency: 'USD',
-      pay_currency: '', // Let user choose crypto
-      order_id: `ss_${Date.now()}_${payload.planType}`,
-      order_description: `SteadyStream TV - ${selectedPlan.name}`,
-      success_url: `${Deno.env.get('FRONTEND_URL') || 'https://steadystreamtv.com'}/payment-success`,
-      cancel_url: `${Deno.env.get('FRONTEND_URL') || 'https://steadystreamtv.com'}/onboarding`,
-      customer_email: payload.customerEmail
+      pay_currency: 'btc', // Default to Bitcoin
+      order_id: session.session_id,
+      order_description: `${planDetails.name} - SteadyStream TV`,
+      success_url: `${frontendUrl}/payment-success?session_id=${session.session_id}`,
+      cancel_url: `${frontendUrl}/onboarding?step=subscription`
     };
 
-    log("Creating NowPayments invoice", { paymentData });
-
-    const nowPaymentsResponse = await fetch('https://api.nowpayments.io/v1/invoice', {
+    const nowPaymentsResponse = await fetch('https://api.nowpayments.io/v1/payment', {
       method: 'POST',
       headers: {
-        'x-api-key': nowPaymentsApiKey,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'x-api-key': nowPaymentsApiKey
       },
       body: JSON.stringify(paymentData)
     });
 
-    const invoiceData = await nowPaymentsResponse.json();
-
     if (!nowPaymentsResponse.ok) {
-      log("NowPayments API error", { error: invoiceData });
-      return new Response(
-        JSON.stringify({
-          error: 'Failed to create crypto payment',
-          detail: invoiceData.message || 'Unknown error'
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      const errorData = await nowPaymentsResponse.text();
+      console.error('NowPayments API error:', errorData);
+      throw new Error('Failed to create crypto payment');
     }
 
-    log("NowPayments invoice created successfully", { invoiceId: invoiceData.id });
+    const paymentResult = await nowPaymentsResponse.json();
+    
+    console.log('Crypto payment created successfully:', {
+      paymentId: paymentResult.payment_id,
+      payUrl: paymentResult.pay_url
+    });
 
     return new Response(
       JSON.stringify({
-        url: invoiceData.invoice_url,
-        invoiceId: invoiceData.id,
-        amount: selectedPlan.price,
-        currency: 'USD',
-        planType: payload.planType
+        success: true,
+        url: paymentResult.pay_url,
+        sessionId: session.session_id,
+        paymentId: paymentResult.payment_id
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       }
     );
 
   } catch (error) {
-    log("ERROR: Unexpected error in create-payment", { error });
+    console.error('Create payment error:', error);
+    
     return new Response(
       JSON.stringify({
-        error: 'Internal server error',
-        detail: error instanceof Error ? error.message : 'Unknown error'
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        code: 'PAYMENT_CREATION_FAILED'
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       }
     );
   }
