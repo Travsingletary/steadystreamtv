@@ -123,23 +123,50 @@ serve(async (req) => {
         // Auto-create auth user and linked profile
         log('No profile found. Auto-creating auth user + profile for email', { email: payload.email });
         // Create auth user using service role
+        let authUserId: string | null = null;
+        const desiredName = (payload.name || payload.email.split('@')[0]).trim();
         const createUserRes = await supabaseAdmin.auth.admin.createUser({
           email: payload.email,
           email_confirm: true,
-          user_metadata: { name: (payload.name || payload.email.split('@')[0]).trim() }
+          user_metadata: { name: desiredName }
         });
-        if (createUserRes.error || !createUserRes.data?.user?.id) {
-          log('Failed to create auth user', createUserRes.error || {});
-          throw createUserRes.error || new Error('Failed to create auth user');
+        if (createUserRes.error) {
+          // If user already exists, try to find existing auth user by email
+          const alreadyExists = (createUserRes.error as any)?.message?.toLowerCase?.().includes('already been registered');
+          if (!alreadyExists) {
+            log('Failed to create auth user', createUserRes.error);
+            throw createUserRes.error;
+          }
+          log('Auth user already exists, attempting to locate by email');
+          // Fallback: iterate through users to find match by email (bounded pages)
+          let found = null;
+          for (let page = 1; page <= 10; page++) {
+            const listRes = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+            if (listRes.error) {
+              log('Failed to list users', listRes.error);
+              throw listRes.error;
+            }
+            const match = listRes.data.users.find((u: any) => u.email?.toLowerCase() === payload.email.toLowerCase());
+            if (match) { found = match; break; }
+            if (listRes.data.users.length < 1000) break; // no more pages
+          }
+          if (!found?.id) {
+            throw new Error('Existing auth user not found by email');
+          }
+          authUserId = found.id;
+        } else {
+          authUserId = createUserRes.data?.user?.id ?? null;
         }
-        const authUserId = createUserRes.data.user.id;
+        if (!authUserId) {
+          throw new Error('Auth user id missing after create/find flow');
+        }
 
         const { data: newProfile, error: insertError } = await supabaseAdmin
           .from('profiles')
           .insert({
             id: authUserId,
             email: payload.email,
-            name: (payload.name || payload.email.split('@')[0]).trim(),
+            name: desiredName,
             subscription_status: 'inactive'
           })
           .select('id, name, email')
