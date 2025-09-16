@@ -120,13 +120,24 @@ serve(async (req) => {
       }
 
       if (!byEmail?.id) {
-        // Auto-create profile using email if not found
-        log('No profile found. Auto-creating profile for email', { email: payload.email });
-        const generatedId = (globalThis as any).crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+        // Auto-create auth user and linked profile
+        log('No profile found. Auto-creating auth user + profile for email', { email: payload.email });
+        // Create auth user using service role
+        const createUserRes = await supabaseAdmin.auth.admin.createUser({
+          email: payload.email,
+          email_confirm: true,
+          user_metadata: { name: (payload.name || payload.email.split('@')[0]).trim() }
+        });
+        if (createUserRes.error || !createUserRes.data?.user?.id) {
+          log('Failed to create auth user', createUserRes.error || {});
+          throw createUserRes.error || new Error('Failed to create auth user');
+        }
+        const authUserId = createUserRes.data.user.id;
+
         const { data: newProfile, error: insertError } = await supabaseAdmin
           .from('profiles')
           .insert({
-            id: generatedId,
+            id: authUserId,
             email: payload.email,
             name: (payload.name || payload.email.split('@')[0]).trim(),
             subscription_status: 'inactive'
