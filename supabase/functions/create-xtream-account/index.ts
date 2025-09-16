@@ -4,10 +4,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 
 // Define request payload type
 type RequestPayload = {
-  userId: string
+  userId?: string
   planType: string
   email: string
-  name: string
+  name?: string
 }
 
 // Plan mapping for MegaOTT packages - updated to match frontend plans
@@ -71,15 +71,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Validate request
-    if (!payload.userId || !payload.planType || !payload.email) {
+    // Validate request (allow userId to be omitted if email is provided for lookup)
+    if (!payload.planType || !payload.email) {
       log("Missing required fields", { 
         userId: payload.userId, 
         planType: payload.planType, 
         email: payload.email 
       });
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: 'Missing required fields: email and planType are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -103,11 +103,39 @@ serve(async (req) => {
       )
     }
 
+    // Resolve user by ID or email
+    let resolvedUserId = payload.userId;
+    let resolvedName = payload.name;
+
+    if (!resolvedUserId) {
+      const { data: byEmail, error: byEmailError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, name, email, xtream_username, xtream_password')
+        .eq('email', payload.email)
+        .maybeSingle();
+
+      if (byEmailError) {
+        log('Error looking up user by email', byEmailError);
+        throw byEmailError;
+      }
+
+      if (!byEmail?.id) {
+        log('No profile found for provided email', { email: payload.email });
+        return new Response(
+          JSON.stringify({ error: 'Profile not found for provided email' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      resolvedUserId = byEmail.id;
+      resolvedName = resolvedName || byEmail.name || payload.email.split('@')[0];
+    }
+
     // Check if user already has IPTV credentials
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('xtream_username, xtream_password')
-      .eq('id', payload.userId)
+      .eq('id', resolvedUserId)
       .single();
       
     if (profileError) {
@@ -147,7 +175,8 @@ serve(async (req) => {
 
     // Generate username and password
     // Format: steady_[first letter of name][random string]
-    const nameLetter = payload.name.charAt(0).toLowerCase();
+    const safeName = (resolvedName || payload.email).trim();
+    const nameLetter = safeName.charAt(0).toLowerCase();
     const randomString = Math.random().toString(36).substring(2, 8);
     const username = `steady_${nameLetter}${randomString}`;
     
@@ -209,7 +238,7 @@ serve(async (req) => {
         subscription_end_date: endDate.toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', payload.userId);
+      .eq('id', resolvedUserId);
 
     if (updateError) {
       log("Supabase update error:", updateError);
