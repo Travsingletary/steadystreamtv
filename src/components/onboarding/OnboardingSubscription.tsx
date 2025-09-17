@@ -97,49 +97,67 @@ export const OnboardingSubscription = ({
     setIsLocalProcessing(true);
     
     try {
-      // First create user account before payment
-      console.log("Creating user account before payment...");
+      // Check if user already exists and handle authentication
+      console.log("Checking authentication for payment...");
       
-      // Generate a secure password for the user
-      const generateSecurePassword = () => {
-        const length = 16;
-        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-        let password = "";
-        for (let i = 0; i < length; i++) {
-          password += charset.charAt(Math.floor(Math.random() * charset.length));
-        }
-        return password;
-      };
+      let currentUser = null;
+      let password = null;
+      
+      // Try to get current session first
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session?.user) {
+        currentUser = sessionData.session.user;
+        console.log("Using existing authenticated user:", currentUser.id);
+      } else {
+        // Generate a secure password for the user
+        const generateSecurePassword = () => {
+          const length = 16;
+          const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+          let password = "";
+          for (let i = 0; i < length; i++) {
+            password += charset.charAt(Math.floor(Math.random() * charset.length));
+          }
+          return password;
+        };
 
-      const password = generateSecurePassword();
-      
-      // Sign up the user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email,
-        password: password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            name: userData.name,
+        password = generateSecurePassword();
+        
+        // Try to sign up first
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: userData.email,
+          password: password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              name: userData.name,
+            }
+          }
+        });
+
+        if (authError) {
+          if (authError.message.includes('already_exists') || authError.message.includes('already registered')) {
+            console.log("User already exists, redirecting to sign in...");
+            // Redirect to auth page with sign-in mode
+            window.location.href = '/auth?message=Please sign in with your existing account to continue with payment.';
+            return;
+          } else {
+            console.error("Auth error:", authError);
+            throw new Error(`Authentication failed: ${authError.message}`);
           }
         }
-      });
 
-      if (authError) {
-        console.error("Auth error:", authError);
-        throw new Error(`Authentication failed: ${authError.message}`);
-      }
+        if (!authData.user) {
+          throw new Error("User creation failed");
+        }
 
-      if (!authData.user) {
-        throw new Error("User creation failed");
-      }
-
-      console.log("User created successfully:", authData.user.id);
-      
-      // Ensure we have an authenticated session before invoking edge functions
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        await supabase.auth.signInWithPassword({ email: userData.email, password });
+        currentUser = authData.user;
+        console.log("User created successfully:", currentUser.id);
+        
+        // Ensure we have an authenticated session
+        const { data: newSessionData } = await supabase.auth.getSession();
+        if (!newSessionData.session) {
+          await supabase.auth.signInWithPassword({ email: userData.email, password });
+        }
       }
 
       // First create a subscription record
@@ -158,7 +176,7 @@ export const OnboardingSubscription = ({
           payment_method: 'card',
           payment_status: 'pending',
           status: 'pending',
-          user_id: authData.user.id
+          user_id: currentUser.id
         });
 
       if (subscriptionError) {
@@ -174,7 +192,7 @@ export const OnboardingSubscription = ({
           price: plan?.price,
           trialDays: 1
         },
-        userId: authData.user.id,
+        userId: currentUser.id,
         password: password,
         paymentId: paymentId
       };

@@ -8,6 +8,7 @@ import Account from "./pages/Account";
 import ConnectApps from "./pages/ConnectApps";
 import AdminDashboard from "./pages/AdminDashboard";
 import TestXtreamAccount from "./pages/TestXtreamAccount";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 export const navItems = [
@@ -46,6 +47,10 @@ export const navItems = [
   {
     to: "/test-xtream",
     page: <TestXtreamAccount />,
+  },
+  {
+    to: "/auth",
+    page: <Auth />,
   },
   {
     to: "*",

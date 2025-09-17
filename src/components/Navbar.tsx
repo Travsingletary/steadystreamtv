@@ -137,7 +137,7 @@ const Navbar = () => {
                   <Button
                     variant="ghost"
                     className="text-white hover:bg-gray-800"
-                    onClick={() => navigate("/onboarding")}
+                    onClick={() => navigate("/auth")}
                   >
                     <LogIn className="h-4 w-4 mr-2" /> Sign In
                   </Button>
@@ -213,7 +213,7 @@ const Navbar = () => {
             </>
           ) : (
             <div className="space-y-2 p-2">
-              <MobileNavLink to="/onboarding" onClick={closeMenu}>
+              <MobileNavLink to="/auth" onClick={closeMenu}>
                 Sign In
               </MobileNavLink>
               {showSignUpButton && (
