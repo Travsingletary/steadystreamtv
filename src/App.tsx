@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { navItems } from "./nav-items";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import AuthRedirect from "@/components/AuthRedirect";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +17,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AuthRedirect />
         <Routes>
           <Route path="/payment-success" element={<PaymentSuccess />} />
           {navItems.map(({ to, page }) => (
