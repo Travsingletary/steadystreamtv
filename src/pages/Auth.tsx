@@ -206,12 +206,12 @@ const AuthPage = () => {
           {!isSignUp && (
             <div className="mt-4 text-center">
               <Button
-                variant="link"
+                variant="outline"
                 onClick={handlePasswordReset}
-                disabled={resetLoading}
-                className="text-sm text-gray-400 hover:text-white"
+                disabled={resetLoading || !email}
+                className="text-sm border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
               >
-                {resetLoading ? 'Sending...' : 'Forgot Password?'}
+                {resetLoading ? 'Sending Reset Email...' : 'Forgot Password?'}
               </Button>
             </div>
           )}
