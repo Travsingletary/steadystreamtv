@@ -80,12 +80,12 @@ serve(async (req) => {
       console.error('User endpoint error:', userErrorBody);
     }
 
-    // Test 2: Try to get packages (if available)
-    console.log('Testing GET /packages endpoint...');
-    let packagesResponse: Response | null = null;
-    let packagesFetchError: string | null = null;
+    // Test 2: Try to get subscriptions/plans (common alternative to packages)
+    console.log('Testing GET /subscriptions endpoint...');
+    let subscriptionsResponse: Response | null = null;
+    let subscriptionsFetchError: string | null = null;
     try {
-      packagesResponse = await fetch(`${apiBase}/packages`, {
+      subscriptionsResponse = await fetch(`${apiBase}/subscriptions`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${megaottApiKey}`,
@@ -93,24 +93,57 @@ serve(async (req) => {
         }
       });
     } catch (e: any) {
-      packagesFetchError = e?.message || String(e);
-      console.error('Packages endpoint fetch error:', packagesFetchError);
+      subscriptionsFetchError = e?.message || String(e);
+      console.error('Subscriptions endpoint fetch error:', subscriptionsFetchError);
     }
 
-    console.log('Packages endpoint response status:', packagesResponse?.status ?? 'fetch_error');
-    let packagesResult: any = null;
-    let packagesErrorBody: string | null = null;
-    if (packagesResponse && packagesResponse.ok) {
+    console.log('Subscriptions endpoint response status:', subscriptionsResponse?.status ?? 'fetch_error');
+    let subscriptionsResult: any = null;
+    let subscriptionsErrorBody: string | null = null;
+    if (subscriptionsResponse && subscriptionsResponse.ok) {
       try {
-        packagesResult = await packagesResponse.json();
-        console.log('Packages data received:', packagesResult);
+        subscriptionsResult = await subscriptionsResponse.json();
+        console.log('Subscriptions data received:', subscriptionsResult);
       } catch (e) {
-        console.warn('Failed to parse packages JSON:', e);
-        packagesErrorBody = 'Invalid JSON response';
+        console.warn('Failed to parse subscriptions JSON:', e);
+        subscriptionsErrorBody = 'Invalid JSON response';
       }
-    } else if (packagesResponse) {
-      packagesErrorBody = await packagesResponse.text().catch(() => 'Failed to read error');
-      console.log('Packages endpoint error (might not exist):', packagesErrorBody);
+    } else if (subscriptionsResponse) {
+      subscriptionsErrorBody = await subscriptionsResponse.text().catch(() => 'Failed to read error');
+      console.log('Subscriptions endpoint error:', subscriptionsErrorBody);
+    }
+
+    // Test 3: Try to get plans/packages endpoint (alternative path)
+    console.log('Testing GET /plans endpoint...');
+    let plansResponse: Response | null = null;
+    let plansFetchError: string | null = null;
+    try {
+      plansResponse = await fetch(`${apiBase}/plans`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${megaottApiKey}`,
+          'Accept': 'application/json'
+        }
+      });
+    } catch (e: any) {
+      plansFetchError = e?.message || String(e);
+      console.error('Plans endpoint fetch error:', plansFetchError);
+    }
+
+    console.log('Plans endpoint response status:', plansResponse?.status ?? 'fetch_error');
+    let plansResult: any = null;
+    let plansErrorBody: string | null = null;
+    if (plansResponse && plansResponse.ok) {
+      try {
+        plansResult = await plansResponse.json();
+        console.log('Plans data received:', plansResult);
+      } catch (e) {
+        console.warn('Failed to parse plans JSON:', e);
+        plansErrorBody = 'Invalid JSON response';
+      }
+    } else if (plansResponse) {
+      plansErrorBody = await plansResponse.text().catch(() => 'Failed to read error');
+      console.log('Plans endpoint error:', plansErrorBody);
     }
 
     // Return test results
@@ -125,11 +158,17 @@ serve(async (req) => {
           data: userResult,
           error: userErrorBody || userFetchError
         },
-        packagesEndpoint: {
-          status: packagesResponse ? packagesResponse.status : -1,
-          success: !!(packagesResponse && packagesResponse.ok),
-          data: packagesResult,
-          error: packagesErrorBody || packagesFetchError
+        subscriptionsEndpoint: {
+          status: subscriptionsResponse ? subscriptionsResponse.status : -1,
+          success: !!(subscriptionsResponse && subscriptionsResponse.ok),
+          data: subscriptionsResult,
+          error: subscriptionsErrorBody || subscriptionsFetchError
+        },
+        plansEndpoint: {
+          status: plansResponse ? plansResponse.status : -1,
+          success: !!(plansResponse && plansResponse.ok),
+          data: plansResult,
+          error: plansErrorBody || plansFetchError
         }
       },
       timestamp: new Date().toISOString()

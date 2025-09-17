@@ -139,22 +139,46 @@ const MegaOTTAPITest = () => {
                   )}
                 </div>
 
-                {/* Packages Endpoint Test */}
+                {/* Subscriptions Endpoint Test */}
                 <div className="p-4 bg-dark-300 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">Packages Endpoint (/packages)</span>
-                    {getStatusBadge(results.tests.packagesEndpoint.success, results.tests.packagesEndpoint.status)}
+                    <span className="font-medium">Subscriptions Endpoint (/subscriptions)</span>
+                    {getStatusBadge(results.tests.subscriptionsEndpoint?.success, results.tests.subscriptionsEndpoint?.status)}
                   </div>
                   
-                  {results.tests.packagesEndpoint.success && results.tests.packagesEndpoint.data && (
+                  {results.tests.subscriptionsEndpoint?.success && results.tests.subscriptionsEndpoint.data && (
                     <div className="text-sm">
-                      <p className="text-green-400">Packages endpoint is available</p>
+                      <pre className="text-xs bg-dark-400 p-2 rounded overflow-auto">
+                        {JSON.stringify(results.tests.subscriptionsEndpoint.data, null, 2)}
+                      </pre>
                     </div>
                   )}
                   
-                  {!results.tests.packagesEndpoint.success && (
+                  {!results.tests.subscriptionsEndpoint?.success && (
                     <div className="text-sm text-gray-400">
-                      Note: {results.tests.packagesEndpoint.error}
+                      Error: {results.tests.subscriptionsEndpoint?.error?.substring(0, 100)}...
+                    </div>
+                  )}
+                </div>
+
+                {/* Plans Endpoint Test */}
+                <div className="p-4 bg-dark-300 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">Plans Endpoint (/plans)</span>
+                    {getStatusBadge(results.tests.plansEndpoint?.success, results.tests.plansEndpoint?.status)}
+                  </div>
+                  
+                  {results.tests.plansEndpoint?.success && results.tests.plansEndpoint.data && (
+                    <div className="text-sm">
+                      <pre className="text-xs bg-dark-400 p-2 rounded overflow-auto">
+                        {JSON.stringify(results.tests.plansEndpoint.data, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  
+                  {!results.tests.plansEndpoint?.success && (
+                    <div className="text-sm text-gray-400">
+                      Error: {results.tests.plansEndpoint?.error?.substring(0, 100)}...
                     </div>
                   )}
                 </div>
