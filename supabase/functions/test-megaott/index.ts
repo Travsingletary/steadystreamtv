@@ -44,63 +44,89 @@ serve(async (req) => {
 
     // Test 1: Get User Information
     console.log('Testing GET /user endpoint...');
-    const userResponse = await fetch(`${apiBase}/user`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${megaottApiKey}`,
-        'Accept': 'application/json'
+    let userResponse: Response | null = null;
+    let userFetchError: string | null = null;
+    try {
+      userResponse = await fetch(`${apiBase}/user`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${megaottApiKey}`,
+          'Accept': 'application/json'
+        }
+      });
+    } catch (e: any) {
+      userFetchError = e?.message || String(e);
+      console.error('User endpoint fetch error:', userFetchError);
+    }
+
+    console.log('User endpoint response status:', userResponse?.status ?? 'fetch_error');
+    console.log('User endpoint response headers:', userResponse ? Object.fromEntries(userResponse.headers.entries()) : {});
+
+    let userResult: any = null;
+    let userErrorBody: string | null = null;
+    if (userResponse && userResponse.ok) {
+      try {
+        userResult = await userResponse.json();
+        console.log('User data received:', userResult);
+      } catch (e) {
+        console.warn('Failed to parse user JSON:', e);
+        userErrorBody = 'Invalid JSON response';
       }
-    });
-
-    console.log('User endpoint response status:', userResponse.status);
-    console.log('User endpoint response headers:', Object.fromEntries(userResponse.headers.entries()));
-
-    let userResult = null;
-    if (userResponse.ok) {
-      userResult = await userResponse.json();
-      console.log('User data received:', userResult);
-    } else {
-      const errorText = await userResponse.text();
-      console.error('User endpoint error:', errorText);
+    } else if (userResponse) {
+      userErrorBody = await userResponse.text().catch(() => 'Failed to read error');
+      console.error('User endpoint error:', userErrorBody);
     }
 
     // Test 2: Try to get packages (if available)
     console.log('Testing package availability...');
-    const packagesResponse = await fetch(`${apiBase}/packages`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${megaottApiKey}`,
-        'Accept': 'application/json'
-      }
-    });
+    let packagesResponse: Response | null = null;
+    let packagesFetchError: string | null = null;
+    try {
+      packagesResponse = await fetch(`${apiBase}/packages`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${megaottApiKey}`,
+          'Accept': 'application/json'
+        }
+      });
+    } catch (e: any) {
+      packagesFetchError = e?.message || String(e);
+      console.error('Packages endpoint fetch error:', packagesFetchError);
+    }
 
-    console.log('Packages endpoint response status:', packagesResponse.status);
-    let packagesResult = null;
-    if (packagesResponse.ok) {
-      packagesResult = await packagesResponse.json();
-      console.log('Packages data received:', packagesResult);
-    } else {
-      const errorText = await packagesResponse.text();
-      console.log('Packages endpoint error (might not exist):', errorText);
+    console.log('Packages endpoint response status:', packagesResponse?.status ?? 'fetch_error');
+    let packagesResult: any = null;
+    let packagesErrorBody: string | null = null;
+    if (packagesResponse && packagesResponse.ok) {
+      try {
+        packagesResult = await packagesResponse.json();
+        console.log('Packages data received:', packagesResult);
+      } catch (e) {
+        console.warn('Failed to parse packages JSON:', e);
+        packagesErrorBody = 'Invalid JSON response';
+      }
+    } else if (packagesResponse) {
+      packagesErrorBody = await packagesResponse.text().catch(() => 'Failed to read error');
+      console.log('Packages endpoint error (might not exist):', packagesErrorBody);
     }
 
     // Return test results
     const results = {
       success: true,
-      apiUrl: megaottApiUrl,
+      apiUrl: apiBase,
       hasApiKey: !!megaottApiKey,
       tests: {
         userEndpoint: {
-          status: userResponse.status,
-          success: userResponse.ok,
+          status: userResponse ? userResponse.status : -1,
+          success: !!(userResponse && userResponse.ok),
           data: userResult,
-          error: !userResponse.ok ? await userResponse.text().catch(() => 'Failed to read error') : null
+          error: userErrorBody || userFetchError
         },
         packagesEndpoint: {
-          status: packagesResponse.status,
-          success: packagesResponse.ok,
+          status: packagesResponse ? packagesResponse.status : -1,
+          success: !!(packagesResponse && packagesResponse.ok),
           data: packagesResult,
-          error: !packagesResponse.ok ? await packagesResponse.text().catch(() => 'Failed to read error') : null
+          error: packagesErrorBody || packagesFetchError
         }
       },
       timestamp: new Date().toISOString()
