@@ -116,7 +116,7 @@ const Dashboard = () => {
           throw error;
         }
         
-        addDebugInfo(`Profile loaded: subscription_tier=${profile?.subscription_tier}, status=${profile?.subscription_status}`);
+        addDebugInfo(`Profile loaded: email=${profile?.email}, name=${profile?.full_name}`);
         setProfile(profile);
       } catch (error) {
         console.error("Error fetching user data:", error);

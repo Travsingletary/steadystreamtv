@@ -42,12 +42,9 @@ export const createUserProfile = async (userId: string, userData: OnboardingUser
   const { error: profileError } = await supabase
     .from('profiles')
     .insert({
-      id: userId,
-      name: userData.name,
-      preferred_device: userData.preferredDevice,
-      genres: userData.genres,
-      subscription_status: 'trial',
-      subscription_tier: userData.subscription?.plan || 'basic',
+      supabase_user_id: userId,
+      email: userData.email,
+      full_name: userData.name,
       trial_end_date: trialEndDate.toISOString()
     });
   
