@@ -12,15 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    const userReadToken = Deno.env.get('MEGAOTT_USER_READ_TOKEN');
-    const megaottApiKey = userReadToken || Deno.env.get('MEGAOTT_API_KEY');
+    const readToken = Deno.env.get('MEGAOTT_USER_READ_TOKEN');
+    const adminToken = Deno.env.get('MEGAOTT_API_KEY');
     let megaottApiUrl = Deno.env.get('MEGAOTT_API_URL');
 
     console.log('Testing MegaOTT API...');
     console.log('API URL:', megaottApiUrl);
-    console.log('Auth token source:', userReadToken ? 'MEGAOTT_USER_READ_TOKEN' : (megaottApiKey ? 'MEGAOTT_API_KEY' : 'Missing'));
+    console.log('Token availability:', { userRead: !!readToken, apiKey: !!adminToken });
 
-    if (!megaottApiKey || !megaottApiUrl) {
+    if (!adminToken || !megaottApiUrl) {
       throw new Error('MegaOTT API configuration missing');
     }
 
@@ -51,7 +51,7 @@ serve(async (req) => {
       userResponse = await fetch(`${apiBase}/user`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${megaottApiKey}`,
+          'Authorization': `Bearer ${readToken || adminToken}`,
           'Accept': 'application/json',
           'User-Agent': 'LovableApp/megaott-test (SupabaseEdge)',
           'Cache-Control': 'no-cache'
@@ -88,7 +88,7 @@ serve(async (req) => {
       subscriptionsResponse = await fetch(`${apiBase}/subscriptions`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${megaottApiKey}`,
+          'Authorization': `Bearer ${adminToken}`,
           'Accept': 'application/json'
         }
       });
@@ -121,7 +121,7 @@ serve(async (req) => {
       plansResponse = await fetch(`${apiBase}/plans`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${megaottApiKey}`,
+          'Authorization': `Bearer ${adminToken}`,
           'Accept': 'application/json'
         }
       });
@@ -150,7 +150,7 @@ serve(async (req) => {
     const results = {
       success: true,
       apiUrl: apiBase,
-      hasApiKey: !!megaottApiKey,
+      hasApiKey: !!adminToken,
       tests: {
         userEndpoint: {
           status: userResponse ? userResponse.status : -1,
