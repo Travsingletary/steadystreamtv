@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY');
-    const megaottApiUrl = Deno.env.get('MEGAOTT_API_URL');
+    let megaottApiUrl = Deno.env.get('MEGAOTT_API_URL');
 
     console.log('Testing MegaOTT API...');
     console.log('API URL:', megaottApiUrl);
@@ -21,6 +21,12 @@ serve(async (req) => {
 
     if (!megaottApiKey || !megaottApiUrl) {
       throw new Error('MegaOTT API configuration missing');
+    }
+
+    // Ensure URL has protocol
+    if (!megaottApiUrl.startsWith('http://') && !megaottApiUrl.startsWith('https://')) {
+      megaottApiUrl = 'https://' + megaottApiUrl;
+      console.log('Added https:// protocol to URL:', megaottApiUrl);
     }
 
     // Test 1: Get User Information
