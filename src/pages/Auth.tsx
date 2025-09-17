@@ -16,6 +16,7 @@ const AuthPage = () => {
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
   
   const navigate = useNavigate();
@@ -77,6 +78,31 @@ const AuthPage = () => {
       setError(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      setError("Please enter your email address first");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset`
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password reset sent!",
+        description: "Check your email for the password reset link.",
+      });
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -176,6 +202,19 @@ const AuthPage = () => {
               )}
             </Button>
           </form>
+
+          {!isSignUp && (
+            <div className="mt-4 text-center">
+              <Button
+                variant="link"
+                onClick={handlePasswordReset}
+                disabled={resetLoading}
+                className="text-sm text-gray-400 hover:text-white"
+              >
+                {resetLoading ? 'Sending...' : 'Forgot Password?'}
+              </Button>
+            </div>
+          )}
 
           <div className="mt-4 text-center">
             <Button
