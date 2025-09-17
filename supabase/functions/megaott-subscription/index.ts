@@ -134,7 +134,7 @@ async function createSubscription(
   console.log('MegaOTT API payload:', Object.fromEntries(megaottPayload));
 
   // Call MegaOTT API
-  const response = await fetch(`${apiUrl}/subscriptions`, {
+  const response = await fetch(`${apiUrl}/v1/subscriptions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -223,7 +223,7 @@ async function extendSubscription(
   }
 
   // Call MegaOTT API to extend
-  const response = await fetch(`${apiUrl}/subscriptions/${subscription.megaott_subscription_id}/extend`, {
+  const response = await fetch(`${apiUrl}/v1/subscriptions/${subscription.megaott_subscription_id}/extend`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -283,7 +283,7 @@ async function activateSubscription(
     throw new Error(`Subscription not found: ${error.message}`);
   }
 
-  const response = await fetch(`${apiUrl}/subscriptions/${subscription.megaott_subscription_id}/activate`, {
+  const response = await fetch(`${apiUrl}/v1/subscriptions/${subscription.megaott_subscription_id}/activate`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -326,7 +326,7 @@ async function deactivateSubscription(
     throw new Error(`Subscription not found: ${error.message}`);
   }
 
-  const response = await fetch(`${apiUrl}/subscriptions/${subscription.megaott_subscription_id}/deactivate`, {
+  const response = await fetch(`${apiUrl}/v1/subscriptions/${subscription.megaott_subscription_id}/deactivate`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -354,7 +354,7 @@ async function deactivateSubscription(
 }
 
 async function getUser(apiUrl: string, apiKey: string) {
-  const response = await fetch(`${apiUrl}/user`, {
+  const response = await fetch(`${apiUrl}/v1/user`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
