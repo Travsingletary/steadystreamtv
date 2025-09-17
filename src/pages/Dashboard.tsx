@@ -11,6 +11,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
 import EnhancedSubscriptionManager from "@/components/dashboard/EnhancedSubscriptionManager";
+import MegaOTTAPITest from "@/components/TestMegaOTTAPI";
 import { CreditCard, Calendar, CheckCircle, Clock, Lock, User, Key, AlertTriangle, DollarSign, Tv } from "lucide-react";
 
 const Dashboard = () => {
@@ -336,6 +337,11 @@ const Dashboard = () => {
                 <User className="mr-2 h-4 w-4" /> Account Settings
               </Button>
             </div>
+          </div>
+          
+          {/* MegaOTT API Test Panel */}
+          <div className="mb-8">
+            <MegaOTTAPITest />
           </div>
           
           {/* Debug Panel */}
