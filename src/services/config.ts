@@ -20,7 +20,7 @@ export const CONFIG = {
   },
   megaOTT: {
     streamBaseUrl: 'https://duperab.xyz/live',
-    apiUrl: 'https://duperab.xyz/api',
+    apiUrl: 'https://duperab.xyz',
     apiKey: 'PduXXKv6Hi6M9xrstKEpXzmJ3WWBvZjigmr9opdg9c3c15af',
     username: 'IX5E3YZZ',
     password: '2N1xXXid'

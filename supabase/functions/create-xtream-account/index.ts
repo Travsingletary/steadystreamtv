@@ -85,7 +85,7 @@ serve(async (req) => {
     }
 
     // Get MegaOTT credentials from environment variables
-    const megaottApiUrl = 'https://megaott.net/api/v1/user';
+    const megaottApiUrl = `${Deno.env.get('MEGAOTT_API_URL') || 'https://duperab.xyz'}/api/users`;
     const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY');
     
     if (!megaottApiKey) {
