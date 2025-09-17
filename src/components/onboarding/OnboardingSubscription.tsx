@@ -118,6 +118,7 @@ export const OnboardingSubscription = ({
         email: userData.email,
         password: password,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             name: userData.name,
           }
@@ -134,6 +135,12 @@ export const OnboardingSubscription = ({
       }
 
       console.log("User created successfully:", authData.user.id);
+      
+      // Ensure we have an authenticated session before invoking edge functions
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        await supabase.auth.signInWithPassword({ email: userData.email, password });
+      }
       
       // Store onboarding data in localStorage for after payment - with more persistent storage
       const onboardingData = {
@@ -160,12 +167,9 @@ export const OnboardingSubscription = ({
       // Call the create-payment function with the real user ID and onboarding data
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
-          userId: authData.user.id, // Use the actual user ID, not "onboarding"
-          planId: selectedPlan,
           customerEmail: userData.email,
           customerName: userData.name,
-          isRecurring: true,
-          onboardingData: onboardingData
+          planType: selectedPlan
         }
       });
       

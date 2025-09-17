@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import Hls from 'hls.js';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -35,6 +36,7 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const { toast } = useToast();
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -74,29 +76,64 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
 
   // Initialize player when URL changes
   useEffect(() => {
-    if (url && videoRef.current) {
-      setError(null);
-      
-      try {
+    if (!videoRef.current || !url) return;
+
+    setError(null);
+
+    // Clean up any existing HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    try {
+      const isHls = url.endsWith('.m3u8');
+
+      if (isHls && Hls.isSupported()) {
+        const hls = new Hls({
+          maxBufferSize: 30 * 1000 * 1000,
+          maxBufferLength: 30,
+        });
+        hlsRef.current = hls;
+        hls.loadSource(url);
+        hls.attachMedia(videoRef.current);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (isPlaying) {
+            videoRef.current!.play().catch((e) => {
+              console.error('Auto-play prevented:', e);
+              setIsPlaying(false);
+            });
+          }
+        });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          console.error('HLS error:', data);
+          setError('Failed to load stream. Please try again.');
+        });
+      } else {
+        // Native playback (e.g., Safari)
         videoRef.current.src = url;
         videoRef.current.load();
-        
-        // Auto-play on URL change if previously playing
         if (isPlaying) {
           const playPromise = videoRef.current.play();
-          
           if (playPromise !== undefined) {
-            playPromise.catch(error => {
-              console.error("Auto-play prevented:", error);
+            playPromise.catch((e) => {
+              console.error('Auto-play prevented:', e);
               setIsPlaying(false);
             });
           }
         }
-      } catch (err) {
-        console.error("Error loading video:", err);
-        setError("Failed to load stream. Please try again.");
       }
+    } catch (err) {
+      console.error('Error loading video:', err);
+      setError('Failed to load stream. Please try again.');
     }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
   }, [url]);
 
   // Load XTREAM credentials for current user
@@ -109,17 +146,18 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
         if (!user) return;
         
         const { data, error } = await supabase
-          .from('profiles')
-          .select('xtream_username, xtream_password')
-          .eq('id', user.id)
-          .single();
+          .from('iptv_accounts')
+          .select('username, password')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .maybeSingle();
         
         if (error) throw error;
         
-        if (data?.xtream_username && data?.xtream_password) {
+        if (data?.username && data?.password) {
           setXtreamCredentials({
-            username: data.xtream_username,
-            password: data.xtream_password
+            username: data.username,
+            password: data.password
           });
         }
       } catch (error) {

@@ -55,41 +55,55 @@ export const useOnboarding = () => {
       
       setIsProcessingXtream(true);
 
-      // Sign up the user with Supabase Auth
-      console.log("Creating Supabase user...");
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email,
-        password: (userData as any).password,
-        options: {
-          data: {
-            name: userData.name,
+      // Ensure we have a Supabase user session
+      console.log("Ensuring Supabase user session...");
+      let userId: string | null = null;
+      const { data: userResp } = await supabase.auth.getUser();
+      if (userResp.user) {
+        userId = userResp.user.id;
+      } else {
+        const generatedPassword = (userData as any).password || Math.random().toString(36).slice(2) + '!Aa1';
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: userData.email,
+          password: generatedPassword,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              name: userData.name,
+            }
           }
+        });
+
+        if (authError) {
+          console.error("Supabase auth error:", authError);
+          throw new Error(`Authentication failed: ${authError.message}`);
         }
-      });
 
-      if (authError) {
-        console.error("Supabase auth error:", authError);
-        throw new Error(`Authentication failed: ${authError.message}`);
+        if (!authData.user) {
+          throw new Error("User creation failed");
+        }
+
+        userId = authData.user.id;
+
+        // Ensure active session
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          await supabase.auth.signInWithPassword({ email: userData.email, password: generatedPassword });
+        }
       }
 
-      if (!authData.user) {
-        throw new Error("User creation failed");
-      }
+      console.log("Supabase user ready:", userId);
 
-      console.log("Supabase user created successfully:", authData.user.id);
-
-      // Use UPSERT to create or update the profile
+      // Create or update user profile in our public table
       console.log("Creating/updating user profile...");
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .upsert({
-          id: authData.user.id,
+          id: userId!,
+          supabase_user_id: userId!,
           email: userData.email,
-          name: userData.name,
-          preferred_device: userData.preferredDevice,
-          genres: userData.genres,
-          subscription_tier: userData.subscription?.plan || null,
-          created_at: new Date().toISOString(),
+          full_name: userData.name,
+          subscription_plan: userData.subscription?.plan || null,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'id'
@@ -109,9 +123,10 @@ export const useOnboarding = () => {
         try {
           const { data: xtreamData, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
             body: {
+              userId: userId!,
               email: userData.email,
               name: userData.name,
-              planId: userData.subscription.plan
+              planType: userData.subscription.plan
             }
           });
 
@@ -123,15 +138,16 @@ export const useOnboarding = () => {
           if (xtreamData?.username && xtreamData?.password) {
             console.log("Xtream account created successfully");
             
-            // Update profile with Xtream credentials
+            // Update user_profile with Xtream credentials
             const { error: updateError } = await supabase
-              .from('profiles')
+              .from('user_profiles')
               .update({
-                xtream_username: xtreamData.username,
-                xtream_password: xtreamData.password,
+                username: xtreamData.username,
+                password: xtreamData.password,
+                playlist_url: xtreamData?.playlistUrls?.m3u_plus || xtreamData?.playlistUrls?.m3u || xtreamData?.playlist_url || null,
                 updated_at: new Date().toISOString()
               })
-              .eq('id', authData.user.id);
+              .eq('id', userId!);
 
             if (updateError) {
               console.error("Failed to update profile with Xtream credentials:", updateError);
