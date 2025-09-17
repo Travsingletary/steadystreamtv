@@ -14,114 +14,252 @@ export type Database = {
   }
   public: {
     Tables: {
-      profiles: {
+      packages: {
         Row: {
           created_at: string | null
-          email: string
-          full_name: string | null
-          id: string
-          supabase_user_id: string | null
+          description: string | null
+          duration_days: number
+          id: number
+          is_active: boolean | null
+          max_connections: number | null
+          megaott_package_id: number
+          name: string
+          price: number
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
-          email: string
-          full_name?: string | null
-          id?: string
-          supabase_user_id?: string | null
+          description?: string | null
+          duration_days: number
+          id?: number
+          is_active?: boolean | null
+          max_connections?: number | null
+          megaott_package_id: number
+          name: string
+          price: number
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          description?: string | null
+          duration_days?: number
+          id?: number
+          is_active?: boolean | null
+          max_connections?: number | null
+          megaott_package_id?: number
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          credit: number | null
+          email: string
+          full_name: string | null
+          id: string
+          megaott_user_id: number | null
+          megaott_username: string | null
+          supabase_user_id: string | null
+          trial_end_date: string | null
+          updated_at: string | null
+          user_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          credit?: number | null
+          email: string
+          full_name?: string | null
+          id?: string
+          megaott_user_id?: number | null
+          megaott_username?: string | null
+          supabase_user_id?: string | null
+          trial_end_date?: string | null
+          updated_at?: string | null
+          user_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          credit?: number | null
           email?: string
           full_name?: string | null
           id?: string
+          megaott_user_id?: number | null
+          megaott_username?: string | null
           supabase_user_id?: string | null
+          trial_end_date?: string | null
           updated_at?: string | null
+          user_type?: string | null
         }
         Relationships: []
       }
       subscriptions: {
         Row: {
+          adult_content: boolean | null
           created_at: string | null
           crypto_amount: number | null
           crypto_currency: string | null
           customer_email: string
           customer_name: string | null
+          dns_link: string | null
+          dns_link_samsung_lg: string | null
+          enable_vpn: boolean | null
           end_date: string | null
           epg_url: string | null
+          expiring_at: string | null
           fiat_amount: number | null
           fiat_currency: string | null
+          forced_country: string | null
           id: string
           iptv_password: string | null
           iptv_username: string | null
           m3u_url: string | null
+          mac_address: string | null
+          max_connections: number | null
+          megaott_subscription_id: number | null
           megaott_user_id: string | null
+          note: string | null
+          package_id: number | null
+          package_name: string | null
+          paid: boolean | null
           payment_id: string
           payment_method: string
           payment_status: string | null
           plan_id: string
           plan_name: string
           plan_price: number
+          portal_link: string | null
           start_date: string | null
           status: string | null
+          subscription_type: string | null
+          template_id: number | null
+          template_name: string | null
           updated_at: string | null
           user_id: string | null
+          whatsapp_telegram: string | null
           xtream_url: string | null
         }
         Insert: {
+          adult_content?: boolean | null
           created_at?: string | null
           crypto_amount?: number | null
           crypto_currency?: string | null
           customer_email: string
           customer_name?: string | null
+          dns_link?: string | null
+          dns_link_samsung_lg?: string | null
+          enable_vpn?: boolean | null
           end_date?: string | null
           epg_url?: string | null
+          expiring_at?: string | null
           fiat_amount?: number | null
           fiat_currency?: string | null
+          forced_country?: string | null
           id?: string
           iptv_password?: string | null
           iptv_username?: string | null
           m3u_url?: string | null
+          mac_address?: string | null
+          max_connections?: number | null
+          megaott_subscription_id?: number | null
           megaott_user_id?: string | null
+          note?: string | null
+          package_id?: number | null
+          package_name?: string | null
+          paid?: boolean | null
           payment_id: string
           payment_method: string
           payment_status?: string | null
           plan_id: string
           plan_name: string
           plan_price: number
+          portal_link?: string | null
           start_date?: string | null
           status?: string | null
+          subscription_type?: string | null
+          template_id?: number | null
+          template_name?: string | null
           updated_at?: string | null
           user_id?: string | null
+          whatsapp_telegram?: string | null
           xtream_url?: string | null
         }
         Update: {
+          adult_content?: boolean | null
           created_at?: string | null
           crypto_amount?: number | null
           crypto_currency?: string | null
           customer_email?: string
           customer_name?: string | null
+          dns_link?: string | null
+          dns_link_samsung_lg?: string | null
+          enable_vpn?: boolean | null
           end_date?: string | null
           epg_url?: string | null
+          expiring_at?: string | null
           fiat_amount?: number | null
           fiat_currency?: string | null
+          forced_country?: string | null
           id?: string
           iptv_password?: string | null
           iptv_username?: string | null
           m3u_url?: string | null
+          mac_address?: string | null
+          max_connections?: number | null
+          megaott_subscription_id?: number | null
           megaott_user_id?: string | null
+          note?: string | null
+          package_id?: number | null
+          package_name?: string | null
+          paid?: boolean | null
           payment_id?: string
           payment_method?: string
           payment_status?: string | null
           plan_id?: string
           plan_name?: string
           plan_price?: number
+          portal_link?: string | null
           start_date?: string | null
           status?: string | null
+          subscription_type?: string | null
+          template_id?: number | null
+          template_name?: string | null
           updated_at?: string | null
           user_id?: string | null
+          whatsapp_telegram?: string | null
           xtream_url?: string | null
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: number
+          is_active: boolean | null
+          megaott_template_id: number
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_active?: boolean | null
+          megaott_template_id: number
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_active?: boolean | null
+          megaott_template_id?: number
+          name?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

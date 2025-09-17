@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
-import { CreditCard, Calendar, CheckCircle, Clock, Lock, User, Key, AlertTriangle } from "lucide-react";
+import EnhancedSubscriptionManager from "@/components/dashboard/EnhancedSubscriptionManager";
+import { CreditCard, Calendar, CheckCircle, Clock, Lock, User, Key, AlertTriangle, DollarSign, Tv } from "lucide-react";
 
 const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
