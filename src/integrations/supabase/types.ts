@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      checkout_sessions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          plan_name: string
+          session_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          plan_name: string
+          session_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          plan_name?: string
+          session_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       packages: {
         Row: {
           created_at: string | null
