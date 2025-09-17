@@ -197,15 +197,12 @@ const Dashboard = () => {
       }
       addDebugInfo(`User verified for payment: ${currentUser.email}`);
 
-      // Prepare function payload
+      // Prepare function payload (NowPayments crypto)
       const payload = {
-        userId: user.id,
-        planId: planId,
-        customerEmail: user.email,
-        customerName: profile?.name || user.email,
-        isRecurring: isRecurring
+        customerEmail: currentUser.email,
+        customerName: (profile?.full_name as string) || currentUser.email,
+        planType: planId
       };
-      
       addDebugInfo(`Calling create-payment function with payload: ${JSON.stringify(payload)}`);
       
       // Call the edge function
