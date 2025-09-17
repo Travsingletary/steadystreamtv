@@ -1,10 +1,16 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCardModule } from '@angular/material/card';
-import { PaymentService, SubscriptionPlan, PaymentResponse } from '../../services/payment.service';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
+import { MatRadioModule } from '@angular/material/radio';
+import { PaymentService, SubscriptionPlan, PaymentMethodOption } from '../../services/payment.service';
 import { PayclyService, PayclyPaymentRequest } from '../../services/paycly.service';
 import { Subject, firstValueFrom } from 'rxjs';
 
@@ -13,10 +19,16 @@ import { Subject, firstValueFrom } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
+    RouterModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatCardModule
+    MatCardModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatInputModule,
+    MatRadioModule
   ],
   templateUrl: './payment.component.html',
   styleUrls: ['./payment.component.scss']
@@ -25,9 +37,14 @@ export class PaymentComponent implements OnInit, OnDestroy {
   subscriptionPlans: SubscriptionPlan[] = [];
   selectedPlan: SubscriptionPlan | null = null;
   selectedPaymentMethod: 'crypto' | 'card' | null = null;
+  paymentMethods: PaymentMethodOption[] = [];
+  selectedCurrency = 'USD';
+  supportedCurrencies: string[] = [];
+  customerEmail = '';
   isProcessing = false;
   paymentUrl = '';
   error = '';
+  currentStep: 'plan' | 'method' | 'details' | 'processing' = 'plan';
 
   private destroy$ = new Subject<void>();
 
@@ -38,6 +55,8 @@ export class PaymentComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.subscriptionPlans = this.paymentService.getSubscriptionPlans();
+    this.paymentMethods = this.paymentService.getPaymentMethods();
+    this.supportedCurrencies = this.paymentService.getSupportedFiatCurrencies();
   }
 
   ngOnDestroy(): void {
@@ -48,24 +67,49 @@ export class PaymentComponent implements OnInit, OnDestroy {
   selectPlan(plan: SubscriptionPlan): void {
     this.selectedPlan = plan;
     this.error = '';
+    this.currentStep = 'method';
   }
 
   selectPaymentMethod(method: 'crypto' | 'card'): void {
     this.selectedPaymentMethod = method;
     this.error = '';
+    this.currentStep = method === 'card' ? 'details' : 'processing';
+  }
+
+  goBack(): void {
+    if (this.currentStep === 'method') {
+      this.currentStep = 'plan';
+      this.selectedPlan = null;
+    } else if (this.currentStep === 'details') {
+      this.currentStep = 'method';
+      this.selectedPaymentMethod = null;
+    } else if (this.currentStep === 'processing') {
+      this.currentStep = this.selectedPaymentMethod === 'card' ? 'details' : 'method';
+    }
   }
 
   async processPayment(): Promise<void> {
-    if (!this.selectedPlan) {
-      this.error = 'Please select a subscription plan';
+    if (!this.selectedPlan || !this.selectedPaymentMethod) {
+      this.error = 'Please select a subscription plan and payment method';
+      return;
+    }
+
+    if (this.selectedPaymentMethod === 'card' && !this.customerEmail) {
+      this.error = 'Please provide your email address for card payments';
       return;
     }
 
     this.isProcessing = true;
     this.error = '';
+    this.currentStep = 'processing';
 
     try {
-      const paymentResponse: PaymentResponse = await this.paymentService.processSubscriptionPayment(this.selectedPlan.id);
+      const paymentResponse = await this.paymentService.processFiatSubscriptionPayment(
+        this.selectedPlan.id,
+        this.selectedPaymentMethod,
+        this.selectedCurrency,
+        this.customerEmail
+      );
 
       if (paymentResponse.payment_url) {
         // Open payment URL in new window/tab
@@ -141,8 +185,74 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
 
   getProcessingFee(): number {
+    if (!this.selectedPlan || !this.selectedPaymentMethod) return 0;
+    const pricing = this.paymentService.calculatePricingWithFees(this.selectedPlan.price, this.selectedPaymentMethod);
+    return pricing.processingFee;
+  }
+
+  getTotalPrice(): number {
+    if (!this.selectedPlan || !this.selectedPaymentMethod) return 0;
+    const pricing = this.paymentService.calculatePricingWithFees(this.selectedPlan.price, this.selectedPaymentMethod);
+    return pricing.totalPrice;
+  }
+
+  getDisplayPrice(): number {
     if (!this.selectedPlan) return 0;
-    return this.selectedPlan.price * 0.035; // 3.5% for card payments
+    return this.paymentService.convertPriceForDisplay(this.selectedPlan.price, this.selectedCurrency);
+  }
+
+  getDisplayProcessingFee(): number {
+    if (!this.selectedPlan || !this.selectedPaymentMethod) return 0;
+    const pricing = this.paymentService.calculatePricingWithFees(this.selectedPlan.price, this.selectedPaymentMethod);
+    return this.paymentService.convertPriceForDisplay(pricing.processingFee, this.selectedCurrency);
+  }
+
+  getDisplayTotalPrice(): number {
+    if (!this.selectedPlan || !this.selectedPaymentMethod) return 0;
+    const pricing = this.paymentService.calculatePricingWithFees(this.selectedPlan.price, this.selectedPaymentMethod);
+    return this.paymentService.convertPriceForDisplay(pricing.totalPrice, this.selectedCurrency);
+  }
+
+  getPaymentMethodDescription(method: PaymentMethodOption): string {
+    return method.description;
+  }
+
+  getPaymentMethodIcon(methodId: 'crypto' | 'card'): string {
+    const method = this.paymentService.getPaymentMethodById(methodId);
+    return method?.icon || '💳';
+  }
+
+  isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  canProceedToPayment(): boolean {
+    if (this.selectedPaymentMethod === 'card') {
+      return this.isValidEmail(this.customerEmail);
+    }
+    return this.selectedPaymentMethod === 'crypto';
+  }
+
+  getStepTitle(): string {
+    switch (this.currentStep) {
+      case 'plan': return 'Choose Your Plan';
+      case 'method': return 'Select Payment Method';
+      case 'details': return 'Payment Details';
+      case 'processing': return 'Processing Payment';
+      default: return 'Payment';
+    }
+  }
+
+  getConversionNote(): string {
+    if (this.selectedPaymentMethod === 'card') {
+      return 'Your card payment will be securely converted to cryptocurrency for enhanced privacy. You will receive crypto while your personal banking information remains private.';
+    }
+    return '';
+  }
+
+  getProcessingFeePercentage(): string {
+    return this.selectedPaymentMethod === 'crypto' ? '0.5' : '3.5';
   }
 
   getCryptoFee(): number {

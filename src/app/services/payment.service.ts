@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, from } from 'rxjs';
 import { AppConfig } from '../../environments/environment';
 import { SupabaseService } from './supabase.service';
 import { AutomationService } from './automation.service';
@@ -65,6 +65,55 @@ export interface UserSubscription {
     xtream_url: string;
     epg_url?: string;
   };
+}
+
+export interface FiatPaymentRequest {
+  price_amount: number;
+  price_currency: string;
+  pay_currency: string; // Fiat currency (USD, EUR, etc.)
+  order_id: string;
+  order_description: string;
+  success_url?: string;
+  cancel_url?: string;
+  customer_email?: string;
+  is_fiat?: boolean;
+}
+
+export interface FiatPaymentResponse {
+  payment_id: string;
+  payment_status: string;
+  payment_url: string; // Guardarian checkout URL
+  pay_address?: string;
+  price_amount: number;
+  price_currency: string;
+  pay_amount: number;
+  pay_currency: string;
+  order_id: string;
+  order_description: string;
+  guardarian_url?: string;
+}
+
+export interface GuardarianWebhookData {
+  payment_id: string;
+  payment_status: string;
+  conversion_status: string;
+  fiat_amount: number;
+  fiat_currency: string;
+  crypto_amount: number;
+  crypto_currency: string;
+  customer_email: string;
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface PaymentMethodOption {
+  id: 'crypto' | 'card';
+  name: string;
+  description: string;
+  icon: string;
+  fees: string;
+  processingTime: string;
+  supported: boolean;
 }
 
 @Injectable({
@@ -143,6 +192,98 @@ export class PaymentService {
 
   generateOrderId(): string {
     return 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  // Get available payment methods
+  getPaymentMethods(): PaymentMethodOption[] {
+    return [
+      {
+        id: 'crypto',
+        name: 'Cryptocurrency',
+        description: 'Pay with Bitcoin, Ethereum, USDT, or 300+ cryptocurrencies',
+        icon: '₿',
+        fees: '0.5%',
+        processingTime: 'Instant',
+        supported: true
+      },
+      {
+        id: 'card',
+        name: 'Credit/Debit Card',
+        description: 'Pay with Visa, Mastercard, or other cards (converts to crypto)',
+        icon: '💳',
+        fees: '3.5%',
+        processingTime: '5-10 minutes',
+        supported: true
+      }
+    ];
+  }
+
+  // Get supported fiat currencies for card payments
+  getSupportedFiatCurrencies(): string[] {
+    return [
+      'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'SEK', 'NOK', 'DKK',
+      'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'HRK', 'RSD', 'MKD', 'BAM', 'ALL'
+    ];
+  }
+
+  // Create fiat payment (card-to-crypto)
+  createFiatPayment(paymentData: FiatPaymentRequest): Observable<FiatPaymentResponse> {
+    const payload = {
+      ...paymentData,
+      is_fiat: true
+    };
+
+    return this.http.post<FiatPaymentResponse>(`${this.apiUrl}/payment`, payload, {
+      headers: this.getHeaders()
+    });
+  }
+
+  // Process fiat subscription payment (card-to-crypto)
+  async processFiatSubscriptionPayment(planId: string, paymentMethod: 'crypto' | 'card', fiatCurrency: string = 'USD', customerEmail?: string): Promise<PaymentResponse | FiatPaymentResponse> {
+    const plan = this.subscriptionPlans.find(p => p.id === planId);
+    if (!plan) {
+      throw new Error('Plan not found');
+    }
+
+    const orderId = this.generateOrderId();
+
+    if (paymentMethod === 'card') {
+      // Create fiat payment for card-to-crypto conversion
+      const fiatPaymentRequest: FiatPaymentRequest = {
+        price_amount: plan.price,
+        price_currency: plan.currency,
+        pay_currency: fiatCurrency,
+        order_id: orderId,
+        order_description: `${plan.name} Subscription - IPTV Service (Card Payment)`,
+        success_url: `${window.location.origin}/payment/success`,
+        cancel_url: `${window.location.origin}/payment/cancel`,
+        customer_email: customerEmail,
+        is_fiat: true
+      };
+
+      try {
+        const response = await this.createFiatPayment(fiatPaymentRequest).toPromise();
+
+        // Store pending subscription data with fiat info
+        const pendingSubscription = {
+          orderId,
+          planId,
+          paymentId: response?.payment_id,
+          paymentMethod: 'card',
+          fiatCurrency,
+          createdAt: new Date()
+        };
+        localStorage.setItem('pendingSubscription', JSON.stringify(pendingSubscription));
+
+        return response!;
+      } catch (error) {
+        console.error('Fiat payment creation failed:', error);
+        throw error;
+      }
+    } else {
+      // Fall back to regular crypto payment
+      return this.processSubscriptionPayment(planId);
+    }
   }
 
   async processSubscriptionPayment(planId: string): Promise<PaymentResponse> {
@@ -296,5 +437,74 @@ Save these credentials safely!
     localStorage.removeItem('userSubscription');
     localStorage.removeItem('pendingSubscription');
     this.userSubscriptionSubject.next(null);
+  }
+
+  // Calculate pricing with fees based on payment method
+  calculatePricingWithFees(basePrice: number, paymentMethod: 'crypto' | 'card'): {
+    basePrice: number;
+    processingFee: number;
+    totalPrice: number;
+    feePercentage: number;
+  } {
+    const feePercentage = paymentMethod === 'crypto' ? 0.005 : 0.035; // 0.5% for crypto, 3.5% for cards
+    const processingFee = basePrice * feePercentage;
+
+    return {
+      basePrice,
+      processingFee: Math.round(processingFee * 100) / 100,
+      totalPrice: Math.round((basePrice + processingFee) * 100) / 100,
+      feePercentage: feePercentage * 100
+    };
+  }
+
+  // Convert price to different currencies (for display purposes)
+  convertPriceForDisplay(usdPrice: number, targetCurrency: string): number {
+    // Simplified conversion rates (in production, use a real exchange rate API)
+    const exchangeRates: { [key: string]: number } = {
+      'USD': 1.00,
+      'EUR': 0.92,
+      'GBP': 0.79,
+      'CAD': 1.35,
+      'AUD': 1.52,
+      'JPY': 149.50,
+      'CHF': 0.91,
+      'SEK': 10.85,
+      'NOK': 10.95,
+      'DKK': 6.87
+    };
+
+    const rate = exchangeRates[targetCurrency] || 1.00;
+    return Math.round(usdPrice * rate * 100) / 100;
+  }
+
+  // Process Guardarian webhook for fiat payments
+  processGuardarianWebhook(webhookData: GuardarianWebhookData): Observable<any> {
+    console.log('Processing Guardarian webhook:', webhookData);
+
+    if (webhookData.payment_status === 'finished' && webhookData.conversion_status === 'completed') {
+      // Trigger the same automation as regular crypto payments
+      return from(this.automationService.processPaymentWebhook(
+        webhookData.payment_id,
+        webhookData.payment_status
+      ));
+    }
+
+    return from(Promise.resolve({ success: false, message: 'Payment not completed' }));
+  }
+
+  // Get payment method details by ID
+  getPaymentMethodById(methodId: 'crypto' | 'card'): PaymentMethodOption | undefined {
+    return this.getPaymentMethods().find(method => method.id === methodId);
+  }
+
+  // Estimate conversion time for fiat payments
+  getEstimatedConversionTime(paymentMethod: 'crypto' | 'card'): string {
+    return paymentMethod === 'crypto' ? 'Instant' : '5-10 minutes';
+  }
+
+  // Check if fiat payment method is supported in user's region
+  isFiatPaymentSupported(): boolean {
+    // This could be enhanced with IP geolocation
+    return true; // For now, assume globally supported
   }
 }

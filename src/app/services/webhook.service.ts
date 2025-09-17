@@ -2,9 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AppConfig } from '../../environments/environment';
-import { PaymentService } from './payment.service';
+import { PaymentService, GuardarianWebhookData } from './payment.service';
+import { SupabaseService } from './supabase.service';
+import { AutomationService } from './automation.service';
 
-export interface WebhookPayload {
+export interface NOWPaymentsWebhookPayload {
   payment_id: string;
   payment_status: string;
   pay_address: string;
@@ -21,22 +23,44 @@ export interface WebhookPayload {
   updated_at: string;
 }
 
+export interface GuardarianWebhookPayload {
+  id: string;
+  type: string;
+  data: {
+    id: string;
+    status: string;
+    conversion_status: string;
+    from_amount: number;
+    from_currency: string;
+    to_amount: number;
+    to_currency: string;
+    customer_email: string;
+    external_partner_link_id?: string;
+    created_at: string;
+    updated_at: string;
+  };
+  created_at: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class WebhookService {
   private ipnSecret = AppConfig.NOWPAYMENTS_IPN_SECRET;
+  private webhookUrl = 'https://ojueihcytxwcioqtvwez.supabase.co/functions/v1';
 
   constructor(
     private http: HttpClient,
-    private paymentService: PaymentService
+    private paymentService: PaymentService,
+    private supabaseService: SupabaseService,
+    private automationService: AutomationService
   ) {}
 
   /**
    * Verify webhook signature (for backend implementation)
    * This would typically be implemented on your backend server
    */
-  verifyWebhookSignature(payload: string, signature: string): boolean {
+  verifyWebhookSignature(_payload: string, _signature: string): boolean {
     // This is a placeholder - actual implementation would be on the backend
     // The signature verification uses HMAC-SHA512 with your IPN secret
     //
@@ -51,11 +75,84 @@ export class WebhookService {
     return true; // For demo purposes
   }
 
+  // Handle Guardarian webhook for fiat-to-crypto conversions
+  async handleGuardarianWebhook(webhook: GuardarianWebhookPayload): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('Processing Guardarian webhook:', webhook);
+
+      // Log webhook to Supabase for tracking
+      await this.logWebhook('guardarian', webhook);
+
+      const { data } = webhook;
+
+      // Check if conversion is completed
+      if (data.status === 'completed' && data.conversion_status === 'completed') {
+        // Create GuardarianWebhookData for payment service
+        const guardarianData: GuardarianWebhookData = {
+          payment_id: data.external_partner_link_id || data.id,
+          payment_status: 'finished',
+          conversion_status: data.conversion_status,
+          fiat_amount: data.from_amount,
+          fiat_currency: data.from_currency,
+          crypto_amount: data.to_amount,
+          crypto_currency: data.to_currency,
+          customer_email: data.customer_email,
+          created_at: data.created_at,
+          completed_at: data.updated_at
+        };
+
+        // Process through payment service
+        const result = await this.paymentService.processGuardarianWebhook(guardarianData).toPromise();
+
+        if (result?.success) {
+          // Trigger automation for user provisioning
+          const automationResult = await this.automationService.processPaymentWebhook(
+            guardarianData.payment_id,
+            'finished'
+          );
+
+          if (automationResult.success) {
+            await this.activateSubscriptionFromFiatPayment(guardarianData, automationResult);
+          }
+
+          return {
+            success: true,
+            message: 'Fiat-to-crypto conversion completed and subscription activated'
+          };
+        } else {
+          return {
+            success: false,
+            message: 'Conversion completed but subscription activation failed'
+          };
+        }
+      } else if (data.status === 'failed' || data.status === 'cancelled') {
+        // Handle failed conversions
+        await this.handleFailedFiatPayment(data.id, data.status);
+
+        return {
+          success: true,
+          message: `Fiat conversion ${data.status} - handled appropriately`
+        };
+      }
+
+      return {
+        success: true,
+        message: `Conversion status ${data.status} - no action required`
+      };
+    } catch (error) {
+      console.error('Guardarian webhook processing failed:', error);
+      return {
+        success: false,
+        message: `Webhook processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
   /**
-   * Process incoming webhook payload
+   * Process incoming NOWPayments webhook payload
    * This method should be called when your backend receives a webhook from NOWPayments
    */
-  processWebhook(webhookData: WebhookPayload): Observable<any> {
+  processNOWPaymentsWebhook(webhookData: NOWPaymentsWebhookPayload): Observable<any> {
     console.log('Processing webhook:', webhookData);
 
     // Validate payment status
@@ -77,7 +174,7 @@ export class WebhookService {
     });
   }
 
-  private handleSuccessfulPayment(webhookData: WebhookPayload): void {
+  private handleSuccessfulPayment(webhookData: NOWPaymentsWebhookPayload): void {
     console.log('Payment successful:', webhookData.payment_id);
 
     // Activate subscription
@@ -90,7 +187,7 @@ export class WebhookService {
     this.logPaymentEvent('success', webhookData);
   }
 
-  private handleFailedPayment(webhookData: WebhookPayload): void {
+  private handleFailedPayment(webhookData: NOWPaymentsWebhookPayload): void {
     console.log('Payment failed:', webhookData.payment_id);
 
     // Clean up pending subscription data
@@ -103,7 +200,7 @@ export class WebhookService {
     this.logPaymentEvent('failed', webhookData);
   }
 
-  private handlePartialPayment(webhookData: WebhookPayload): void {
+  private handlePartialPayment(webhookData: NOWPaymentsWebhookPayload): void {
     console.log('Partial payment received:', webhookData.payment_id);
 
     // You might want to:
@@ -114,7 +211,7 @@ export class WebhookService {
     this.logPaymentEvent('partial', webhookData);
   }
 
-  private activateSubscriptionFromWebhook(webhookData: WebhookPayload): void {
+  private activateSubscriptionFromWebhook(webhookData: NOWPaymentsWebhookPayload): void {
     // Find the pending subscription by order_id
     const pendingData = localStorage.getItem('pendingSubscription');
     if (pendingData) {
@@ -126,7 +223,7 @@ export class WebhookService {
     }
   }
 
-  private cleanupFailedPayment(webhookData: WebhookPayload): void {
+  private cleanupFailedPayment(webhookData: NOWPaymentsWebhookPayload): void {
     const pendingData = localStorage.getItem('pendingSubscription');
     if (pendingData) {
       const pending = JSON.parse(pendingData);
@@ -136,7 +233,7 @@ export class WebhookService {
     }
   }
 
-  private sendPaymentConfirmation(webhookData: WebhookPayload): void {
+  private sendPaymentConfirmation(webhookData: NOWPaymentsWebhookPayload): void {
     // This would typically trigger an email service
     console.log('Sending payment confirmation for:', webhookData.order_id);
 
@@ -146,7 +243,7 @@ export class WebhookService {
     // 3. In-app notifications
   }
 
-  private notifyPaymentFailure(webhookData: WebhookPayload): void {
+  private notifyPaymentFailure(webhookData: NOWPaymentsWebhookPayload): void {
     // Notify user of payment failure
     console.log('Notifying payment failure for:', webhookData.order_id);
 
@@ -156,7 +253,7 @@ export class WebhookService {
     // 3. Dashboard alert
   }
 
-  private logPaymentEvent(eventType: string, webhookData: WebhookPayload): void {
+  private logPaymentEvent(eventType: string, webhookData: NOWPaymentsWebhookPayload): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
       eventType,
@@ -176,6 +273,178 @@ export class WebhookService {
     // 3. Audit trail storage
   }
 
+  // Activate subscription from fiat payment webhook data
+  private async activateSubscriptionFromFiatPayment(guardarianData: GuardarianWebhookData, automationResult?: any): Promise<void> {
+    try {
+      // Get pending subscription data
+      const pendingData = localStorage.getItem('pendingSubscription');
+      if (!pendingData) {
+        console.warn('No pending subscription found for fiat payment:', guardarianData.payment_id);
+        return;
+      }
+
+      const pending = JSON.parse(pendingData);
+
+      // Create subscription record in Supabase
+      const subscription = {
+        id: automationResult?.subscriptionId || `sub_${Date.now()}`,
+        user_id: pending.userId || 'anonymous',
+        plan_id: pending.planId,
+        payment_id: guardarianData.payment_id,
+        payment_method: 'card',
+        fiat_currency: guardarianData.fiat_currency,
+        fiat_amount: guardarianData.fiat_amount,
+        crypto_currency: guardarianData.crypto_currency,
+        crypto_amount: guardarianData.crypto_amount,
+        status: 'active',
+        start_date: new Date().toISOString(),
+        end_date: this.calculateEndDate(pending.planId),
+        iptv_credentials: automationResult?.iptvCredentials,
+        created_at: new Date().toISOString()
+      };
+
+      // Create subscription record in Supabase (using direct client access)
+      const { error } = await this.supabaseService['supabase']
+        .from('subscriptions')
+        .insert(subscription);
+
+      if (error) {
+        console.error('Failed to insert subscription:', error);
+        throw error;
+      }
+
+      // Clean up pending data
+      localStorage.removeItem('pendingSubscription');
+
+      console.log('Fiat subscription activated:', subscription.id);
+    } catch (error) {
+      console.error('Failed to activate fiat subscription:', error);
+    }
+  }
+
+  // Handle failed fiat payments
+  private async handleFailedFiatPayment(conversionId: string, status: string): Promise<void> {
+    try {
+      // Update conversion status in Supabase (using direct client access)
+      const { error } = await this.supabaseService['supabase']
+        .from('fiat_conversions')
+        .update({
+          status: status,
+          failed_at: new Date().toISOString()
+        })
+        .eq('conversion_id', conversionId);
+
+      if (error) {
+        console.error('Failed to update fiat conversion:', error);
+      }
+
+      console.log(`Fiat conversion ${conversionId} marked as ${status}`);
+    } catch (error) {
+      console.error('Failed to handle fiat payment failure:', error);
+    }
+  }
+
+  // Log webhook to Supabase for tracking
+  private async logWebhook(provider: string, data: any): Promise<void> {
+    try {
+      const webhookLog = {
+        provider,
+        webhook_data: data,
+        processed_at: new Date().toISOString(),
+        status: 'received'
+      };
+
+      // Log webhook to Supabase (using direct client access)
+      const { error } = await this.supabaseService['supabase']
+        .from('webhook_logs')
+        .insert(webhookLog);
+
+      if (error) {
+        console.error('Failed to insert webhook log:', error);
+      }
+    } catch (error) {
+      console.error('Failed to log webhook:', error);
+      // Don't throw - webhook logging is not critical
+    }
+  }
+
+  // Calculate subscription end date based on plan
+  private calculateEndDate(planId: string): string {
+    const plans = this.paymentService.getSubscriptionPlans();
+    const plan = plans.find(p => p.id === planId);
+
+    if (!plan) {
+      // Default to 30 days if plan not found
+      return new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)).toISOString();
+    }
+
+    return new Date(Date.now() + (plan.duration * 24 * 60 * 60 * 1000)).toISOString();
+  }
+
+  // Send test webhook (for development/testing)
+  sendTestWebhook(type: 'nowpayments' | 'guardarian'): Observable<any> {
+    const testData = type === 'nowpayments' ? {
+      payment_id: 'test_payment_123',
+      payment_status: 'finished',
+      pay_address: 'test_address',
+      price_amount: 19.99,
+      price_currency: 'USD',
+      pay_amount: 0.001,
+      pay_currency: 'BTC',
+      order_id: 'test_order_123',
+      order_description: 'Test Payment',
+      purchase_id: 'test_purchase_123',
+      outcome_amount: 0.001,
+      outcome_currency: 'BTC',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    } : {
+      id: 'test_conversion_123',
+      type: 'transaction.completed',
+      data: {
+        id: 'test_conversion_123',
+        status: 'completed',
+        conversion_status: 'completed',
+        from_amount: 19.99,
+        from_currency: 'USD',
+        to_amount: 0.001,
+        to_currency: 'BTC',
+        customer_email: 'test@example.com',
+        external_partner_link_id: 'test_payment_123',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      created_at: new Date().toISOString()
+    };
+
+    return this.http.post(`${this.webhookUrl}/${type}-webhook`, testData, {
+      headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+    });
+  }
+
+  // Get webhook logs for debugging
+  async getWebhookLogs(provider?: string, limit: number = 50): Promise<any[]> {
+    try {
+      const query = this.supabaseService['supabase']
+        .from('webhook_logs')
+        .select('*')
+        .order('processed_at', { ascending: false })
+        .limit(limit);
+
+      if (provider) {
+        query.eq('provider', provider);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Failed to get webhook logs:', error);
+      return [];
+    }
+  }
+
   /**
    * Get webhook endpoint URL for NOWPayments configuration
    * This URL should point to your backend webhook handler
@@ -184,6 +453,13 @@ export class WebhookService {
     // This would be your actual webhook endpoint URL
     // Example: https://yourdomain.com/api/webhooks/nowpayments
     return `${AppConfig.BACKEND_URL}/webhooks/nowpayments`;
+  }
+
+  /**
+   * Get Guardarian webhook endpoint URL
+   */
+  getGuardarianWebhookEndpointUrl(): string {
+    return `${AppConfig.BACKEND_URL}/webhooks/guardarian`;
   }
 
   /**
