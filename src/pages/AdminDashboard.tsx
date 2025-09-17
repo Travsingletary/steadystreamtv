@@ -80,18 +80,20 @@ const AdminDashboard = () => {
       
       setUsers(data || []);
       
-      // Calculate statistics
-      const activeSubscriptions = data?.filter(u => u.subscription_status === 'active')?.length || 0;
-      const trialUsers = data?.filter(u => 
-        u.subscription_tier === 'free-trial' && 
-        new Date(u.trial_end_date) > new Date()
-      )?.length || 0;
+      // Get subscription data
+      const { data: subscriptions, error: subscriptionsError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('status', 'active');
+
+      const activeSubscriptions = subscriptions?.length || 0;
+      const totalRevenue = subscriptions?.reduce((sum, sub) => sum + Number(sub.plan_price || 0), 0) || 0;
       
       setStats({
         totalUsers: data?.length || 0,
-        activeSubscriptions,
-        trialUsers,
-        revenue: calculateRevenue(data || [])
+        activeSubscriptions: activeSubscriptions,
+        trialUsers: 0, // Simplified for now
+        revenue: totalRevenue
       });
       
     } catch (error) {
@@ -107,20 +109,8 @@ const AdminDashboard = () => {
   };
   
   const calculateRevenue = (users: any[]) => {
-    const planPrices = {
-      'standard': 20,
-      'premium': 35,
-      'ultimate': 45,
-      'free-trial': 0
-    };
-    
-    return users.reduce((total, user) => {
-      const plan = user.subscription_tier;
-      if (user.subscription_status === 'active' && plan && plan !== 'free-trial') {
-        return total + (planPrices[plan as keyof typeof planPrices] || 0);
-      }
-      return total;
-    }, 0);
+    // Revenue calculation is now handled directly in loadUsers function
+    return 0;
   };
 
   const formatDate = (dateString: string) => {
@@ -414,47 +404,27 @@ const UsersTable = ({ users, loading, onUserAction }: UsersTableProps) => {
           {users.map((user) => (
             <TableRow key={user.id}>
               <TableCell className="font-medium">{user.name || "N/A"}</TableCell>
-              <TableCell>{user.xtream_username || "N/A"}</TableCell>
+              <TableCell>{"N/A"}</TableCell>
               <TableCell>
-                {user.subscription_tier === "free-trial" && "Free Trial"}
-                {user.subscription_tier === "standard" && "Standard"}
-                {user.subscription_tier === "premium" && "Premium"}
-                {user.subscription_tier === "ultimate" && "Ultimate"}
-                {!user.subscription_tier && "N/A"}
+                {"N/A"}
               </TableCell>
               <TableCell>
-                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                  user.subscription_status === 'active' 
-                    ? 'bg-green-900/30 text-green-500' 
-                    : 'bg-red-900/30 text-red-500'
-                }`}>
-                  {user.subscription_status === 'active' ? 'Active' : 'Inactive'}
+                <div className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-900/30 text-gray-500">
+                  Not Available
                 </div>
               </TableCell>
-              <TableCell>{formatDate(user.trial_end_date)}</TableCell>
+              <TableCell>{"N/A"}</TableCell>
               <TableCell>
                 <div className="flex justify-end space-x-1">
-                  {user.subscription_status === 'active' ? (
-                    <Button
-                      variant="outline" 
-                      size="icon" 
-                      className="w-8 h-8 text-yellow-500 hover:text-yellow-300"
-                      onClick={() => onUserAction(user.id, 'suspend')}
-                      title="Suspend User"
-                    >
-                      <AlertCircle size={14} />
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline" 
-                      size="icon" 
-                      className="w-8 h-8 text-green-500 hover:text-green-300"
-                      onClick={() => onUserAction(user.id, 'activate')}
-                      title="Activate User"
-                    >
-                      <Shield size={14} />
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline" 
+                    size="icon" 
+                    className="w-8 h-8 text-gray-500"
+                    disabled
+                    title="User management temporarily disabled"
+                  >
+                    <AlertCircle size={14} />
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="icon" 

@@ -97,16 +97,14 @@ export const useOnboarding = () => {
       // Create or update user profile in our public table
       console.log("Creating/updating user profile...");
       const { error: profileError } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .upsert({
-          id: userId!,
           supabase_user_id: userId!,
           email: userData.email,
           full_name: userData.name,
-          subscription_plan: userData.subscription?.plan || null,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'id'
+          onConflict: 'supabase_user_id'
         });
 
       if (profileError) {
@@ -116,11 +114,39 @@ export const useOnboarding = () => {
 
       console.log("Profile created/updated successfully");
 
-      // Create Xtream account if subscription is selected
+      // Create subscription record if subscription is selected
       if (userData.subscription && userData.subscription.plan !== "free-trial") {
-        console.log("Creating Xtream account...");
+        console.log("Creating subscription record...");
         
         try {
+          // Generate a payment ID for the subscription
+          const paymentId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          const { error: subscriptionError } = await supabase
+            .from('subscriptions')
+            .insert({
+              customer_email: userData.email,
+              customer_name: userData.name,
+              plan_id: userData.subscription.plan,
+              plan_name: userData.subscription.plan.replace('_', ' ').toUpperCase(),
+              plan_price: userData.subscription.plan === 'premium' ? 19.99 : 9.99,
+              payment_id: paymentId,
+              payment_method: 'onboarding',
+              payment_status: 'completed',
+              status: 'active',
+              start_date: new Date().toISOString(),
+              end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              user_id: userId!
+            });
+
+          if (subscriptionError) {
+            console.error("Subscription creation error:", subscriptionError);
+            throw new Error(`Subscription creation failed: ${subscriptionError.message}`);
+          }
+
+          console.log("Subscription record created successfully");
+
+          // Create MegaOTT account
           const { data: xtreamData, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
             body: {
               userId: userId!,
@@ -132,33 +158,30 @@ export const useOnboarding = () => {
 
           if (xtreamError) {
             console.error("Xtream account creation error:", xtreamError);
-            throw new Error(`Xtream account creation failed: ${xtreamError.message}`);
-          }
-
-          if (xtreamData?.username && xtreamData?.password) {
+          } else if (xtreamData?.username && xtreamData?.password) {
             console.log("Xtream account created successfully");
             
-            // Update user_profile with Xtream credentials
+            // Update subscription with IPTV credentials
             const { error: updateError } = await supabase
-              .from('user_profiles')
+              .from('subscriptions')
               .update({
-                username: xtreamData.username,
-                password: xtreamData.password,
-                playlist_url: xtreamData?.playlistUrls?.m3u_plus || xtreamData?.playlistUrls?.m3u || xtreamData?.playlist_url || null,
-                updated_at: new Date().toISOString()
+                iptv_username: xtreamData.username,
+                iptv_password: xtreamData.password,
+                m3u_url: xtreamData?.playlistUrls?.m3u_plus || xtreamData?.playlistUrls?.m3u || null,
+                xtream_url: xtreamData?.server_url || null,
+                megaott_user_id: xtreamData?.subscription_id || null
               })
-              .eq('id', userId!);
+              .eq('payment_id', paymentId);
 
             if (updateError) {
-              console.error("Failed to update profile with Xtream credentials:", updateError);
+              console.error("Failed to update subscription with IPTV credentials:", updateError);
             } else {
-              console.log("Profile updated with Xtream credentials");
+              console.log("Subscription updated with IPTV credentials");
             }
           }
-        } catch (xtreamError) {
-          console.error("Xtream account creation failed:", xtreamError);
-          // Don't throw here - allow onboarding to continue even if Xtream fails
-          toast.error("Account created but streaming setup failed. You can set this up later in your dashboard.");
+        } catch (error) {
+          console.error("Subscription setup failed:", error);
+          toast.error("Account created but subscription setup failed. You can set this up later in your dashboard.");
         }
       }
 

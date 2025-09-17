@@ -141,18 +141,42 @@ export const OnboardingSubscription = ({
       if (!sessionData.session) {
         await supabase.auth.signInWithPassword({ email: userData.email, password });
       }
+
+      // First create a subscription record
+      const paymentId = `stripe_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const plan = pricingPlans.find(p => p.id === selectedPlan);
       
-      // Store onboarding data in localStorage for after payment - with more persistent storage
+      const { error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .insert({
+          customer_email: userData.email,
+          customer_name: userData.name,
+          plan_id: selectedPlan,
+          plan_name: plan?.name || selectedPlan.toUpperCase(),
+          plan_price: plan?.price || 0,
+          payment_id: paymentId,
+          payment_method: 'card',
+          payment_status: 'pending',
+          status: 'pending',
+          user_id: authData.user.id
+        });
+
+      if (subscriptionError) {
+        throw new Error(`Subscription creation failed: ${subscriptionError.message}`);
+      }
+      
+      // Store onboarding data in localStorage for after payment
       const onboardingData = {
         ...userData,
         subscription: {
           plan: selectedPlan,
-          name: pricingPlans.find(p => p.id === selectedPlan)?.name,
-          price: pricingPlans.find(p => p.id === selectedPlan)?.price,
+          name: plan?.name,
+          price: plan?.price,
           trialDays: 1
         },
         userId: authData.user.id,
-        password: password
+        password: password,
+        paymentId: paymentId
       };
       
       // Store in multiple ways to ensure persistence
@@ -161,15 +185,13 @@ export const OnboardingSubscription = ({
       
       console.log("Stored onboarding data:", onboardingData);
       
-      // Get the selected plan details
-      const plan = pricingPlans.find(p => p.id === selectedPlan);
-      
-      // Call the create-payment function with the real user ID and onboarding data
+      // Call the create-payment function
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
           customerEmail: userData.email,
           customerName: userData.name,
-          planType: selectedPlan
+          planType: selectedPlan,
+          paymentId: paymentId
         }
       });
       

@@ -1,10 +1,7 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import Hls from 'hls.js';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Play, 
@@ -28,6 +25,12 @@ interface StreamPlayerProps {
   onToggleFullscreen?: () => void;
 }
 
+interface UserCredentials {
+  username: string;
+  password: string;
+  playlist_url?: string;
+}
+
 const StreamPlayer: React.FC<StreamPlayerProps> = ({ 
   url, 
   title,
@@ -46,9 +49,8 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
   const [isBuffering, setIsBuffering] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [xtreamCredentials, setXtreamCredentials] = useState<any>(null);
+  const [userCredentials, setUserCredentials] = useState<UserCredentials | null>(null);
   const [showXtreamPlayer, setShowXtreamPlayer] = useState(false);
-  const [loadingCredentials, setLoadingCredentials] = useState(false);
 
   // Hide controls after period of inactivity
   useEffect(() => {
@@ -136,38 +138,36 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
     };
   }, [url]);
 
-  // Load XTREAM credentials for current user
-  useEffect(() => {
-    const loadXtreamCredentials = async () => {
-      setLoadingCredentials(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) return;
-        
-        const { data, error } = await supabase
-          .from('iptv_accounts')
-          .select('username, password')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .maybeSingle();
-        
-        if (error) throw error;
-        
-        if (data?.username && data?.password) {
-          setXtreamCredentials({
-            username: data.username,
-            password: data.password
-          });
-        }
-      } catch (error) {
-        console.error("Error loading XTREAM credentials:", error);
-      } finally {
-        setLoadingCredentials(false);
+  // Load user credentials for current user
+  const loadUserCredentials = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get credentials from subscriptions table
+      const { data: subscriptionData } = await supabase
+        .from('subscriptions')
+        .select('iptv_username, iptv_password, m3u_url')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (subscriptionData?.iptv_username && subscriptionData?.iptv_password) {
+        setUserCredentials({
+          username: subscriptionData.iptv_username,
+          password: subscriptionData.iptv_password,
+          playlist_url: subscriptionData.m3u_url || undefined
+        });
       }
-    };
-    
-    loadXtreamCredentials();
+    } catch (error) {
+      console.error('Error loading user credentials:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadUserCredentials();
   }, []);
 
   const togglePlay = () => {
@@ -264,14 +264,6 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
     setShowXtreamPlayer(!showXtreamPlayer);
   };
 
-  const getXtreamPlayerUrl = () => {
-    if (!xtreamCredentials) return null;
-    
-    const { username, password } = xtreamCredentials;
-    const baseUrl = `http://megaott.net/player_api.php?username=${username}&password=${password}`;
-    return baseUrl;
-  };
-
   return (
     <div 
       ref={playerRef}
@@ -281,7 +273,7 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
       {showXtreamPlayer ? (
         <div className="w-full h-full">
           <iframe 
-            src={`http://megaott.net/player_api.php?username=${xtreamCredentials?.username}&password=${xtreamCredentials?.password}`}
+            src={`http://megaott.net/player_api.php?username=${userCredentials?.username}&password=${userCredentials?.password}`}
             className="w-full h-full border-0"
             allowFullScreen
           />
@@ -450,7 +442,7 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
           )}
 
           {/* XTREAM Player Option */}
-          {xtreamCredentials && !error && !isBuffering && (
+          {userCredentials && !error && !isBuffering && (
             <div className="absolute top-4 right-4 z-20">
               <Button
                 variant="outline"
