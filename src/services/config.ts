@@ -19,8 +19,8 @@ export const CONFIG = {
     adminPass: 'Skyhigh123'
   },
   megaOTT: {
-    streamBaseUrl: 'https://megaott.net/live',
-    apiUrl: 'https://megaott.net/api/v1',
+    streamBaseUrl: 'https://api.megaott.net/live',
+    apiUrl: 'https://api.megaott.net/v1',
     apiKey: 'PduXXKv6Hi6M9xrstKEpXzmJ3WWBvZjigmr9opdg9c3c15af',
     username: 'IX5E3YZZ',
     password: '2N1xXXid'
