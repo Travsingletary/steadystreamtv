@@ -12,6 +12,7 @@ interface CheckoutRequest {
   user_id: string;
   amount: number;
   currency?: string;
+  payment_method?: string;
 }
 
 serve(async (req) => {
@@ -25,7 +26,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { plan_id, user_id, amount, currency = 'usd' }: CheckoutRequest = await req.json();
+    const { plan_id, user_id, amount, currency = 'usd', payment_method = 'card' }: CheckoutRequest = await req.json();
 
     if (!plan_id || !user_id || !amount) {
       throw new Error('Missing required fields: plan_id, user_id, amount');

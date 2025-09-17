@@ -69,7 +69,7 @@ export class PaymentService {
   /**
    * Create a checkout session for a plan
    */
-  static async createCheckout(planId: string, userId: string): Promise<{ checkout_url: string; payment_id: string }> {
+  static async createCheckout(planId: string, userId: string, paymentMethod?: string): Promise<{ checkout_url: string; payment_id: string }> {
     const plan = PRICING_PLANS.find(p => p.id === planId);
     if (!plan) {
       throw new Error(`Plan ${planId} not found`);
@@ -80,7 +80,8 @@ export class PaymentService {
         plan_id: planId,
         user_id: userId,
         amount: plan.price,
-        currency: plan.currency
+        currency: plan.currency,
+        payment_method: paymentMethod || 'card'
       }
     });
 
