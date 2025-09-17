@@ -78,7 +78,7 @@ serve(async (req) => {
     }
 
     // Test 2: Try to get packages (if available)
-    console.log('Testing package availability...');
+    console.log('Testing GET /packages endpoint...');
     let packagesResponse: Response | null = null;
     let packagesFetchError: string | null = null;
     try {
