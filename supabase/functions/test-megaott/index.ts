@@ -12,12 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY');
+    const userReadToken = Deno.env.get('MEGAOTT_USER_READ_TOKEN');
+    const megaottApiKey = userReadToken || Deno.env.get('MEGAOTT_API_KEY');
     let megaottApiUrl = Deno.env.get('MEGAOTT_API_URL');
 
     console.log('Testing MegaOTT API...');
     console.log('API URL:', megaottApiUrl);
-    console.log('API Key:', megaottApiKey ? 'Present' : 'Missing');
+    console.log('Auth token source:', userReadToken ? 'MEGAOTT_USER_READ_TOKEN' : (megaottApiKey ? 'MEGAOTT_API_KEY' : 'Missing'));
 
     if (!megaottApiKey || !megaottApiUrl) {
       throw new Error('MegaOTT API configuration missing');
@@ -51,7 +52,9 @@ serve(async (req) => {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${megaottApiKey}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'LovableApp/megaott-test (SupabaseEdge)',
+          'Cache-Control': 'no-cache'
         }
       });
     } catch (e: any) {
