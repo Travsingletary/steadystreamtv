@@ -104,20 +104,43 @@ const Dashboard = () => {
         addDebugInfo(`User authenticated: ${user.email} (ID: ${user.id})`);
         setUser(user);
         
-        // Get user profile
-        const { data: profile, error } = await supabase
+        // Get profile data
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (error) {
-          addDebugInfo(`Profile fetch error: ${error.message}`);
-          throw error;
+          .eq('supabase_user_id', user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          addDebugInfo(`Profile fetch error: ${profileError.message}`);
+          throw profileError;
+        }
+
+        // Get subscription data
+        const { data: subscription, error: subError } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .maybeSingle();
+
+        if (subError) {
+          console.warn('No subscription found:', subError);
+          addDebugInfo(`No subscription found: ${subError.message}`);
         }
         
-        addDebugInfo(`Profile loaded: email=${profile?.email}, name=${profile?.full_name}`);
-        setProfile(profile);
+        // Combine profile and subscription data
+        const combinedProfile = {
+          ...profile,
+          subscription_tier: subscription?.plan_name || 'trial',
+          subscription_status: subscription?.status || 'trial',
+          xtream_username: subscription?.iptv_username,
+          xtream_password: subscription?.iptv_password,
+          m3u_url: subscription?.m3u_url
+        };
+        
+        addDebugInfo(`Profile loaded: email=${profile?.email || user.email}, name=${profile?.full_name}, subscription=${subscription?.plan_name || 'none'}`);
+        setProfile(combinedProfile);
       } catch (error) {
         console.error("Error fetching user data:", error);
         addDebugInfo(`Error fetching user data: ${error}`);
