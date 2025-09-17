@@ -29,9 +29,22 @@ serve(async (req) => {
       console.log('Added https:// protocol to URL:', megaottApiUrl);
     }
 
+    // Normalize API base path to include /api/v1 if missing
+    let apiBase = megaottApiUrl.replace(/\/$/, '');
+    try {
+      const urlObj = new URL(apiBase);
+      const hasVersion = /(api\/)?v\d+(\/|$)/.test(urlObj.pathname);
+      if (!hasVersion) {
+        apiBase = apiBase + '/api/v1';
+        console.log('Appended /api/v1 to base URL:', apiBase);
+      }
+    } catch (e) {
+      console.warn('Failed to parse API URL, proceeding with raw string:', apiBase, e);
+    }
+
     // Test 1: Get User Information
     console.log('Testing GET /user endpoint...');
-    const userResponse = await fetch(`${megaottApiUrl}/user`, {
+    const userResponse = await fetch(`${apiBase}/user`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${megaottApiKey}`,
@@ -53,7 +66,7 @@ serve(async (req) => {
 
     // Test 2: Try to get packages (if available)
     console.log('Testing package availability...');
-    const packagesResponse = await fetch(`${megaottApiUrl}/packages`, {
+    const packagesResponse = await fetch(`${apiBase}/packages`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${megaottApiKey}`,
