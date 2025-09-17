@@ -50,8 +50,9 @@ serve(async (req) => {
       userResponse = await fetch(`${apiBase}/users`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${megaottApiKey}`,
-          'Accept': 'application/json'
+          'Authorization': `${megaottApiKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': '*/*'
         }
       });
     } catch (e: any) {
@@ -85,8 +86,9 @@ serve(async (req) => {
       packagesResponse = await fetch(`${apiBase}/packages`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${megaottApiKey}`,
-          'Accept': 'application/json'
+          'Authorization': `${megaottApiKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': '*/*'
         }
       });
     } catch (e: any) {
