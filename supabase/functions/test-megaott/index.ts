@@ -42,17 +42,16 @@ serve(async (req) => {
       console.warn('Failed to parse API URL, proceeding with raw string:', apiBase, e);
     }
 
-    // Test 1: Get Users endpoint (as per the API documentation)
-    console.log('Testing GET /users endpoint...');
+    // Test 1: Get User endpoint (as per the API documentation)
+    console.log('Testing GET /user endpoint...');
     let userResponse: Response | null = null;
     let userFetchError: string | null = null;
     try {
-      userResponse = await fetch(`${apiBase}/users`, {
+      userResponse = await fetch(`${apiBase}/user`, {
         method: 'GET',
         headers: {
-          'Authorization': `${megaottApiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': '*/*'
+          'Authorization': `Bearer ${megaottApiKey}`,
+          'Accept': 'application/json'
         }
       });
     } catch (e: any) {
@@ -86,9 +85,8 @@ serve(async (req) => {
       packagesResponse = await fetch(`${apiBase}/packages`, {
         method: 'GET',
         headers: {
-          'Authorization': `${megaottApiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': '*/*'
+          'Authorization': `Bearer ${megaottApiKey}`,
+          'Accept': 'application/json'
         }
       });
     } catch (e: any) {
