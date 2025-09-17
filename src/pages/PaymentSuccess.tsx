@@ -1,229 +1,172 @@
-
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { PaymentService } from "@/services/paymentService";
 
 const PaymentSuccess = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [isProcessing, setIsProcessing] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [status, setStatus] = useState<'checking' | 'success' | 'error'>('checking');
+  const [subscriptionData, setSubscriptionData] = useState<any>(null);
+
+  const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
-    const completeOnboarding = async () => {
+    const verifyPayment = async () => {
+      if (!sessionId) {
+        setStatus('error');
+        toast({
+          title: "Invalid Session",
+          description: "No payment session found",
+          variant: "destructive"
+        });
+        return;
+      }
+
       try {
-        console.log("Processing payment success...");
-        console.log("Current URL:", window.location.href);
-        console.log("Search params:", Object.fromEntries(searchParams.entries()));
-        
-        const sessionId = searchParams.get('session_id');
-        let userId = searchParams.get('user_id');
-        
-        console.log("Session ID:", sessionId);
-        console.log("User ID from URL:", userId);
-        
-        if (!sessionId) {
-          console.error("No session ID found in URL params");
-          setError("Payment session not found. Please complete the onboarding process again.");
-          setIsProcessing(false);
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          navigate('/auth');
           return;
         }
 
-        // Get current authenticated user
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) {
-          console.error("User authentication error:", userError);
-          setError("User authentication failed. Please sign in and try again.");
-          setIsProcessing(false);
-          return;
-        }
+        // Wait for subscription to be activated (webhook processing)
+        toast({
+          title: "Processing Payment",
+          description: "Please wait while we activate your subscription...",
+        });
 
-        // Use the authenticated user's ID
-        userId = userData.user.id;
-        console.log("Using authenticated user ID:", userId);
-
-        // Try to get onboarding data from storage first
-        let onboardingDataStr = localStorage.getItem('onboarding-data');
-        if (!onboardingDataStr) {
-          onboardingDataStr = sessionStorage.getItem('onboarding-data');
-        }
+        const isActivated = await PaymentService.waitForSubscriptionActivation(user.id, 30);
         
-        let onboardingData = null;
-        if (onboardingDataStr) {
-          console.log("Found onboarding data in storage");
-          onboardingData = JSON.parse(onboardingDataStr);
-          // Update the user ID in onboarding data to match authenticated user
-          onboardingData.userId = userId;
+        if (isActivated) {
+          const subscriptionStatus = await PaymentService.getSubscriptionStatus(user.id);
+          setSubscriptionData(subscriptionStatus);
+          setStatus('success');
+          
+          toast({
+            title: "Payment Successful!",
+            description: "Your subscription has been activated",
+          });
         } else {
-          console.log("No onboarding data in storage, creating minimal data");
-          
-          onboardingData = {
-            userId: userId,
-            email: userData.user.email,
-            name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'User',
-            preferredDevice: "web",
-            genres: [],
-            subscription: {
-              plan: "premium", // Default, will be updated from crypto payment
-              name: "Premium",
-              price: 35,
-              trialDays: 30
-            }
-          };
-          console.log("Created minimal onboarding data from user:", onboardingData);
-        }
-        
-        console.log("Using onboarding data:", onboardingData);
-        
-        // Create or update the user profile
-        console.log("Creating/updating user profile...");
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: userId,
-            email: onboardingData.email,
-            name: onboardingData.name,
-            preferred_device: onboardingData.preferredDevice || "web",
-            genres: onboardingData.genres || [],
-            subscription_tier: onboardingData.subscription?.plan || null,
-            subscription_status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'id'
+          setStatus('error');
+          toast({
+            title: "Activation Pending",
+            description: "Your payment was successful but activation is taking longer than expected. Please contact support if this persists.",
+            variant: "destructive"
           });
-
-        if (profileError) {
-          console.error("Profile creation/update error:", profileError);
-          throw new Error(`Profile creation failed: ${profileError.message}`);
         }
-
-        console.log("Profile created/updated successfully");
-
-        // Create Xtream account if subscription is selected
-        if (onboardingData.subscription && onboardingData.subscription.plan !== "free-trial") {
-          console.log("Creating Xtream account...");
-          
-          try {
-            const { data: xtreamData, error: xtreamError } = await supabase.functions.invoke('create-xtream-account', {
-              body: {
-                email: onboardingData.email,
-                name: onboardingData.name,
-                planId: onboardingData.subscription.plan
-              }
-            });
-
-            if (xtreamError) {
-              console.error("Xtream account creation error:", xtreamError);
-              toast.error("Account created but streaming setup failed. You can set this up later in your dashboard.");
-            } else if (xtreamData?.data?.username && xtreamData?.data?.password) {
-              console.log("Xtream account created successfully");
-              
-              // Update profile with Xtream credentials
-              const { error: updateError } = await supabase
-                .from('profiles')
-                .update({
-                  xtream_username: xtreamData.data.username,
-                  xtream_password: xtreamData.data.password,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', userId);
-
-              if (updateError) {
-                console.error("Failed to update profile with Xtream credentials:", updateError);
-              } else {
-                console.log("Profile updated with Xtream credentials");
-              }
-            }
-          } catch (xtreamError) {
-            console.error("Xtream account creation failed:", xtreamError);
-            toast.error("Account created but streaming setup failed. You can set this up later in your dashboard.");
-          }
-        }
-
-        // Send welcome email
-        try {
-          await supabase.functions.invoke('send-welcome-email', {
-            body: {
-              email: onboardingData.email,
-              name: onboardingData.name
-            }
-          });
-          console.log("Welcome email sent");
-        } catch (emailError) {
-          console.error("Welcome email failed:", emailError);
-          // Don't throw - this is not critical
-        }
-
-        // Clear onboarding data from both storages
-        localStorage.removeItem('onboarding-data');
-        sessionStorage.removeItem('onboarding-data');
-        
-        setIsProcessing(false);
-        toast.success("Welcome to SteadyStream TV! Your account has been created successfully.");
-        
-        // Navigate to dashboard after a short delay
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 2000);
-
-      } catch (error: any) {
-        console.error("Complete onboarding error:", error);
-        setError(error.message || "Failed to complete onboarding. Please try again.");
-        setIsProcessing(false);
+      } catch (error) {
+        console.error('Payment verification error:', error);
+        setStatus('error');
+        toast({
+          title: "Verification Error",
+          description: "Unable to verify payment status. Please contact support.",
+          variant: "destructive"
+        });
       }
     };
 
-    completeOnboarding();
-  }, [navigate, searchParams]);
+    verifyPayment();
+  }, [sessionId, navigate, toast]);
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-black py-20 px-4 flex items-center justify-center">
-        <div className="max-w-md w-full bg-dark-200 rounded-xl border border-gray-800 p-8 text-center">
-          <div className="inline-flex items-center justify-center bg-red-500/20 rounded-full p-4 mb-4">
-            <span className="text-red-500 text-xl">⚠️</span>
-          </div>
-          <h1 className="text-2xl font-bold mb-4">Payment Processing Error</h1>
-          <p className="text-gray-400 mb-6">{error}</p>
-          <button 
-            onClick={() => navigate("/onboarding")}
-            className="bg-gold hover:bg-gold-dark text-black font-semibold px-6 py-3 rounded-lg"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleGoToDashboard = () => {
+    navigate('/dashboard');
+  };
+
+  const handleContactSupport = () => {
+    // Open support email or chat
+    window.location.href = 'mailto:support@yoursite.com';
+  };
 
   return (
-    <div className="min-h-screen bg-black py-20 px-4 flex items-center justify-center">
-      <div className="max-w-md w-full bg-dark-200 rounded-xl border border-gray-800 p-8 text-center">
-        <div className="inline-flex items-center justify-center bg-green-500/20 rounded-full p-4 mb-4">
-          {isProcessing ? (
-            <Loader2 className="h-8 w-8 text-green-500 animate-spin" />
-          ) : (
-            <CheckCircle className="h-8 w-8 text-green-500" />
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          {status === 'checking' && (
+            <>
+              <Loader2 className="w-16 h-16 mx-auto mb-4 animate-spin text-primary" />
+              <CardTitle>Processing Payment</CardTitle>
+              <CardDescription>
+                Please wait while we verify your payment and activate your subscription...
+              </CardDescription>
+            </>
           )}
-        </div>
-        <h1 className="text-2xl font-bold mb-4">
-          {isProcessing ? "Setting Up Your Account..." : "Payment Successful!"}
-        </h1>
-        <p className="text-gray-400 mb-6">
-          {isProcessing 
-            ? "We're creating your account and setting up your streaming services. This will only take a moment."
-            : "Your SteadyStream TV account has been created successfully. Redirecting to your dashboard..."
-          }
-        </p>
-        {isProcessing && (
-          <div className="text-sm text-gray-500">
-            Please don't close this page while we complete your setup.
+
+          {status === 'success' && (
+            <>
+              <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
+              <CardTitle className="text-green-700">Payment Successful!</CardTitle>
+              <CardDescription>
+                Your subscription has been activated and you now have access to all features.
+              </CardDescription>
+            </>
+          )}
+
+          {status === 'error' && (
+            <>
+              <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+              <CardTitle className="text-red-700">Payment Issue</CardTitle>
+              <CardDescription>
+                There was an issue processing your payment or activating your subscription.
+              </CardDescription>
+            </>
+          )}
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {status === 'success' && subscriptionData && (
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+              <h3 className="font-semibold text-green-800 dark:text-green-200 mb-2">
+                Subscription Details
+              </h3>
+              <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                <p><strong>Plan:</strong> {subscriptionData.subscription?.plan_name}</p>
+                <p><strong>Type:</strong> {subscriptionData.subscription?.subscription_type?.toUpperCase()}</p>
+                <p><strong>Connections:</strong> {subscriptionData.subscription?.max_connections}</p>
+                {subscriptionData.expires_at && (
+                  <p><strong>Expires:</strong> {new Date(subscriptionData.expires_at).toLocaleDateString()}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            {status === 'success' && (
+              <Button onClick={handleGoToDashboard} className="w-full">
+                Go to Dashboard
+              </Button>
+            )}
+
+            {status === 'error' && (
+              <>
+                <Button onClick={handleContactSupport} className="w-full">
+                  Contact Support
+                </Button>
+                <Button onClick={handleGoToDashboard} variant="outline" className="w-full">
+                  Go to Dashboard
+                </Button>
+              </>
+            )}
+
+            {status === 'checking' && (
+              <Button disabled className="w-full">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </Button>
+            )}
           </div>
-        )}
-      </div>
+
+          <div className="text-center text-sm text-muted-foreground">
+            Session ID: {sessionId}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

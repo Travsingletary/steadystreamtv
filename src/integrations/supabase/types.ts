@@ -80,6 +80,48 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          id: string
+          metadata: Json | null
+          plan_id: string
+          provider: string
+          provider_payment_id: string | null
+          status: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          plan_id: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          plan_id?: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -124,6 +166,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          active: boolean | null
           adult_content: boolean | null
           created_at: string | null
           crypto_amount: number | null
@@ -149,8 +192,10 @@ export type Database = {
           megaott_user_id: string | null
           note: string | null
           package_id: number | null
+          package_id_megaott: number | null
           package_name: string | null
           paid: boolean | null
+          password_generated: string | null
           payment_id: string
           payment_method: string
           payment_status: string | null
@@ -165,10 +210,12 @@ export type Database = {
           template_name: string | null
           updated_at: string | null
           user_id: string | null
+          username_generated: string | null
           whatsapp_telegram: string | null
           xtream_url: string | null
         }
         Insert: {
+          active?: boolean | null
           adult_content?: boolean | null
           created_at?: string | null
           crypto_amount?: number | null
@@ -194,8 +241,10 @@ export type Database = {
           megaott_user_id?: string | null
           note?: string | null
           package_id?: number | null
+          package_id_megaott?: number | null
           package_name?: string | null
           paid?: boolean | null
+          password_generated?: string | null
           payment_id: string
           payment_method: string
           payment_status?: string | null
@@ -210,10 +259,12 @@ export type Database = {
           template_name?: string | null
           updated_at?: string | null
           user_id?: string | null
+          username_generated?: string | null
           whatsapp_telegram?: string | null
           xtream_url?: string | null
         }
         Update: {
+          active?: boolean | null
           adult_content?: boolean | null
           created_at?: string | null
           crypto_amount?: number | null
@@ -239,8 +290,10 @@ export type Database = {
           megaott_user_id?: string | null
           note?: string | null
           package_id?: number | null
+          package_id_megaott?: number | null
           package_name?: string | null
           paid?: boolean | null
+          password_generated?: string | null
           payment_id?: string
           payment_method?: string
           payment_status?: string | null
@@ -255,6 +308,7 @@ export type Database = {
           template_name?: string | null
           updated_at?: string | null
           user_id?: string | null
+          username_generated?: string | null
           whatsapp_telegram?: string | null
           xtream_url?: string | null
         }
@@ -287,6 +341,39 @@ export type Database = {
           megaott_template_id?: number
           name?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      webhook_events: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          payload: Json
+          processed: boolean | null
+          processed_at: string | null
+          provider: string
+          status_code: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          payload: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          provider: string
+          status_code?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          payload?: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          provider?: string
+          status_code?: number | null
         }
         Relationships: []
       }
