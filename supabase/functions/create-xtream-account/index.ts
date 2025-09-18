@@ -98,7 +98,7 @@ serve(async (req) => {
     }
 
     // Get MegaOTT credentials from environment variables
-    const megaottApiUrl = 'https://megaott.net/api/v1/user';
+    const megaottApiUrl = 'https://megaott.net/api/v1/subscriptions';
     const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY') || '673|N7TGCj0AFZRyrXFsWJjbWK0va2eSzR5mHYhqY8IO74c1fa65';
 
     if (!megaottApiKey) {
@@ -180,22 +180,29 @@ serve(async (req) => {
       expDate: endDate.toISOString().split('T')[0]
     });
 
-    // Make REAL request to MegaOTT API to create user (for ALL plans including trials)
+    // Create subscription data in the format expected by MegaOTT API
+    const subscriptionData = new URLSearchParams({
+      'type': 'M3U',
+      'username': username,
+      'package_id': planDetails.packageId.toString(),
+      'max_connections': planDetails.maxConnections.toString(),
+      'forced_country': 'ALL',
+      'adult': '0',
+      'note': `SteadyStream customer: ${payload.name} (${payload.email}) - Plan: ${payload.planType}`,
+      'whatsapp_telegram': '',
+      'enable_vpn': '0',
+      'paid': '1' // Mark as paid since customer has paid through our system
+    });
+
+    // Make REAL request to MegaOTT API to create subscription (for ALL plans including trials)
     const response = await fetchWithRetry(megaottApiUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${megaottApiKey}`,
-        'Accept': 'application/json'
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: JSON.stringify({
-        username: username,
-        password: password,
-        package_id: planDetails.packageId,
-        max_connections: planDetails.maxConnections,
-        exp_date: endDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-        admin_notes: `SteadyStream customer: ${payload.name} (${payload.email}) - Plan: ${payload.planType}`
-      })
+      body: subscriptionData.toString()
     });
 
     const megaottResponse = await response.json();
@@ -205,21 +212,23 @@ serve(async (req) => {
       throw new Error(megaottResponse.message || `Failed to create IPTV account: ${response.status} ${response.statusText}`);
     }
 
-    log("MegaOTT account created successfully", { 
-      responseId: megaottResponse.id,
-      username: username,
-      plan: payload.planType 
+    log("MegaOTT subscription created successfully", {
+      subscriptionId: megaottResponse.id,
+      username: megaottResponse.username,
+      password: megaottResponse.password,
+      type: megaottResponse.type,
+      plan: payload.planType
     });
 
-    // Update the user profile with IPTV credentials
+    // Update the user profile with IPTV credentials (use password from API response)
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({
-        xtream_username: username,
-        xtream_password: password,
+        xtream_username: megaottResponse.username,
+        xtream_password: megaottResponse.password,
         subscription_status: 'active',
         subscription_start_date: startDate.toISOString(),
-        subscription_end_date: endDate.toISOString(),
+        subscription_end_date: megaottResponse.expiring_at,
         updated_at: new Date().toISOString()
       })
       .eq('id', payload.userId);
@@ -229,29 +238,26 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Generate playlist URLs with the real MegaOTT endpoint
-    const baseUrl = `https://megaott.net/get.php?username=${username}&password=${password}`;
-    const m3uUrl = `${baseUrl}&type=m3u_plus&output=ts`;
-    const m3uPlusUrl = `${baseUrl}&type=m3u_plus&output=ts`;
-    const xspfUrl = `${baseUrl}&type=xspf&output=ts`;
-
-    log("Account creation complete, returning credentials");
+    log("Subscription creation complete, returning credentials from API response");
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'IPTV account created successfully in MegaOTT panel',
+        message: 'IPTV subscription created successfully in MegaOTT panel',
         data: {
-          username,
-          password,
+          username: megaottResponse.username,
+          password: megaottResponse.password,
+          subscriptionId: megaottResponse.id,
+          type: megaottResponse.type,
           startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
+          endDate: megaottResponse.expiring_at,
           playlistUrls: {
-            m3u: m3uUrl,
-            m3u_plus: m3uPlusUrl,
-            xspf: xspfUrl
+            dns_link: megaottResponse.dns_link,
+            dns_link_samsung_lg: megaottResponse.dns_link_for_samsung_lg,
+            portal_link: megaottResponse.portal_link
           },
-          megaottId: megaottResponse.id,
+          package: megaottResponse.package,
+          maxConnections: megaottResponse.max_connections,
           planType: payload.planType
         }
       }),
