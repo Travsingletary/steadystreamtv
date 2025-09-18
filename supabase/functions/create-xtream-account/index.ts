@@ -12,13 +12,26 @@ type RequestPayload = {
 
 // Plan mapping for MegaOTT packages - updated to match correct connection limits
 const PLAN_MAPPING = {
+  // 1-Month Plans
   'standard': { packageId: 1, duration: 30, maxConnections: 1 },
   'premium': { packageId: 2, duration: 30, maxConnections: 2 },
   'ultimate': { packageId: 3, duration: 30, maxConnections: 3 },
+
+  // 6-Month Plans
+  'standard-6m': { packageId: 1, duration: 180, maxConnections: 1 },
+  'premium-6m': { packageId: 2, duration: 180, maxConnections: 2 },
+  'ultimate-6m': { packageId: 3, duration: 180, maxConnections: 3 },
+
+  // 12-Month Plans
+  'standard-12m': { packageId: 1, duration: 365, maxConnections: 1 },
+  'premium-12m': { packageId: 2, duration: 365, maxConnections: 2 },
+  'ultimate-12m': { packageId: 3, duration: 365, maxConnections: 3 },
+
   // Legacy mappings for compatibility
   'solo': { packageId: 1, duration: 30, maxConnections: 1 },
   'duo': { packageId: 2, duration: 30, maxConnections: 2 },
   'family': { packageId: 3, duration: 30, maxConnections: 3 },
+
   // Trial mapping
   'trial': { packageId: 1, duration: 1, maxConnections: 1 },
   'free-trial': { packageId: 1, duration: 1, maxConnections: 1 }
