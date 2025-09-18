@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // MegaOTT Production Configuration
 const MEGAOTT_CONFIG = {
   baseUrl: 'https://megaott.net/api/v1/user',
-  apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
+  apiKey: '673|N7TGCj0AFZRyrXFsWJjbWK0va2eSzR5mHYhqY8IO74c1fa65'
 };
 
 // Production Automation Service with REAL API calls

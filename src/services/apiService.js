@@ -11,7 +11,7 @@ class ApiService {
     // MegaOTT API Keys (from your credentials )
     this.apiKeys = {
       userRead: '337|phW17Yb7Xvh501ejawHiz4JqO0tk7DVblRpmFlow98c859d3',
-      subscriptionCreate: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d',
+      subscriptionCreate: '673|N7TGCj0AFZRyrXFsWJjbWK0va2eSzR5mHYhqY8IO74c1fa65',
       subscriptionRead: '339|CFBd2HfdAparYWrev4FmBfbfccSYLEXmtV0QMYzV08a66dc2'
     };
 

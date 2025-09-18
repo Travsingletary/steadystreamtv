@@ -14,6 +14,6 @@ export const CONFIG = {
   megaOTT: {
     streamBaseUrl: 'https://megaott.net/live',
     apiUrl: 'https://megaott.net/api/v1/user',
-    apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
+    apiKey: '673|N7TGCj0AFZRyrXFsWJjbWK0va2eSzR5mHYhqY8IO74c1fa65'
   }
 };
