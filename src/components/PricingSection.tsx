@@ -16,7 +16,7 @@ const pricingPlans = [
       "7,000+ Live TV Channels",
       "Standard VOD Library",
       "HD Quality Streaming",
-      "2 Devices Simultaneously",
+      "1 Device Connection",
       "24/7 Basic Support",
       "3 Connection Types"
     ],
@@ -30,7 +30,7 @@ const pricingPlans = [
       "10,000+ Live TV Channels",
       "Extended VOD Library",
       "Full HD Streaming",
-      "4 Devices Simultaneously",
+      "2 Device Connections",
       "24/7 Premium Support",
       "All Connection Types",
       "DVR Functionality"
@@ -45,7 +45,7 @@ const pricingPlans = [
       "10,000+ Live TV Channels",
       "Complete VOD Library",
       "4K Ultra HD Streaming",
-      "6 Devices Simultaneously",
+      "3 Device Connections",
       "24/7 Priority Support",
       "All Connection Types",
       "Advanced DVR Functionality",
