@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle, Loader2 } from "lucide-react";
+import { nowPaymentsService } from "@/services/nowPaymentsService";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
@@ -18,15 +19,15 @@ const PaymentSuccess = () => {
         console.log("Current URL:", window.location.href);
         console.log("Search params:", Object.fromEntries(searchParams.entries()));
         
-        const sessionId = searchParams.get('session_id');
+        const orderId = searchParams.get('order_id');
         let userId = searchParams.get('user_id');
-        
-        console.log("Session ID:", sessionId);
+
+        console.log("Order ID:", orderId);
         console.log("User ID from URL:", userId);
-        
-        if (!sessionId) {
-          console.error("No session ID found in URL params");
-          setError("Payment session not found. Please complete the onboarding process again.");
+
+        if (!orderId) {
+          console.error("No order ID found in URL params");
+          setError("Payment order not found. Please complete the onboarding process again.");
           setIsProcessing(false);
           return;
         }
@@ -43,6 +44,19 @@ const PaymentSuccess = () => {
         // Use the authenticated user's ID
         userId = userData.user.id;
         console.log("Using authenticated user ID:", userId);
+
+        // Verify payment completion with NOWPayments service
+        console.log("Verifying payment completion...");
+        const paymentCompleted = await nowPaymentsService.processPaymentCompletion(orderId, userId);
+
+        if (!paymentCompleted) {
+          console.error("Payment verification failed");
+          setError("Payment verification failed. Please contact support.");
+          setIsProcessing(false);
+          return;
+        }
+
+        console.log("Payment verified successfully");
 
         // Try to get onboarding data from storage first
         let onboardingDataStr = localStorage.getItem('onboarding-data');

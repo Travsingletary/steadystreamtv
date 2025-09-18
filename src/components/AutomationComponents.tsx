@@ -158,11 +158,11 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
   });
   const [error, setError] = useState('');
 
-  // Production Stripe checkout URLs
-  const stripeCheckoutUrls = {
-    'basic': 'https://buy.stripe.com/dRmfZj1OzbPk7UU9H1dby01',
-    'duo': 'https://buy.stripe.com/5kQ5kFdxh7z4fnm1avdby02', 
-    'family': 'https://buy.stripe.com/3cI9AVctd8D8eji4mHdby00'
+  // Card-to-crypto plan mapping
+  const planMapping = {
+    'basic': 'standard',
+    'duo': 'premium',
+    'family': 'ultimate'
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -183,19 +183,21 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
 
     // Route based on plan selection
     if (formData.plan !== 'trial') {
-      // PAID PLANS: Store data and redirect to Stripe
-      const userDataForPayment = {
+      // PAID PLANS: Redirect to onboarding flow for card-to-crypto payment
+      const userDataForOnboarding = {
         name: formData.name,
         email: formData.email,
-        plan: formData.plan,
-        timestamp: Date.now()
+        preferredDevice: 'web',
+        genres: [],
+        subscription: {
+          plan: planMapping[formData.plan as keyof typeof planMapping] || 'premium'
+        }
       };
-      
-      localStorage.setItem('pendingUserData', JSON.stringify(userDataForPayment));
-      sessionStorage.setItem('pendingUserData', JSON.stringify(userDataForPayment));
-      
-      console.log('💳 Redirecting to Stripe for plan:', formData.plan);
-      window.location.href = stripeCheckoutUrls[formData.plan as keyof typeof stripeCheckoutUrls];
+
+      localStorage.setItem('automation-onboarding-data', JSON.stringify(userDataForOnboarding));
+
+      console.log('🔄 Redirecting to onboarding for card-to-crypto payment:', formData.plan);
+      window.location.href = '/onboarding?step=subscription&from=automation';
       return;
     }
 

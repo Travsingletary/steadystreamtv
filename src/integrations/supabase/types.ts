@@ -100,8 +100,6 @@ export type Database = {
           id: string
           name: string | null
           preferred_device: string | null
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
           subscription_status: string | null
           subscription_tier: string | null
           trial_end_date: string | null
@@ -116,8 +114,6 @@ export type Database = {
           id: string
           name?: string | null
           preferred_device?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           trial_end_date?: string | null
@@ -132,8 +128,6 @@ export type Database = {
           id?: string
           name?: string | null
           preferred_device?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           trial_end_date?: string | null

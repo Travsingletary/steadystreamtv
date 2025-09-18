@@ -5,12 +5,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
-import { CreditCard, Calendar, CheckCircle, Clock, Lock, User, Key, AlertTriangle } from "lucide-react";
+import { cardToCryptoService, RECEIVE_CURRENCIES } from "@/services/cardToCryptoService";
+import { CreditCard, Calendar, CheckCircle, Clock, Lock, User, Key, AlertTriangle, Bitcoin } from "lucide-react";
 
 const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -18,6 +20,7 @@ const Dashboard = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [selectedCrypto, setSelectedCrypto] = useState<string>('USDT');
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -155,15 +158,15 @@ const Dashboard = () => {
     }
   }, [navigate, toast, paymentSuccess, paymentCanceled, sessionId]);
 
-  const handleSubscribe = async (planId: string, isRecurring: boolean = true) => {
+  const handleSubscribe = async (planId: string) => {
     if (processingPayment || !user) {
       addDebugInfo(`Subscribe blocked: processingPayment=${processingPayment}, user=${!!user}`);
       return;
     }
-    
+
     setProcessingPayment(true);
-    addDebugInfo(`Starting subscription process for plan: ${planId}, isRecurring: ${isRecurring}`);
-    
+    addDebugInfo(`Starting card-to-crypto payment for plan: ${planId}, crypto: ${selectedCrypto}`);
+
     try {
       // Verify user authentication
       const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -172,42 +175,29 @@ const Dashboard = () => {
       }
       addDebugInfo(`User verified for payment: ${currentUser.email}`);
 
-      // Prepare function payload
-      const payload = {
-        userId: user.id,
-        planId: planId,
-        customerEmail: user.email,
-        customerName: profile?.name || user.email,
-        isRecurring: isRecurring
-      };
-      
-      addDebugInfo(`Calling create-payment function with payload: ${JSON.stringify(payload)}`);
-      
-      // Call the edge function
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: payload
-      });
-      
-      if (error) {
-        addDebugInfo(`Edge function error: ${JSON.stringify(error)}`);
-        throw new Error(`Function error: ${error.message || JSON.stringify(error)}`);
-      }
-      
-      addDebugInfo(`Edge function response: ${JSON.stringify(data)}`);
-      
-      if (data?.url) {
-        addDebugInfo(`Opening Stripe checkout in new tab: ${data.url}`);
-        
+      // Create card-to-crypto payment
+      const paymentResponse = await cardToCryptoService.createPayment(
+        planId as any,
+        selectedCrypto,
+        user.id,
+        user.email || ''
+      );
+
+      addDebugInfo(`Payment created: ${JSON.stringify(paymentResponse)}`);
+
+      if (paymentResponse.payment_url) {
+        addDebugInfo(`Opening payment page in new tab: ${paymentResponse.payment_url}`);
+
         // Show user feedback before opening new tab
         toast({
           title: "Redirecting to Payment",
-          description: "A new tab will open with your secure Stripe payment page.",
+          description: "A new tab will open with your secure card payment page. We'll receive your payment in cryptocurrency.",
           variant: "default",
         });
-        
-        // Open Stripe checkout in a new tab to avoid iframe restrictions
-        const newWindow = window.open(data.url, '_blank');
-        
+
+        // Open payment page in a new tab
+        const newWindow = window.open(paymentResponse.payment_url, '_blank');
+
         if (!newWindow) {
           // Fallback if popup was blocked
           addDebugInfo("Popup blocked, providing manual link");
@@ -216,28 +206,27 @@ const Dashboard = () => {
             description: "Please allow popups and try again, or click the payment link below.",
             variant: "destructive",
           });
-          
-          // You could also show a modal with the link here
-          console.log("Direct payment link:", data.url);
+
+          console.log("Direct payment link:", paymentResponse.payment_url);
         } else {
-          addDebugInfo("New tab opened successfully");
+          addDebugInfo("Payment tab opened successfully");
         }
-        
+
         setProcessingPayment(false);
       } else {
-        addDebugInfo("No checkout URL returned from function");
-        throw new Error("No checkout URL returned from payment function");
+        addDebugInfo("No payment URL returned");
+        throw new Error("No payment URL returned from payment service");
       }
-      
+
     } catch (error) {
-      console.error("Payment error:", error);
+      console.error("Card-to-crypto payment error:", error);
       addDebugInfo(`Payment error: ${error}`);
-      
+
       let errorMessage = "Could not process your payment. Please try again.";
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       toast({
         title: "Payment Error",
         description: errorMessage,

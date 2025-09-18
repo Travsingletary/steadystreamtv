@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Clock, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { nowPaymentsService, NOWPAYMENTS_CURRENCIES } from "@/services/nowPaymentsService";
 
 interface UserData {
   name: string;
@@ -80,6 +81,7 @@ export const OnboardingSubscription = ({
   const [selectedPlan, setSelectedPlan] = useState<string>(
     userData.subscription?.plan || ""
   );
+  const [selectedCrypto, setSelectedCrypto] = useState<string>('usdt');
   const [isLocalProcessing, setIsLocalProcessing] = useState(false);
 
   const handleSelectPlan = (planId: string) => {
@@ -154,29 +156,21 @@ export const OnboardingSubscription = ({
       
       console.log("Stored onboarding data:", onboardingData);
       
-      // Get the selected plan details
-      const plan = pricingPlans.find(p => p.id === selectedPlan);
-      
-      // Call the create-payment function with the real user ID and onboarding data
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          userId: authData.user.id, // Use the actual user ID, not "onboarding"
-          planId: selectedPlan,
-          customerEmail: userData.email,
-          customerName: userData.name,
-          isRecurring: true,
-          onboardingData: onboardingData
-        }
-      });
-      
-      if (error) throw error;
-      
-      if (data?.url) {
-        console.log("Redirecting to payment URL:", data.url);
-        // Redirect to Stripe checkout
-        window.location.href = data.url;
+      // Create NOWPayments crypto payment
+      console.log("Creating NOWPayments crypto payment...");
+      const paymentResponse = await nowPaymentsService.createPayment(
+        selectedPlan as 'standard' | 'premium' | 'ultimate',
+        selectedCrypto,
+        authData.user.id,
+        userData.email
+      );
+
+      if (paymentResponse?.invoice_url) {
+        console.log("Redirecting to payment URL:", paymentResponse.invoice_url);
+        // Redirect to NOWPayments crypto payment page
+        window.location.href = paymentResponse.invoice_url;
       } else {
-        throw new Error("No checkout URL returned");
+        throw new Error("No payment URL returned");
       }
     } catch (error: any) {
       console.error("Payment error:", error);
@@ -239,6 +233,31 @@ export const OnboardingSubscription = ({
         <div className="flex-grow h-px bg-gray-700"></div>
       </div>
 
+      {selectedPlan && (
+        <div className="bg-dark-100 border border-gray-700 p-6 rounded-lg mb-6">
+          <h3 className="text-lg font-semibold mb-4">Select Payment Currency</h3>
+          <p className="text-sm text-gray-400 mb-4">
+            Pay with cryptocurrency. Choose from 300+ supported currencies for instant payments.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {NOWPAYMENTS_CURRENCIES.map((crypto) => (
+              <button
+                key={crypto.code}
+                onClick={() => setSelectedCrypto(crypto.code)}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  selectedCrypto === crypto.code
+                    ? 'border-gold bg-gold/10 text-gold'
+                    : 'border-gray-600 hover:border-gray-500'
+                }`}
+              >
+                <div className="font-semibold">{crypto.symbol} {crypto.code}</div>
+                <div className="text-xs text-gray-400">{crypto.name}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {pricingPlans.map((plan) => (
           <div
@@ -299,13 +318,13 @@ export const OnboardingSubscription = ({
         >
           Back
         </Button>
-        <Button 
+        <Button
           className="bg-gray-600 hover:bg-gray-500 text-white font-semibold flex-1"
           onClick={handleSubscribe}
           disabled={isButtonDisabled || !selectedPlan}
         >
           <CreditCard className="mr-2 h-5 w-5" />
-          {isButtonDisabled ? "Processing..." : "Subscribe to Selected Plan"}
+          {isButtonDisabled ? "Processing..." : "Pay with Crypto"}
         </Button>
       </div>
     </div>
