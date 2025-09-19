@@ -1,0 +1,34 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "env": {
+    "VITE_SUPABASE_URL": "https://ojueihcytxwcioqtvwez.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qdWVpaGN5dHh3Y2lvcXR2d2V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0Mzc1NDQsImV4cCI6MjA2MjAxMzU0NH0.VsWI3EcSVaeY-NfsW1zJUw6DpMsrHHDP9GYTpaxMbPM",
+    "VITE_NOWPAYMENTS_API_KEY": "GWY1RNA-CDXMZ35-M326YDF-JC660RR",
+    "VITE_NOWPAYMENTS_TEST_MODE": "false",
+    "VITE_APP_ENV": "production",
+    "VITE_PAYMENT_PROCESSOR": "nowpayments",
+    "VITE_PAYMENT_TEST_MODE": "false",
+    "VITE_ENABLE_PERFORMANCE_MONITORING": "true",
+    "VITE_ENABLE_DVR": "true",
+    "VITE_ENABLE_RECOMMENDATIONS": "true",
+    "VITE_ENABLE_MOBILE_FEATURES": "true"
+  },
+  "functions": {
+    "app/api/*.js": {
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
