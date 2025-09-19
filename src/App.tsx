@@ -9,6 +9,7 @@ import { navItems } from "./nav-items";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
 import PaymentPartial from "./pages/PaymentPartial";
+import DemoPayment from "./pages/DemoPayment";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/demo-payment" element={<DemoPayment />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-failed" element={<PaymentFailed />} />
           <Route path="/payment-partial" element={<PaymentPartial />} />
