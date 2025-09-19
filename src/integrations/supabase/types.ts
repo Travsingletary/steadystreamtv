@@ -102,7 +102,10 @@ export type Database = {
           preferred_device: string | null
           subscription_status: string | null
           subscription_tier: string | null
+          subscription_start_date: string | null
+          subscription_end_date: string | null
           trial_end_date: string | null
+          role: string | null
           updated_at: string
           xtream_password: string | null
           xtream_username: string | null
@@ -116,7 +119,10 @@ export type Database = {
           preferred_device?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
+          subscription_start_date?: string | null
+          subscription_end_date?: string | null
           trial_end_date?: string | null
+          role?: string | null
           updated_at?: string
           xtream_password?: string | null
           xtream_username?: string | null
@@ -130,7 +136,10 @@ export type Database = {
           preferred_device?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
+          subscription_start_date?: string | null
+          subscription_end_date?: string | null
           trial_end_date?: string | null
+          role?: string | null
           updated_at?: string
           xtream_password?: string | null
           xtream_username?: string | null

@@ -7,7 +7,6 @@ import Favorites from "./pages/Favorites";
 import Account from "./pages/Account";
 import ConnectApps from "./pages/ConnectApps";
 import AdminDashboard from "./pages/AdminDashboard";
-import TestXtreamAccount from "./pages/TestXtreamAccount";
 import NotFound from "./pages/NotFound";
 
 export const navItems = [
@@ -42,10 +41,6 @@ export const navItems = [
   {
     to: "/admin",
     page: <AdminDashboard />,
-  },
-  {
-    to: "/test-xtream",
-    page: <TestXtreamAccount />,
   },
   {
     to: "*",

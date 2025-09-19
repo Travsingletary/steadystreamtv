@@ -99,7 +99,7 @@ serve(async (req) => {
 
     // Get MegaOTT credentials from environment variables
     const megaottApiUrl = 'https://megaott.net/api/v1/subscriptions';
-    const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY') || '673|N7TGCj0AFZRyrXFsWJjbWK0va2eSzR5mHYhqY8IO74c1fa65';
+    const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY') || '677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c';
 
     if (!megaottApiKey) {
       log("Missing MegaOTT API key");
@@ -158,11 +158,11 @@ serve(async (req) => {
       );
     }
 
-    // Generate username and password
-    // Format: steady_[first letter of name][random string]
-    const nameLetter = payload.name.charAt(0).toLowerCase();
-    const randomString = Math.random().toString(36).substring(2, 8);
-    const username = `steady_${nameLetter}${randomString}`;
+    // Generate username (under 50 characters for MegaOTT)
+    // Format: steady_[timestamp_suffix]_[random]
+    const timestamp = Date.now().toString().slice(-4); // Last 4 digits
+    const randomString = Math.random().toString(36).substring(2, 8); // 6 chars
+    const username = `steady_${timestamp}_${randomString}`;
     
     // Generate secure password
     const password = Math.random().toString(36).substring(2, 10) + 
@@ -189,7 +189,7 @@ serve(async (req) => {
       'forced_country': 'ALL',
       'adult': '0',
       'note': `SteadyStream customer: ${payload.name} (${payload.email}) - Plan: ${payload.planType}`,
-      'whatsapp_telegram': '',
+      'whatsapp_telegram': payload.name || 'SteadyStream Customer',
       'enable_vpn': '0',
       'paid': '1' // Mark as paid since customer has paid through our system
     });
@@ -198,6 +198,7 @@ serve(async (req) => {
     const response = await fetchWithRetry(megaottApiUrl, {
       method: 'POST',
       headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'application/json',
         'Authorization': `Bearer ${megaottApiKey}`,
         'Content-Type': 'application/x-www-form-urlencoded'

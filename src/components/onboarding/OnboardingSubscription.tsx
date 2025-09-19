@@ -5,6 +5,7 @@ import { CheckCircle, Clock, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { nowPaymentsService, NOWPAYMENTS_CURRENCIES } from "@/services/nowPaymentsService";
+import { cardToCryptoService, RECEIVE_CURRENCIES } from "@/services/cardToCryptoService";
 
 interface UserData {
   name: string;
@@ -82,6 +83,7 @@ export const OnboardingSubscription = ({
     userData.subscription?.plan || ""
   );
   const [selectedCrypto, setSelectedCrypto] = useState<string>('usdt');
+  const [paymentMethod, setPaymentMethod] = useState<'card-to-crypto' | 'crypto-only'>('card-to-crypto');
   const [isLocalProcessing, setIsLocalProcessing] = useState(false);
 
   const handleSelectPlan = (planId: string) => {
@@ -156,19 +158,31 @@ export const OnboardingSubscription = ({
       
       console.log("Stored onboarding data:", onboardingData);
       
-      // Create NOWPayments crypto payment
-      console.log("Creating NOWPayments crypto payment...");
-      const paymentResponse = await nowPaymentsService.createPayment(
-        selectedPlan as 'standard' | 'premium' | 'ultimate',
-        selectedCrypto,
-        authData.user.id,
-        userData.email
-      );
+      // Create payment based on selected method
+      let paymentResponse;
+      if (paymentMethod === 'card-to-crypto') {
+        console.log("Creating card-to-crypto payment...");
+        paymentResponse = await cardToCryptoService.createPayment(
+          selectedPlan as 'standard' | 'premium' | 'ultimate',
+          'ETH', // Always use ETH for card-to-crypto payments
+          authData.user.id,
+          userData.email
+        );
+      } else {
+        console.log("Creating NOWPayments crypto payment...");
+        paymentResponse = await nowPaymentsService.createPayment(
+          selectedPlan as 'standard' | 'premium' | 'ultimate',
+          selectedCrypto,
+          authData.user.id,
+          userData.email
+        );
+      }
 
-      if (paymentResponse?.invoice_url) {
-        console.log("Redirecting to payment URL:", paymentResponse.invoice_url);
-        // Redirect to NOWPayments crypto payment page
-        window.location.href = paymentResponse.invoice_url;
+      if (paymentResponse?.payment_url || paymentResponse?.invoice_url) {
+        const paymentUrl = paymentResponse.payment_url || paymentResponse.invoice_url;
+        console.log("Redirecting to payment URL:", paymentUrl);
+        // Redirect to payment page
+        window.location.href = paymentUrl;
       } else {
         throw new Error("No payment URL returned");
       }
@@ -234,28 +248,103 @@ export const OnboardingSubscription = ({
       </div>
 
       {selectedPlan && (
-        <div className="bg-dark-100 border border-gray-700 p-6 rounded-lg mb-6">
-          <h3 className="text-lg font-semibold mb-4">Select Payment Currency</h3>
-          <p className="text-sm text-gray-400 mb-4">
-            Pay with cryptocurrency. Choose from 300+ supported currencies for instant payments.
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {NOWPAYMENTS_CURRENCIES.map((crypto) => (
-              <button
-                key={crypto.code}
-                onClick={() => setSelectedCrypto(crypto.code)}
-                className={`p-3 rounded-lg border text-left transition-all ${
-                  selectedCrypto === crypto.code
-                    ? 'border-gold bg-gold/10 text-gold'
-                    : 'border-gray-600 hover:border-gray-500'
+        <>
+          {/* Payment Method Selector */}
+          <div className="bg-gradient-to-r from-gold/20 to-gold/10 border-2 border-gold/50 rounded-xl p-6 mb-6">
+            <h3 className="text-xl font-bold text-gold mb-4 text-center">
+              💳 Choose How to Pay
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* Card-to-Crypto Option - Featured */}
+              <div 
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  paymentMethod === 'card-to-crypto'
+                    ? 'border-gold bg-gold/20 shadow-lg shadow-gold/20'
+                    : 'border-gray-600 hover:border-gold/50'
                 }`}
+                onClick={() => setPaymentMethod('card-to-crypto')}
               >
-                <div className="font-semibold">{crypto.symbol} {crypto.code}</div>
-                <div className="text-xs text-gray-400">{crypto.name}</div>
-              </button>
-            ))}
+                <div className="flex items-center gap-3 mb-2">
+                  <CreditCard className="w-6 h-6 text-gold" />
+                  <h4 className="font-bold text-white">Pay with Card</h4>
+                  <span className="bg-gold text-black text-xs px-2 py-1 rounded font-bold">RECOMMENDED</span>
+                </div>
+                <p className="text-sm text-gray-300 mb-2">
+                  Pay with any credit/debit card. Simple and secure.
+                </p>
+                <div className="text-xs text-gray-400">
+                  • Works with Visa, MasterCard, Amex<br/>
+                  • Instant setup<br/>
+                  • Secure payment processing
+                </div>
+              </div>
+
+              {/* Crypto-Only Option */}
+              <div 
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  paymentMethod === 'crypto-only'
+                    ? 'border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20'
+                    : 'border-gray-600 hover:border-blue-500/50'
+                }`}
+                onClick={() => setPaymentMethod('crypto-only')}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">₿</span>
+                  </div>
+                  <h4 className="font-bold text-white">Crypto Only</h4>
+                </div>
+                <p className="text-sm text-gray-300 mb-2">
+                  Pay directly with cryptocurrency from your wallet.
+                </p>
+                <div className="text-xs text-gray-400">
+                  • Requires crypto wallet<br/>
+                  • 300+ supported currencies<br/>
+                  • Direct crypto payments
+                </div>
+              </div>
+            </div>
+
+            {/* Currency Selection - Only show for crypto-only */}
+            {paymentMethod === 'crypto-only' && (
+              <div className="border-t border-gray-700 pt-4">
+                <h4 className="text-lg font-semibold mb-3">Select Cryptocurrency</h4>
+                <p className="text-sm text-gray-400 mb-4">
+                  Choose from 300+ supported cryptocurrencies for instant payments.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {NOWPAYMENTS_CURRENCIES.map((crypto) => (
+                    <button
+                      key={crypto.code}
+                      onClick={() => setSelectedCrypto(crypto.code)}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        selectedCrypto === crypto.code
+                          ? 'border-gold bg-gold/10 text-gold'
+                          : 'border-gray-600 hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="font-semibold">{crypto.symbol} {crypto.code}</div>
+                      <div className="text-xs text-gray-400">{crypto.name}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Card Payment Info - No currency selection needed */}
+            {paymentMethod === 'card-to-crypto' && (
+              <div className="border-t border-gray-700 pt-4">
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold mb-2">Secure Card Payment</h4>
+                  <p className="text-sm text-gray-400">
+                    Your payment will be processed securely with industry-standard encryption.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        </>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -324,7 +413,9 @@ export const OnboardingSubscription = ({
           disabled={isButtonDisabled || !selectedPlan}
         >
           <CreditCard className="mr-2 h-5 w-5" />
-          {isButtonDisabled ? "Processing..." : "Pay with Crypto"}
+          {isButtonDisabled ? "Processing..." : 
+            paymentMethod === 'card-to-crypto' ? "💳 Pay with Card" : "₿ Pay with Crypto"
+          }
         </Button>
       </div>
     </div>

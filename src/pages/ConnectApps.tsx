@@ -126,9 +126,9 @@ const ConnectApps = () => {
       recommended: true,
       description: 'Best for most IPTV apps with full EPG support',
       fields: {
-        'Server URL': profile?.xtream_server || 'Not available',
-        'Username': profile?.xtream_username || 'Not available',
-        'Password': profile?.xtream_password || 'Not available'
+        'Server URL': 'https://megaott.net:8080',
+        'Username': profile?.xtream_username || 'Not available - Subscribe to get credentials',
+        'Password': profile?.xtream_password || 'Not available - Subscribe to get credentials'
       }
     },
     {
@@ -137,7 +137,7 @@ const ConnectApps = () => {
       recommended: false,
       description: 'Direct playlist link for basic streaming',
       fields: {
-        'Playlist URL': profile?.playlist_url || `${window.location.origin}/api/playlist/your-token.m3u8`
+        'Playlist URL': 'Available after subscription - Contact support for playlist URL'
       }
     }
   ];

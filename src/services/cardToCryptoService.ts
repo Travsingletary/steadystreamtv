@@ -219,7 +219,7 @@ class CardToCryptoService {
       receive_currency: receiveCurrency,
       created_at: new Date().toISOString(),
       order_id: orderId,
-      payment_url: `${window.location.origin}/mock-card-payment?id=${orderId}&amount=${plan.amount}&plan=${planId}`
+      payment_url: `${window.location.origin}/payment-success?order_id=${orderId}&user_id=${userId}&demo=true`
     };
   }
 

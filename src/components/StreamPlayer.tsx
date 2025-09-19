@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   Play, 
   Pause, 
@@ -19,6 +18,11 @@ import {
   SkipBack
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  profileService,
+  ProfileSchemaError,
+  ProfilePermissionError,
+} from "@/services/profileService";
 
 interface StreamPlayerProps {
   url?: string;
@@ -104,26 +108,22 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
     const loadXtreamCredentials = async () => {
       setLoadingCredentials(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) return;
-        
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('xtream_username, xtream_password')
-          .eq('id', user.id)
-          .single();
-        
-        if (error) throw error;
-        
-        if (data?.xtream_username && data?.xtream_password) {
+        const { profile } = await profileService.fetchProfile();
+
+        if (profile?.xtream_username && profile?.xtream_password) {
           setXtreamCredentials({
-            username: data.xtream_username,
-            password: data.xtream_password
+            username: profile.xtream_username,
+            password: profile.xtream_password,
           });
         }
       } catch (error) {
-        console.error("Error loading XTREAM credentials:", error);
+        if (error instanceof ProfilePermissionError) {
+          console.error("Profile permission error while loading XTREAM credentials", error);
+        } else if (error instanceof ProfileSchemaError) {
+          console.error("Profile schema error while loading XTREAM credentials", error);
+        } else {
+          console.error("Error loading XTREAM credentials:", error);
+        }
       } finally {
         setLoadingCredentials(false);
       }

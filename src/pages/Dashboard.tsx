@@ -13,6 +13,11 @@ import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
 import { cardToCryptoService, RECEIVE_CURRENCIES } from "@/services/cardToCryptoService";
 import { CreditCard, Calendar, CheckCircle, Clock, Lock, User, Key, AlertTriangle, Bitcoin } from "lucide-react";
+import {
+  profileService,
+  ProfilePermissionError,
+  ProfileSchemaError,
+} from "@/services/profileService";
 
 const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -95,40 +100,44 @@ const Dashboard = () => {
       addDebugInfo("Starting user data fetch");
       
       try {
-        // Get authenticated user
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
+        const { user: currentUser, profile: currentProfile } = await profileService.fetchProfile();
+
+        if (!currentUser) {
           addDebugInfo("No authenticated user found, redirecting to onboarding");
           navigate("/onboarding");
           return;
         }
-        
-        addDebugInfo(`User authenticated: ${user.email} (ID: ${user.id})`);
-        setUser(user);
-        
-        // Get user profile
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (error) {
-          addDebugInfo(`Profile fetch error: ${error.message}`);
-          throw error;
-        }
-        
-        addDebugInfo(`Profile loaded: subscription_tier=${profile?.subscription_tier}, status=${profile?.subscription_status}`);
-        setProfile(profile);
+
+        addDebugInfo(`User authenticated: ${currentUser.email} (ID: ${currentUser.id})`);
+        setUser(currentUser);
+
+        addDebugInfo(`Profile loaded: subscription_tier=${currentProfile?.subscription_tier}, status=${currentProfile?.subscription_status}`);
+        setProfile(currentProfile);
       } catch (error) {
         console.error("Error fetching user data:", error);
-        addDebugInfo(`Error fetching user data: ${error}`);
-        toast({
-          title: "Error",
-          description: "Failed to load your subscription information",
-          variant: "destructive"
-        });
+
+        if (error instanceof ProfilePermissionError) {
+          addDebugInfo("Profile permission error encountered");
+          toast({
+            title: "Profile access blocked",
+            description: "Row Level Security policies for the profiles table are missing. Apply the latest Supabase migrations and policies.",
+            variant: "destructive",
+          });
+        } else if (error instanceof ProfileSchemaError) {
+          addDebugInfo("Profile schema error encountered");
+          toast({
+            title: "Profiles table out of date",
+            description: "The profiles table is missing required columns. Run the Supabase migrations to sync the schema.",
+            variant: "destructive",
+          });
+        } else {
+          addDebugInfo(`Error fetching user data: ${error}`);
+          toast({
+            title: "Error",
+            description: "Failed to load your subscription information",
+            variant: "destructive",
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -178,7 +187,7 @@ const Dashboard = () => {
       // Create card-to-crypto payment
       const paymentResponse = await cardToCryptoService.createPayment(
         planId as any,
-        selectedCrypto,
+        'ETH', // Always use ETH for card-to-crypto payments
         user.id,
         user.email || ''
       );

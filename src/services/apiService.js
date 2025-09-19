@@ -8,12 +8,8 @@ class ApiService {
     this.retryDelay = 1000; // Start with 1 second
     this.timeout = 10000; // 10 seconds
     
-    // MegaOTT API Keys (from your credentials )
-    this.apiKeys = {
-      userRead: '337|phW17Yb7Xvh501ejawHiz4JqO0tk7DVblRpmFlow98c859d3',
-      subscriptionCreate: '673|N7TGCj0AFZRyrXFsWJjbWK0va2eSzR5mHYhqY8IO74c1fa65',
-      subscriptionRead: '339|CFBd2HfdAparYWrev4FmBfbfccSYLEXmtV0QMYzV08a66dc2'
-    };
+    // MegaOTT API Key (single key for all operations)
+    this.apiKey = '677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c';
 
     // Health monitoring
     this.healthStatus = {
@@ -88,32 +84,43 @@ class ApiService {
     console.log('🚀 Creating Xtream account for:', userData.email);
     
     try {
-      // Primary API call to MegaOTT
-      const response = await this.fetchWithRetry(`${this.baseURL}/user`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKeys.subscriptionCreate}`
-        },
-        body: JSON.stringify({
-          email: userData.email,
-          plan: userData.plan,
-          device_type: userData.deviceType,
-          user_agent: navigator.userAgent,
-          ip_address: 'auto-detect'
-        })
+      // Primary API call to MegaOTT - Create subscription (not user)
+      const subscriptionData = new URLSearchParams({
+        'type': 'M3U',
+        'username': `steady_${Date.now()}_${Math.random().toString(36).substring(2)}`.substring(0, 50).padEnd(50, '0'),
+        'package_id': this.getPackageIdForPlan(userData.plan),
+        'max_connections': this.getMaxConnectionsForPlan(userData.plan),
+        'forced_country': 'ALL',
+        'adult': '0',
+        'note': `SteadyStream customer: ${userData.email} - Plan: ${userData.plan}`,
+        'whatsapp_telegram': userData.name || 'SteadyStream Customer',
+        'enable_vpn': '0',
+        'paid': '1'
       });
 
-      if (response.success) {
-        console.log('✅ MegaOTT account created successfully');
+      const response = await this.fetchWithRetry(`${this.baseURL}/subscriptions`, {
+        method: 'POST',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: subscriptionData.toString()
+      });
+
+      // MegaOTT returns direct subscription object, not wrapped in success
+      if (response.id && response.username && response.password) {
+        console.log('✅ MegaOTT subscription created successfully');
         return {
           success: true,
           data: {
             username: response.username,
             password: response.password,
-            server_url: response.server_url,
-            playlist_token: response.playlist_token,
-            activation_code: response.activation_code,
-            expires_at: response.expires_at
+            server_url: response.dns_link || 'http://megaott.net:8080',
+            playlist_token: response.dns_link,
+            activation_code: response.id.toString(),
+            expires_at: response.expiring_at
           },
           source: 'megaott_api'
         };
@@ -186,13 +193,15 @@ class ApiService {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   }
 
-  // Health check endpoint
+  // Health check endpoint - use /user endpoint to verify API key
   async checkHealth() {
     try {
-      const response = await this.fetchWithRetry(`${this.baseURL}/health`, {
+      const response = await this.fetchWithRetry(`${this.baseURL}/user`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.apiKeys.userRead}`
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
         }
       });
       
@@ -232,6 +241,33 @@ class ApiService {
       console.error('❌ Failed to send welcome email:', error);
       return { success: false, error: error.message };
     }
+  }
+
+  // Helper methods for plan mapping
+  getPackageIdForPlan(plan) {
+    const planMapping = {
+      'trial': 1,
+      'standard': 1,
+      'premium': 2,
+      'ultimate': 3,
+      'solo': 1,
+      'duo': 2,
+      'family': 3
+    };
+    return planMapping[plan] || 1;
+  }
+
+  getMaxConnectionsForPlan(plan) {
+    const connectionMapping = {
+      'trial': 1,
+      'standard': 1,
+      'premium': 2,
+      'ultimate': 3,
+      'solo': 1,
+      'duo': 2,
+      'family': 3
+    };
+    return connectionMapping[plan] || 1;
   }
 }
 

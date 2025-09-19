@@ -115,11 +115,7 @@ jobs:
             this.retryDelay = 1000;
             this.timeout = 10000;
             
-            this.apiKeys = {
-              userRead: '337|phW17Yb7Xvh501ejawHiz4JqO0tk7DVblRpmFlow98c859d3',
-              subscriptionCreate: '673|N7TGCj0AFZRyrXFsWJjbWK0va2eSzR5mHYhqY8IO74c1fa65',
-              subscriptionRead: '339|CFBd2HfdAparYWrev4FmBfbfccSYLEXmtV0QMYzV08a66dc2'
-            };
+            this.apiKey = '677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c';
           }
 
           async fetchWithRetry(url, options = {}, retryCount = 0 ) {
@@ -191,7 +187,7 @@ jobs:
               const response = await this.fetchWithRetry(`${this.baseURL}/user`, {
                 method: 'POST',
                 headers: {
-                  'Authorization': `Bearer ${this.apiKeys.subscriptionCreate}`
+                  'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
                   email, name, plan, service: 'steadystream'
@@ -269,7 +265,7 @@ jobs:
             try {
               const response = await this.fetchWithRetry(`${this.baseURL}/health`, {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${this.apiKeys.userRead}` }
+                headers: { 'Authorization': `Bearer ${this.apiKey}` }
               });
               return { success: true, latency: Date.now() };
             } catch (error) {
@@ -302,9 +298,7 @@ jobs:
 
         # MegaOTT API Configuration
         VITE_MEGAOTT_API_URL=https://megaott.net/api/v1
-        VITE_MEGAOTT_USER_READ_KEY=337|phW17Yb7Xvh501ejawHiz4JqO0tk7DVblRpmFlow98c859d3
-        VITE_MEGAOTT_SUB_CREATE_KEY=673|N7TGCj0AFZRyrXFsWJjbWK0va2eSzR5mHYhqY8IO74c1fa65
-        VITE_MEGAOTT_SUB_READ_KEY=339|CFBd2HfdAparYWrev4FmBfbfccSYLEXmtV0QMYzV08a66dc2
+        VITE_MEGAOTT_API_KEY=677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c
 
         # Application Configuration
         VITE_APP_NAME=SteadyStreamTV

@@ -104,6 +104,34 @@ const PricingSection = () => {
           <p className="text-gray-300 max-w-2xl mx-auto mb-8">
             Choose the perfect subscription plan for your streaming needs with no hidden fees or contracts.
           </p>
+          
+          {/* Card-to-Crypto Payment Banner */}
+          <div className="max-w-4xl mx-auto mb-8">
+            <div className="bg-gradient-to-r from-gold/20 to-gold/10 border-2 border-gold/50 rounded-xl p-6 text-center">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <span className="text-3xl">💳</span>
+                <h3 className="text-2xl font-bold text-gold">CARD PAYMENT AVAILABLE!</h3>
+                <span className="text-3xl">⚡</span>
+              </div>
+              <p className="text-white text-lg mb-2">
+                Pay with any credit/debit card • Instant setup • Secure processing
+              </p>
+              <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-300">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  Works with Visa, MasterCard, Amex
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  Instant payment processing
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  Secure & reliable
+                </span>
+              </div>
+            </div>
+          </div>
 
           {/* Duration Selector */}
           <div className="flex justify-center mb-8">
@@ -163,6 +191,10 @@ const PricingSection = () => {
             <FaqItem 
               question="Is there a contract or commitment?"
               answer="No contracts or long-term commitments. All plans are month-to-month and can be canceled at any time."
+            />
+            <FaqItem 
+              question="How does card payment work?"
+              answer="You pay with your regular credit/debit card (Visa, MasterCard, Amex). Your payment is processed securely and instantly. No special setup or additional accounts required!"
             />
           </div>
         </div>
@@ -253,8 +285,15 @@ const PricingCard = ({
       onClick={() => onSubscribe(currentPrice.planId, currentPrice.price)}
       disabled={processingPayment}
     >
-      {processingPayment ? "Processing..." : "Subscribe Now"}
+      {processingPayment ? "Processing..." : "💳 Pay with Card"}
     </Button>
+    
+    {/* Card-to-Crypto Notice */}
+    <div className="mt-3 text-center">
+      <div className="text-xs text-gold/80 bg-gold/5 p-2 rounded border border-gold/20">
+        💳 Card Payment • Instant setup • Secure processing
+      </div>
+    </div>
   </div>
   );
 };
