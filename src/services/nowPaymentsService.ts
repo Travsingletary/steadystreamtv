@@ -105,7 +105,6 @@ class NOWPaymentsService {
   ): Promise<NOWPaymentResponse> {
     const plan = PLAN_PRICING[planId];
     const orderId = `steadystream-${Date.now()}-${userId}`;
-    const purchaseId = `purchase-${Date.now()}`;
 
     if (this.isDemoMode) {
       return this.createMockPayment(planId, payCurrency, userId, customerEmail);
@@ -366,7 +365,7 @@ class NOWPaymentsService {
       purchase_id: `purchase_${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      invoice_url: `${window.location.origin}/payment-success?order_id=${orderId}&user_id=${userId}&demo=true`
+      invoice_url: `${window.location.origin}/demo-payment?order_id=${orderId}&user_id=${userId}&plan=${planId}&amount=${plan.amount}&currency=${payCurrency}`
     };
   }
 
