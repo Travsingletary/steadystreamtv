@@ -32,18 +32,23 @@ const PaymentSuccess = () => {
           return;
         }
 
-        // Get current authenticated user
+        // Try to get current authenticated user, but don't fail if session is missing
         const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) {
+
+        // If we have an authenticated user, use that ID
+        if (userData.user && !userError) {
+          userId = userData.user.id;
+          console.log("Using authenticated user ID:", userId);
+        } else if (userId) {
+          // If no session but we have user_id from URL, use that (payment redirect scenario)
+          console.log("No auth session, using user_id from URL:", userId);
+        } else {
+          // No user ID available at all
           console.error("User authentication error:", userError);
-          setError("User authentication failed. Please sign in and try again.");
+          setError("User authentication failed. Please complete onboarding again.");
           setIsProcessing(false);
           return;
         }
-
-        // Use the authenticated user's ID
-        userId = userData.user.id;
-        console.log("Using authenticated user ID:", userId);
 
         // Verify payment completion with NOWPayments service
         console.log("Verifying payment completion...");
@@ -75,12 +80,12 @@ const PaymentSuccess = () => {
           
           onboardingData = {
             userId: userId,
-            email: userData.user.email,
-            name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'User',
+            email: userData?.user?.email || 'user@example.com',
+            name: userData?.user?.user_metadata?.name || userData?.user?.email?.split('@')[0] || 'User',
             preferredDevice: "web",
             genres: [],
             subscription: {
-              plan: "premium", // Default, will be updated from Stripe
+              plan: "premium", // Default, will be updated from payment data
               name: "Premium",
               price: 35,
               trialDays: 30
