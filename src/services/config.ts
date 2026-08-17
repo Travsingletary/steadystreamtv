@@ -15,6 +15,6 @@ export const CONFIG = {
     streamBaseUrl: 'https://megaott.net/live',
     subscriptionsApiUrl: 'https://megaott.net/api/v1/subscriptions',
     userApiUrl: 'https://megaott.net/api/v1/user',
-    apiKey: '677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c'
+    // API key must live only in Supabase secrets (MEGAOTT_API_KEY), never in client code
   }
 };

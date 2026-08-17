@@ -4,10 +4,10 @@ import React, { useState } from 'react';
 const SUPABASE_URL = 'https://ojueihcytxwcioqtvwez.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qdWVpaGN5dHh3Y2lvcXR2d2V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0Mzc1NDQsImV4cCI6MjA2MjAxMzU0NH0.VsWI3EcSVaeY-NfsW1zJUw6DpMsrHHDP9GYTpaxMbPM';
 
-// MegaOTT Production Configuration
+// MegaOTT Production Configuration (API key belongs in Supabase secrets only)
 const MEGAOTT_CONFIG = {
   baseUrl: 'https://megaott.net/api/v1',
-  apiKey: '677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c'
+  apiKey: '' // do not call MegaOTT from the browser with a secret key
 };
 
 // Production Automation Service with REAL API calls

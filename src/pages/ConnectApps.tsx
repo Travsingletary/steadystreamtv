@@ -15,13 +15,13 @@ import {
   Download, 
   QrCode, 
   CheckCircle, 
-  Clock, 
   Copy,
   ExternalLink,
   RefreshCw,
   AlertCircle,
   Play
 } from "lucide-react";
+import { CONFIG } from "@/services/config";
 
 const ConnectApps = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -79,42 +79,43 @@ const ConnectApps = () => {
 
   const deviceSetups = [
     {
-      id: 'android-tv',
-      name: 'Android TV / Fire TV',
-      icon: <Tv className="h-8 w-8 text-blue-500" />,
-      description: 'Install IPTV Smarters Pro or TiviMate',
-      appStore: 'Google Play Store',
+      id: 'firestick',
+      name: 'Amazon Firestick',
+      icon: <Tv className="h-8 w-8 text-orange-500" />,
+      description: 'Install SteadyStreamTV with Downloader',
+      appStore: `Downloader code ${CONFIG.app.downloadCode}`,
       setupInstructions: [
-        'Download IPTV Smarters Pro from Google Play Store',
-        'Open the app and select "Add User"',
-        'Enter your IPTV credentials',
-        'Start watching your channels'
-      ]
-    },
-    {
-      id: 'ios',
-      name: 'iPhone / iPad',
-      icon: <Smartphone className="h-8 w-8 text-gray-600" />,
-      description: 'Install GSE Smart IPTV or IPTV Smarters Pro',
-      appStore: 'App Store',
-      setupInstructions: [
-        'Download GSE Smart IPTV from App Store',
-        'Tap "Remote Playlists" then "+"',
-        'Enter your M3U playlist URL',
-        'Save and enjoy streaming'
+        'Uninstall any old SteadyStream / demo app first',
+        `Install Downloader, open it, enter code ${CONFIG.app.downloadCode}`,
+        'Download and install SteadyStreamTV',
+        'Open SteadyStreamTV and log in with Xtream Codes (server, username, password)',
+        'If the icon looks wrong: Settings → Apps → Clear cache'
       ]
     },
     {
       id: 'android',
       name: 'Android Phone / Tablet',
       icon: <Smartphone className="h-8 w-8 text-green-500" />,
-      description: 'Install IPTV Smarters Pro',
-      appStore: 'Google Play Store',
+      description: 'Install SteadyStreamTV via Downloader',
+      appStore: `Downloader code ${CONFIG.app.downloadCode}`,
       setupInstructions: [
-        'Download IPTV Smarters Pro',
-        'Select "Add User" option',
-        'Input your IPTV server details',
-        'Start streaming immediately'
+        `Install Downloader and enter code ${CONFIG.app.downloadCode}`,
+        'Install SteadyStreamTV from the download',
+        'Open the app and add your Xtream username and password',
+        'Start streaming'
+      ]
+    },
+    {
+      id: 'ios',
+      name: 'iPhone / iPad',
+      icon: <Smartphone className="h-8 w-8 text-gray-600" />,
+      description: 'Use an Xtream-compatible IPTV app',
+      appStore: 'App Store',
+      setupInstructions: [
+        'Download GSE Smart IPTV (or similar Xtream app)',
+        'Add a remote playlist / Xtream Codes login',
+        'Enter your SteadyStream server, username, and password',
+        'Save and start watching'
       ]
     }
   ];
@@ -124,20 +125,21 @@ const ConnectApps = () => {
       id: 'xtream',
       name: 'Xtream Codes API',
       recommended: true,
-      description: 'Best for most IPTV apps with full EPG support',
+      description: 'Use these details inside SteadyStreamTV (or any Xtream player)',
       fields: {
-        'Server URL': 'https://megaott.net:8080',
+        'Server URL': profile?.xtream_server || 'https://megaott.net',
         'Username': profile?.xtream_username || 'Not available - Subscribe to get credentials',
         'Password': profile?.xtream_password || 'Not available - Subscribe to get credentials'
       }
     },
     {
-      id: 'm3u',
-      name: 'M3U Playlist URL',
-      recommended: false,
-      description: 'Direct playlist link for basic streaming',
+      id: 'download',
+      name: 'Firestick / Android Download',
+      recommended: true,
+      description: 'Official SteadyStreamTV APK via AFTV Downloader',
       fields: {
-        'Playlist URL': 'Available after subscription - Contact support for playlist URL'
+        'Downloader Code': CONFIG.app.downloadCode,
+        'Download Link': CONFIG.app.downloadUrl
       }
     }
   ];

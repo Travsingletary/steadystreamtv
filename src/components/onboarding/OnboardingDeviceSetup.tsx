@@ -25,10 +25,10 @@ const devices = [
     icon: Smartphone,
     description: "iOS or Android device",
     instructions: [
-      "Download the SteadyStream app from App Store or Google Play",
-      "Open the app and sign in with your email",
-      "Allow notifications for updates",
-      "Enable background playback in settings"
+      "On Android: install Downloader and enter code 1592817, then install SteadyStreamTV",
+      "On iPhone: use an Xtream-compatible app (e.g. GSE Smart IPTV) with your login details",
+      "Open the app and add playlist with Xtream Codes (server, username, password)",
+      "If you had an old demo app installed, uninstall it first and clear cache if the icon looks wrong"
     ]
   },
   {
@@ -37,10 +37,10 @@ const devices = [
     icon: Tv,
     description: "Samsung, LG, Sony, etc.",
     instructions: [
-      "Open the app store on your TV",
-      "Search for 'SteadyStream TV' app",
-      "Install and launch the application", 
-      "Sign in with your email and PIN code"
+      "Install an Xtream-compatible player for your TV brand",
+      "Choose Login with Xtream Codes / Add User",
+      "Enter your SteadyStream server URL, username, and password",
+      "Load channels and start watching"
     ]
   },
   {
@@ -49,10 +49,11 @@ const devices = [
     icon: Play,
     description: "Fire TV Stick or Cube",
     instructions: [
-      "From Fire TV home, search for 'SteadyStream'",
-      "Select and download the app",
-      "Open app and follow on-screen instructions",
-      "Use the provided PIN code to activate"
+      "Uninstall any old SteadyStream / demo app first",
+      "Install the free Downloader app from the Amazon App Store",
+      "Open Downloader and enter code 1592817 (or aftv.news/1592817)",
+      "Install SteadyStreamTV, then open it and log in with your Xtream username and password",
+      "If the icon still shows the old demo look: Settings → Apps → SteadyStreamTV → Clear cache"
     ]
   },
   {
@@ -61,10 +62,10 @@ const devices = [
     icon: Tablet,
     description: "iPad or Android tablet",
     instructions: [
-      "Download the SteadyStream app from your app store",
-      "Sign in with your email address",
-      "Enable HD streaming in settings",
-      "Download content for offline viewing"
+      "On Android tablets: use Downloader with code 1592817 to install SteadyStreamTV",
+      "On iPad: use an Xtream-compatible app with your login details",
+      "Add your playlist using Xtream Codes (server, username, password)",
+      "Enable HD streaming in the player settings if available"
     ]
   },
   {
@@ -75,8 +76,8 @@ const devices = [
     instructions: [
       "Visit steadystream.tv in your browser",
       "Sign in with your email",
-      "Bookmark the page for easy access",
-      "Enable browser notifications"
+      "Open Connect Apps to copy your Xtream credentials for desktop players",
+      "Bookmark the page for easy access"
     ]
   }
 ];
