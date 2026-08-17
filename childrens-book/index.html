@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tommy's TiviMate Adventure - A SteadyStream Picture Book</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', cursive, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .cover {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            border-radius: 15px;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .cover h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+
+        .cover h2 {
+            font-size: 1.8em;
+            margin-bottom: 30px;
+            color: #f0f0f0;
+        }
+
+        .cover .logo {
+            display: inline-block;
+            padding: 20px 40px;
+            background: #FFD700;
+            color: black;
+            font-size: 2em;
+            font-weight: bold;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .page {
+            margin: 60px 0;
+            padding: 40px;
+            background: #f9f9f9;
+            border-radius: 15px;
+            border: 3px solid #FFD700;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #FFD700;
+        }
+
+        .page-number {
+            background: #FFD700;
+            color: black;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+
+        .page-title {
+            font-size: 2em;
+            color: #333;
+            flex-grow: 1;
+        }
+
+        .page-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .page-content.has-image {
+            grid-template-columns: 1fr 1fr;
+            align-items: center;
+        }
+
+        .page-text {
+            font-size: 1.3em;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .page-text p {
+            margin-bottom: 20px;
+        }
+
+        .page-text ul, .page-text ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .page-text li {
+            margin-bottom: 10px;
+        }
+
+        .page-text strong {
+            color: #000;
+            font-size: 1.1em;
+        }
+
+        .page-image {
+            text-align: center;
+        }
+
+        .page-image img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .highlight-box {
+            background: #FFF9E6;
+            border-left: 5px solid #FFD700;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .safety-box {
+            background: #E6F7FF;
+            border: 3px solid #4A90E2;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+
+        .parent-guide {
+            background: #E8F5E9;
+            border: 3px solid #4CAF50;
+            padding: 30px;
+            margin: 40px 0;
+            border-radius: 10px;
+        }
+
+        .parent-guide h3 {
+            color: #2E7D32;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .emoji {
+            font-size: 1.5em;
+        }
+
+        .gold-text {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .page-content.has-image {
+                grid-template-columns: 1fr;
+            }
+
+            .cover h1 {
+                font-size: 2em;
+            }
+
+            .cover h2 {
+                font-size: 1.3em;
+            }
+
+            .page-title {
+                font-size: 1.5em;
+            }
+
+            .page-text {
+                font-size: 1.1em;
+            }
+        }
+
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #FFD700;
+            color: black;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+
+        .print-button:hover {
+            transform: scale(1.05);
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .print-button {
+                display: none;
+            }
+            .page {
+                page-break-after: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button" onclick="window.print()">🖨️ Print Book</button>
+
+    <div class="container">
+        <div class="cover">
+            <h1>📺 Tommy's TiviMate Adventure 📺</h1>
+            <h2>A Fun Guide to Controlling Your TV</h2>
+            <div class="logo">SteadyStream TV</div>
+            <p style="margin-top: 30px; font-size: 1.3em;">Where Every Show is an Adventure! ⭐</p>
+        </div>
+
+        <!-- Page 1 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">1</div>
+                <div class="page-title">Meet Tommy and SteadyStream</div>
+            </div>
+            <div class="page-content has-image">
+                <div class="page-text">
+                    <p>Tommy loves watching his favorite shows on <span class="gold-text">SteadyStream TV</span>! Today, his parents are teaching him how to use the TiviMate remote control all by himself.</p>
+                    <p>"TiviMate makes it easy to watch all our favorite channels," says Mom. "Let me show you how!"</p>
+                </div>
+                <div class="page-image">
+                    <img src="page-01-tommy-and-steadystream.png" alt="Tommy with his parents watching SteadyStream TV">
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 2 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">2</div>
+                <div class="page-title">The Magic Remote</div>
+            </div>
+            <div class="page-content has-image">
+                <div class="page-text">
+                    <p>Tommy looks at the remote control. It has lots of buttons, but Mom says he only needs to know a few special ones!</p>
+                    <p>"See these arrow buttons?" Mom points. "These are like magic arrows that help you move around the screen!"</p>
+                    <div class="highlight-box">
+                        <strong>The Important Buttons:</strong>
+                        <ul>
+                            <li>⬆️ UP Arrow - Move up</li>
+                            <li>⬇️ DOWN Arrow - Move down</li>
+                            <li>⬅️ LEFT Arrow - Move left</li>
+                            <li>➡️ RIGHT Arrow - Move right</li>
+                            <li>⭕ OK/SELECT Button - Pick what you want!</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="page-image">
+                    <img src="page-02-magic-remote.png" alt="The magic remote control with labeled buttons">
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 3 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">3</div>
+                <div class="page-title">Starting TiviMate</div>
+            </div>
+            <div class="page-content">
+                <div class="page-text">
+                    <p>Tommy turns on the TV and sees the <span class="gold-text">SteadyStream logo</span> with its beautiful gold color!</p>
+                    <p>"First, use the arrows to find the TiviMate app," says Dad. "Then press the big OK button in the middle of the arrows!"</p>
+                    <p>Tommy presses OK and TiviMate opens up! He sees lots of channels ready to watch.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 4 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">4</div>
+                <div class="page-title">Finding Your Favorite Channels</div>
+            </div>
+            <div class="page-content has-image">
+                <div class="page-text">
+                    <p>"Wow! Look at all these channels!" says Tommy.</p>
+                    <p>The screen shows a list of channels:</p>
+                    <ul>
+                        <li>Cartoon Network 📺</li>
+                        <li>Sports Channel ⚽</li>
+                        <li>Movie Channel 🎬</li>
+                        <li>Kids Fun Time 🎨</li>
+                    </ul>
+                    <p>"Use the UP and DOWN arrows to move through the channels," explains Mom. "When you find one you like, press OK!"</p>
+                </div>
+                <div class="page-image">
+                    <img src="page-04-channel-list.png" alt="Colorful channel list on TV screen">
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 5 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">5</div>
+                <div class="page-title">The Channel List</div>
+            </div>
+            <div class="page-content">
+                <div class="page-text">
+                    <p>Tommy uses the DOWN arrow button. The yellow highlight moves down the list!</p>
+                    <div class="highlight-box">
+                        <strong>How to Navigate:</strong>
+                        <ol>
+                            <li>Press DOWN ⬇️ to see more channels below</li>
+                            <li>Press UP ⬆️ to go back to channels above</li>
+                            <li>Press OK ⭕ when you find what you want to watch!</li>
+                        </ol>
+                    </div>
+                    <p>"It's like a treasure hunt!" giggles Tommy.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 6 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">6</div>
+                <div class="page-title">Watching Your Show</div>
+            </div>
+            <div class="page-content">
+                <div class="page-text">
+                    <p>Tommy finds "Kids Fun Time" and presses OK. The show starts playing!</p>
+                    <p>"If you want to see what else is playing, press the BACK button," says Dad.</p>
+                    <div class="highlight-box">
+                        <strong>Helpful Buttons:</strong>
+                        <ul>
+                            <li>BACK Button ⬅️ - Go back to the channel list</li>
+                            <li>OK Button ⭕ - Select and play</li>
+                            <li>HOME Button 🏠 - Return to the main menu</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 7 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">7</div>
+                <div class="page-title">The Program Guide (EPG)</div>
+            </div>
+            <div class="page-content">
+                <div class="page-text">
+                    <p>"Want to see what's playing later?" asks Mom. She shows Tommy a special button.</p>
+                    <p>"Press this GUIDE button to see the TV schedule!"</p>
+                    <p>Tommy presses it and sees a colorful grid showing:</p>
+                    <ul>
+                        <li>What's playing NOW</li>
+                        <li>What's coming NEXT</li>
+                        <li>What's playing TONIGHT</li>
+                    </ul>
+                    <p>"Use the arrow buttons to look at different shows and times!"</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 8 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">8</div>
+                <div class="page-title">Fast Forward and Rewind</div>
+            </div>
+            <div class="page-content has-image">
+                <div class="page-text">
+                    <p>Dad shows Tommy two more special buttons when watching recorded shows:</p>
+                    <p>"These are like time machines for TV!"</p>
+                    <div class="highlight-box">
+                        <strong>Time Control Buttons:</strong>
+                        <ul>
+                            <li>⏩ Fast Forward - Skip ahead quickly</li>
+                            <li>⏪ Rewind - Go back to watch again</li>
+                            <li>⏸️ Pause - Stop and wait</li>
+                            <li>⏯️ Play - Start watching again</li>
+                        </ul>
+                    </div>
+                    <p><em>"But remember, these only work on recorded shows, not live TV!"</em></p>
+                </div>
+                <div class="page-image">
+                    <img src="page-08-time-controls.png" alt="Tommy learning about time control buttons">
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 9 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">9</div>
+                <div class="page-title">The Search Feature</div>
+            </div>
+            <div class="page-content has-image">
+                <div class="page-text">
+                    <p>"What if I want to find cartoons?" asks Tommy.</p>
+                    <p>Mom shows him the SEARCH button. "Press this and you can type what you're looking for!"</p>
+                    <p>Tommy sees a keyboard on the screen. Using the arrow buttons, he spells out "C-A-R-T-O-O-N-S."</p>
+                    <p>"Press OK on each letter, then press OK on the search button!"</p>
+                    <p>All the cartoon channels appear! Magic!</p>
+                </div>
+                <div class="page-image">
+                    <img src="page-09-search-feature.png" alt="Tommy using the search feature">
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 10 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">10</div>
+                <div class="page-title">The Favorites Star ⭐</div>
+            </div>
+            <div class="page-content has-image">
+                <div class="page-text">
+                    <p>"You can save your favorite channels," says Dad. "See this STAR button?"</p>
+                    <p>When Tommy is on his favorite channel, he presses and holds the STAR button. A gold star appears next to the channel name!</p>
+                    <p>"Now your favorite channels are marked with the <span class="gold-text">SteadyStream gold star</span>! You can find them quickly in the Favorites section."</p>
+                </div>
+                <div class="page-image">
+                    <img src="page-10-favorites-star.png" alt="Gold stars marking favorite channels">
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 11 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">11</div>
+                <div class="page-title">Volume Control</div>
+            </div>
+            <div class="page-content">
+                <div class="page-text">
+                    <p>"These buttons make the sound louder or quieter," Mom shows Tommy.</p>
+                    <div class="highlight-box">
+                        <strong>Volume Buttons:</strong>
+                        <ul>
+                            <li>🔊 VOLUME UP - Make it louder</li>
+                            <li>🔉 VOLUME DOWN - Make it quieter</li>
+                            <li>🔇 MUTE - Turn off all sound (useful when the phone rings!)</li>
+                        </ul>
+                    </div>
+                    <p>"Always check with a grown-up about how loud the TV should be," reminds Mom.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 12 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">12</div>
+                <div class="page-title">The Settings Menu</div>
+            </div>
+            <div class="page-content">
+                <div class="page-text">
+                    <p>"There's a special SETTINGS button," says Dad. "But you should ask a grown-up before pressing this one!"</p>
+                    <p>The settings have important things like:</p>
+                    <ul>
+                        <li>Picture quality 📺</li>
+                        <li>Language options 🗣️</li>
+                        <li>Parental controls 👨‍👩‍👧‍👦</li>
+                        <li>SteadyStream account information</li>
+                    </ul>
+                    <p>"These help make sure you only watch shows that are right for you!"</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 13 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">13</div>
+                <div class="page-title">Turning Everything Off</div>
+            </div>
+            <div class="page-content">
+                <div class="page-text">
+                    <p>"When you're done watching TV, it's important to turn everything off properly," says Mom.</p>
+                    <div class="highlight-box">
+                        <strong>Steps to Power Down:</strong>
+                        <ol>
+                            <li>Press the BACK button until you see the main menu</li>
+                            <li>Press the POWER button on the remote</li>
+                            <li>Say "Thank you, SteadyStream!" (optional but fun!)</li>
+                        </ol>
+                    </div>
+                    <p>"Always tell a grown-up when you're done watching TV," reminds Dad.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 14 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">14</div>
+                <div class="page-title">Tommy Becomes a TiviMate Expert!</div>
+            </div>
+            <div class="page-content has-image">
+                <div class="page-text">
+                    <p>Now Tommy can use TiviMate all by himself! He knows:</p>
+                    <ul>
+                        <li>✅ How to move around with arrow buttons</li>
+                        <li>✅ How to select channels with OK</li>
+                        <li>✅ How to use the program guide</li>
+                        <li>✅ How to mark favorite channels with stars</li>
+                        <li>✅ How to search for shows</li>
+                        <li>✅ When to ask for grown-up help</li>
+                    </ul>
+                    <p>"I'm a <span class="gold-text">SteadyStream expert</span> now!" says Tommy proudly.</p>
+                </div>
+                <div class="page-image">
+                    <img src="page-14-tommy-expert.png" alt="Tommy as a TiviMate expert">
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 15 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">15</div>
+                <div class="page-title">Safety Reminders</div>
+            </div>
+            <div class="page-content">
+                <div class="page-text">
+                    <div class="safety-box">
+                        <strong style="font-size: 1.3em;">Tommy's Important Rules:</strong>
+                        <ol style="margin-top: 15px;">
+                            <li>👨‍👩‍👧‍👦 <strong>Always ask permission</strong> before watching TV</li>
+                            <li>⏰ <strong>Set a timer</strong> - Don't watch for too long!</li>
+                            <li>🛡️ <strong>Ask a grown-up</strong> if you see something confusing</li>
+                            <li>🔊 <strong>Keep the volume</strong> at a good level</li>
+                            <li>💺 <strong>Sit far enough</strong> from the screen</li>
+                            <li>⚙️ <strong>Never change settings</strong> without asking first</li>
+                        </ol>
+                    </div>
+                    <p>"Following these rules helps keep TV time fun and safe!" says Mom.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 16 -->
+        <div class="page">
+            <div class="page-header">
+                <div class="page-number">16</div>
+                <div class="page-title">The End - Happy Streaming!</div>
+            </div>
+            <div class="page-content has-image">
+                <div class="page-text">
+                    <p>Tommy gives his parents a big hug!</p>
+                    <p>"Thank you for teaching me how to use TiviMate and <span class="gold-text">SteadyStream TV</span>!"</p>
+                    <p>Now Tommy can watch his favorite shows anytime. He's careful, he's responsible, and he always follows the rules.</p>
+                    <h3 style="margin-top: 30px; text-align: center; color: #FFD700;">THE END</h3>
+                    <p style="text-align: center; margin-top: 20px; font-style: italic;">
+                        Enjoy watching with <span class="gold-text">SteadyStream TV</span> - Where Every Show is an Adventure! ⭐📺✨
+                    </p>
+                </div>
+                <div class="page-image">
+                    <img src="page-16-happy-ending.png" alt="Happy ending - Tommy hugging his parents">
+                </div>
+            </div>
+        </div>
+
+        <!-- Parent's Guide -->
+        <div class="parent-guide">
+            <h3>📋 Parent's Guide - Quick Reference</h3>
+            
+            <div style="margin: 20px 0;">
+                <h4 style="margin-bottom: 10px;">Essential TiviMate Controls:</h4>
+                <ul>
+                    <li><strong>Arrow Keys (↑ ↓ ← →)</strong>: Navigate menus and channels</li>
+                    <li><strong>OK/Select</strong>: Confirm selection</li>
+                    <li><strong>Back</strong>: Return to previous screen</li>
+                    <li><strong>Home</strong>: Return to main menu</li>
+                    <li><strong>Guide/EPG</strong>: View program schedule</li>
+                    <li><strong>Search</strong>: Find specific content</li>
+                    <li><strong>Favorites (Star ⭐)</strong>: Mark preferred channels</li>
+                    <li><strong>Volume (+/-)</strong>: Audio control</li>
+                    <li><strong>Mute</strong>: Silence audio</li>
+                    <li><strong>Settings</strong>: Configure app (adult supervision recommended)</li>
+                </ul>
+            </div>
+
+            <div style="margin: 20px 0;">
+                <h4 style="margin-bottom: 10px;">Safety Tips:</h4>
+                <ul>
+                    <li>Enable parental controls in TiviMate settings</li>
+                    <li>Set viewing time limits</li>
+                    <li>Review channel access permissions</li>
+                    <li>Monitor viewing history</li>
+                    <li>Establish clear family TV rules</li>
+                </ul>
+            </div>
+
+            <div style="margin: 20px 0;">
+                <h4 style="margin-bottom: 10px;">SteadyStream Support:</h4>
+                <p>For technical assistance with your <span class="gold-text">SteadyStream TV</span> service, contact our 24/7 support team.</p>
+            </div>
+
+            <p style="margin-top: 20px; font-style: italic; text-align: center;">
+                <em>Remember: This guide is designed to teach children basic navigation. Adult supervision is always recommended.</em>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
