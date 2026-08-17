@@ -8,8 +8,11 @@ class ApiService {
     this.retryDelay = 1000; // Start with 1 second
     this.timeout = 10000; // 10 seconds
     
-    // MegaOTT API Key (single key for all operations)
-    this.apiKey = '677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c';
+    // MegaOTT API key must come from env / edge functions — never hardcode in client
+    this.apiKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MEGAOTT_API_KEY) || '';
+    if (!this.apiKey) {
+      console.warn('MegaOTT API key not configured in client; use Supabase edge functions for subscriptions');
+    }
 
     // Health monitoring
     this.healthStatus = {

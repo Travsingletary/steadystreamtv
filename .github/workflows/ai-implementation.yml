@@ -115,7 +115,10 @@ jobs:
             this.retryDelay = 1000;
             this.timeout = 10000;
             
-            this.apiKey = '677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c';
+            this.apiKey = process.env.MEGAOTT_API_KEY || '';
+            if (!this.apiKey) {
+              throw new Error('MEGAOTT_API_KEY secret is not configured');
+            }
           }
 
           async fetchWithRetry(url, options = {}, retryCount = 0 ) {
@@ -296,9 +299,9 @@ jobs:
         VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qdWV0aGN5dHdjaW9xdHZ3ZXoiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcxNzEwODc1NywiZXhwIjoyMDMyNjg0NzU3fQ.NRQhx23mPLBzZojnK_vzUPR_FcpPXgzk88iZAcpvxoo
         SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
-        # MegaOTT API Configuration
-        VITE_MEGAOTT_API_URL=https://megaott.net/api/v1
-        VITE_MEGAOTT_API_KEY=677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c
+        # MegaOTT API Configuration (server-side only — never use VITE_ for the secret key)
+        MEGAOTT_API_URL=https://megaott.net/api/v1
+        MEGAOTT_API_KEY=your_megaott_api_key_here
 
         # Application Configuration
         VITE_APP_NAME=SteadyStreamTV

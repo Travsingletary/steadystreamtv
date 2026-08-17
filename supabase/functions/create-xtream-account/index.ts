@@ -97,9 +97,9 @@ serve(async (req) => {
       )
     }
 
-    // Get MegaOTT credentials from environment variables
+    // Get MegaOTT credentials from environment variables (never hardcode)
     const megaottApiUrl = 'https://megaott.net/api/v1/subscriptions';
-    const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY') || '677|pLzeayEULdsofncJ4CZ2fima0Bg1VWP5qcpI0jzjfd88977c';
+    const megaottApiKey = Deno.env.get('MEGAOTT_API_KEY');
 
     if (!megaottApiKey) {
       log("Missing MegaOTT API key");

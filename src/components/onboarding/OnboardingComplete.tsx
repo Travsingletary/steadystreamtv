@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, Calendar, Mail, User, Smartphone, Key, QrCode, Download, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { CONFIG } from "@/services/config";
 
 interface OnboardingCompleteProps {
   userData: {
@@ -102,29 +103,40 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
           <div className="mt-6 pt-6 border-t border-gray-700">
             <h4 className="font-medium mb-3">Fire TV Stick Setup Instructions</h4>
             <ol className="list-decimal list-inside space-y-2 text-gray-300">
-              <li>On your Fire TV, search for "Downloader" app and install it</li>
-              <li>Open Downloader and enter this URL: <span className="font-medium text-gold">steadystream.tv/firestick</span></li>
-              <li>Install the SteadyStream app when prompted</li>
-              <li>Open the app and sign in with your email and password</li>
-              <li>Your device will be automatically activated</li>
+              <li>Uninstall any old SteadyStream / demo app first</li>
+              <li>On your Fire TV, search for <span className="font-medium text-gold">Downloader</span> and install it</li>
+              <li>Open Downloader and enter code <span className="font-medium text-gold">{CONFIG.app.downloadCode}</span></li>
+              <li>Install <span className="font-medium text-gold">SteadyStreamTV</span>, then open it</li>
+              <li>Log in with Xtream Codes using your username and password below (or from your welcome email)</li>
+              <li>If the icon still looks like the old demo app: Settings → Apps → Clear cache</li>
             </ol>
-            <div className="mt-4 flex gap-3">
+            <div className="mt-4 flex gap-3 flex-wrap">
               <Button 
                 variant="outline" 
                 size="sm"
                 className="text-xs border-gray-700"
-                onClick={() => copyToClipboard("steadystream.tv/firestick", "Download URL")}
+                onClick={() => copyToClipboard(CONFIG.app.downloadCode, "Downloader code")}
+              >
+                <Copy className="h-3 w-3 mr-1" /> Copy Code {CONFIG.app.downloadCode}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs border-gray-700"
+                onClick={() => copyToClipboard(CONFIG.app.downloadUrl, "Download URL")}
               >
                 <QrCode className="h-3 w-3 mr-1" /> Copy URL
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="text-xs border-gray-700"
-                onClick={() => copyToClipboard(`${userData.email}`, "Email")}
-              >
-                <Mail className="h-3 w-3 mr-1" /> Copy Email
-              </Button>
+              {userData.xtreamCredentials?.username && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-xs border-gray-700"
+                  onClick={() => copyToClipboard(userData.xtreamCredentials!.username, "Username")}
+                >
+                  <Key className="h-3 w-3 mr-1" /> Copy Username
+                </Button>
+              )}
             </div>
           </div>
         );
@@ -133,11 +145,10 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
           <div className="mt-6 pt-6 border-t border-gray-700">
             <h4 className="font-medium mb-3">Smart TV Setup Instructions</h4>
             <ol className="list-decimal list-inside space-y-2 text-gray-300">
-              <li>On your Smart TV, open the app store</li>
-              <li>Search for "SteadyStream TV" and install it</li>
-              <li>Open the app and select "Sign In"</li>
-              <li>Enter your email address and password</li>
-              <li>Your account will be automatically linked</li>
+              <li>Install an Xtream-compatible IPTV player for your TV</li>
+              <li>Choose Login with Xtream Codes / Add User</li>
+              <li>Enter your SteadyStream server URL, username, and password</li>
+              <li>Load channels and start watching</li>
             </ol>
           </div>
         );
@@ -146,10 +157,10 @@ export const OnboardingComplete = ({ userData }: OnboardingCompleteProps) => {
           <div className="mt-6 pt-6 border-t border-gray-700">
             <h4 className="font-medium mb-3">Smartphone Setup Instructions</h4>
             <ol className="list-decimal list-inside space-y-2 text-gray-300">
-              <li>Open the App Store (iOS) or Play Store (Android)</li>
-              <li>Search for "SteadyStream TV" and install the app</li>
-              <li>Open the app and sign in with your account email and password</li>
-              <li>Enable notifications for updates about new content</li>
+              <li>Android: install Downloader, enter code <span className="font-medium text-gold">{CONFIG.app.downloadCode}</span>, install SteadyStreamTV</li>
+              <li>iPhone: use an Xtream-compatible app (for example GSE Smart IPTV)</li>
+              <li>Add playlist with your Xtream username and password</li>
+              <li>If an old demo app is installed, uninstall it first</li>
             </ol>
           </div>
         );
