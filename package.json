@@ -8,7 +8,10 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "android:tv-docs": "echo See docs/android-tv-shell.md"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import Hls from 'hls.js';
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   Play, 
   Pause, 
@@ -138,31 +137,21 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
     };
   }, [url]);
 
-  // Load user credentials for current user
+  // Load provisioned MegaOTT / Xtream credentials (subscriptions + legacy profile fields)
   const loadUserCredentials = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get credentials from subscriptions table
-      const { data: subscriptionData } = await supabase
-        .from('subscriptions')
-        .select('iptv_username, iptv_password, m3u_url')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (subscriptionData?.iptv_username && subscriptionData?.iptv_password) {
-        setUserCredentials({
-          username: subscriptionData.iptv_username,
-          password: subscriptionData.iptv_password,
-          playlist_url: subscriptionData.m3u_url || undefined
-        });
-      }
+      const { getXtreamCredentials, buildM3uUrl } = await import(
+        "@/services/xtreamService"
+      );
+      const creds = await getXtreamCredentials();
+      if (!creds) return;
+      setUserCredentials({
+        username: creds.username,
+        password: creds.password,
+        playlist_url: buildM3uUrl(creds),
+      });
     } catch (error) {
-      console.error('Error loading user credentials:', error);
+      console.error("Error loading user credentials:", error);
     }
   };
 
@@ -271,13 +260,20 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
       onDoubleClick={onToggleFullscreen}
     >
       {showXtreamPlayer ? (
-        <div className="w-full h-full">
-          <iframe 
-            src={`http://megaott.net/player_api.php?username=${userCredentials?.username}&password=${userCredentials?.password}`}
-            className="w-full h-full border-0"
-            allowFullScreen
-          />
-          <div className="absolute bottom-4 right-4">
+        <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-6 text-center bg-black">
+          <p className="text-white text-sm max-w-md">
+            Xtream credentials panel. Use the native HLS player for in-app streams,
+            or copy your M3U into stock TiviMate on Fire Stick (interim TV path).
+          </p>
+          {userCredentials?.playlist_url && (
+            <code className="text-xs text-gray-300 bg-gray-900 p-3 rounded break-all max-w-full">
+              {userCredentials.playlist_url}
+            </code>
+          )}
+          {!userCredentials && (
+            <p className="text-gray-400 text-sm">No provisioned credentials found.</p>
+          )}
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -285,6 +281,14 @@ const StreamPlayer: React.FC<StreamPlayerProps> = ({
               onClick={toggleXtreamPlayer}
             >
               Back to Native Player
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-black/50 text-white border-gray-700"
+              onClick={() => (window.location.href = "/connect-apps")}
+            >
+              Connect Apps
             </Button>
           </div>
         </div>
